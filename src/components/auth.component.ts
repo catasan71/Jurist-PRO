@@ -332,6 +332,9 @@ export class AuthComponent {
         this.errorMessage.set(result.error);
         this.loading.set(false);
       } else {
+        // Force session refresh to ensure profile is fetched
+        await this.authService.refreshSession();
+        
         // Wait for profile to be fetched via onAuthStateChanged
         const checkInterval = setInterval(() => {
           if (this.authService.currentUser()) {
@@ -355,7 +358,6 @@ export class AuthComponent {
        this.loading.set(false);
     }
   }
-
   async register() {
     this.errorMessage.set('');
     

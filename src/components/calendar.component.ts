@@ -169,10 +169,20 @@ interface WindowWithSpeechRecognition extends Window {
             Calculează Termene Exacte
           </button>
           
-          @if (aiResponse()) {
+          @if (dateResult()) {
             <div class="mt-6 p-5 bg-gray-800 rounded-xl border border-gray-600 shadow-lg relative animate-fadeIn">
                 <div class="absolute -top-3 left-4 bg-jurist-orange text-black text-[10px] font-bold px-2 py-0.5 rounded">REZULTAT CALCUL</div>
-                <div class="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed font-mono">{{ aiResponse() }}</div>
+                <div class="text-xl font-bold text-white mb-4">{{ dateResult() }}</div>
+                
+                <button (click)="showMethodology.set(!showMethodology())" class="text-xs text-jurist-orange hover:underline">
+                  {{ showMethodology() ? 'Ascunde metodologia' : 'Vezi metodologia de calcul' }}
+                </button>
+                
+                @if (showMethodology() && methodologyResult()) {
+                  <div class="mt-3 pt-3 border-t border-gray-700 text-sm text-gray-400 whitespace-pre-wrap leading-relaxed font-mono">
+                    {{ methodologyResult() }}
+                  </div>
+                }
             </div>
           }
         </div>
@@ -296,7 +306,9 @@ export class CalendarComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   aiPrompt = '';
-  aiResponse = signal<string>('');
+  dateResult = signal<string>('');
+  methodologyResult = signal<string>('');
+  showMethodology = signal(false);
   
   // New state for mobile tabs
   mobileTab = signal<'agenda' | 'calculator'>('agenda');
@@ -384,19 +396,38 @@ export class CalendarComponent implements OnInit {
       Sarcina ta:
       Calculează exact data împlinirii termenului pe baza input-ului utilizatorului.
       Specifică clar dacă data cade în weekend și se prorogă.
+      RĂSPUNSUL TĂU TREBUIE SĂ FIE ÎN FORMATUL URMĂTOR:
+      DATA: [Data calculată, de ex. 01.10.2024]
+      METODOLOGIE: [Detalierea metodologiei conform Art. 181 NCPC]
 
       Input utilizator: ${this.aiPrompt}
     `;
 
-    this.aiResponse.set(""); // Clear previous response
+    this.dateResult.set("");
+    this.methodologyResult.set("");
+    this.showMethodology.set(false);
+    
     try {
+      this.juristService.toggleLoading(true);
       const res = await this.juristService.chatWithAssistant(context, (text) => {
-        this.aiResponse.set(text);
+        // We might want to handle partial updates, but for parsing logic, 
+        // it's easier to handle after the full response.
       });
-      this.aiResponse.set(res.content);
+      
+      const content = res.content;
+      const parts = content.split('METODOLOGIE:');
+      const datePart = parts[0].replace('DATA:', '').trim();
+      const methodologyPart = parts[1]?.trim() || '';
+      
+      this.dateResult.set(datePart);
+      this.methodologyResult.set(methodologyPart);
+      
     } catch (e) {
       console.error(e);
-      this.aiResponse.set("A apărut o eroare la calcularea termenelor. Verificați conexiunea sau creditele disponibile.");
+      this.dateResult.set("Eroare calcul");
+      this.methodologyResult.set("A apărut o eroare la calcularea termenelor.");
+    } finally {
+      this.juristService.toggleLoading(false);
     }
   }
 

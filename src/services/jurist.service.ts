@@ -1,4 +1,5 @@
-import { Injectable, signal, computed, inject, effect, OnDestroy } from '@angular/core';
+import { Injectable, signal, computed, inject, effect, OnDestroy, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import { AuthService, UserConsents, FirestoreOp } from './auth.service';
 import { db } from '../app/firebase';
@@ -153,7 +154,8 @@ const LEGAL_SAFETY_SETTINGS = [
 export class JuristService implements OnDestroy {
   authService = inject(AuthService);
   notificationService = inject(NotificationService);
-
+  platformId = inject(PLATFORM_ID);
+  
   // --- API KEY FIX ---
   // Global State
   private _currentModule = signal<ModuleType>('landing'); 
@@ -267,6 +269,10 @@ export class JuristService implements OnDestroy {
   }
 
   constructor() {
+    if (!isPlatformBrowser(this.platformId)) {
+       return;
+    }
+
     // 1. Listen for global announcements (Always active, public)
     this._announcementUnsub = onSnapshot(doc(db, 'system_settings', 'announcement'), (docSnap) => {
       if (docSnap.exists()) {
@@ -305,15 +311,15 @@ export class JuristService implements OnDestroy {
         if (this._ticketsUnsub) this._ticketsUnsub();
         if (this._promoUnsub) this._promoUnsub();
 
-        // Load Profile Data (One-time or Snapshot)
-        this._profileUnsub = onSnapshot(doc(db, 'profiles', user.id), (snap) => {
+        // Load Profile Data
+        getDoc(doc(db, 'profiles', user.id)).then((snap) => {
           if (snap.exists()) {
             const data = snap.data();
             if (data['cabinet_data']) {
               this._profileData.set(data['cabinet_data'] as CabinetProfile);
             }
           }
-        });
+        }).catch(err => console.warn('Profile load error:', err.message));
 
         // Load Tickets (Snapshot with cleanup)
         const ticketsQuery = isAdmin
@@ -422,6 +428,10 @@ export class JuristService implements OnDestroy {
     if (typeof window !== 'undefined') {
       window.scrollTo(0, 0);
     }
+  }
+  
+  toggleLoading(loading: boolean) {
+    this._loading.set(loading);
   }
   
   async updateAnnouncement(data: SystemAnnouncement) {
@@ -1004,7 +1014,7 @@ export class JuristService implements OnDestroy {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async _executeWithTimeout(ai: GoogleGenAI, parameters: AiCallParameters, timeoutMs: number): Promise<AsyncIterable<any>> {
-    const responsePromise = ai.models.generateContent({
+    const responsePromise = ai.models.generateContentStream({
       model: 'gemini-3-flash-preview',
       contents: parameters.contents,
       config: {
@@ -1016,11 +1026,6 @@ export class JuristService implements OnDestroy {
         tools: parameters.tools,
         safetySettings: LEGAL_SAFETY_SETTINGS
       }
-    }).then(result => {
-      // Convert single response into an AsyncIterable to maintain signature compatibility
-      return (async function* () {
-        yield result;
-      })();
     });
 
     const timeoutPromise = new Promise<never>((_, reject) => 
@@ -1040,7 +1045,7 @@ export class JuristService implements OnDestroy {
     if (msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand') || msg.includes('overloaded')) {
       throw new Error('Sistemul AI este momentan suprasolicitat din cauza cererii ridicate (Eroare 503). Vă rugăm să așteptați câteva momente și să reîncercați. Nu vi s-au reținut credite.', { cause: e });
     }
-    if (msg.includes('key')) {
+    if (msg.includes('API_KEY_INVALID') || msg.includes('API key not valid') || msg.includes('API key is invalid') || msg.includes('API key has expired') || (msg.includes('key') && msg.includes('invalid'))) {
       throw new Error('Cheie API invalidă sau expirată.', { cause: e });
     }
     

@@ -1,4 +1,5 @@
-import { Injectable, signal, computed, effect, inject } from '@angular/core';
+import { Injectable, signal, computed, effect, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { auth, db } from '../app/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -51,6 +52,7 @@ export interface AppUser {
   providedIn: 'root'
 })
 export class AuthService {
+  platformId = inject(PLATFORM_ID);
   // State
   private _currentUser = signal<AppUser | null>(null);
   private _loading = signal<boolean>(true);
@@ -124,13 +126,17 @@ export class AuthService {
   }
 
   constructor() {
-    this.initSession();
-    
-    effect(() => {
-        if (this.isAdmin()) {
-            this.fetchAllUsers();
-        }
-    });
+    if (isPlatformBrowser(this.platformId)) {
+      this.initSession();
+      
+      effect(() => {
+          if (this.isAdmin()) {
+              this.fetchAllUsers();
+          }
+      });
+    } else {
+      this._loading.set(false);
+    }
   }
 
   async initSession() {
@@ -458,21 +464,10 @@ export class AuthService {
           let credits = data['credits'];
 
           if (isAdminEmail) {
-             let needsUpdate = false;
-             const updateObj: Record<string, string | number> = {};
-             if (role !== 'admin') { role = 'admin'; updateObj['role'] = 'admin'; needsUpdate = true; }
-             if (status !== 'active') { status = 'active'; updateObj['status'] = 'active'; needsUpdate = true; }
-             if (plan !== 'expert' && plan !== 'gold') { plan = 'expert'; updateObj['plan'] = 'expert'; needsUpdate = true; }
-             if (!credits || credits < 9999) { credits = 99999; updateObj['credits'] = 99999; needsUpdate = true; }
-
-             if (needsUpdate) {
-               // Automatically fix in db
-               Promise.resolve().then(() => {
-                  return updateDoc(docRef, updateObj);
-               }).catch(e => {
-                  console.warn('Could not auto-promote admin in DB', e);
-               });
-             }
+             if (role !== 'admin') { role = 'admin'; }
+             if (status !== 'active') { status = 'active'; }
+             if (plan !== 'expert' && plan !== 'gold') { plan = 'expert'; }
+             if (!credits || credits < 9999) { credits = 99999; }
           }
 
           this._currentUser.set({
