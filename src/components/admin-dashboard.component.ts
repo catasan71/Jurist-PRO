@@ -615,8 +615,8 @@ export class AdminDashboardComponent {
     this.juristService.resolveTicket(id, response);
   }
 
-  logout() {
-    this.authService.logout();
+  async logout() {
+    await this.authService.logout();
     this.juristService.setModule('landing');
   }
 

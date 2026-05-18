@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject, effect, OnDestroy } from '@angular/core';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
-import { AuthService, UserConsents } from './auth.service';
+import { AuthService, UserConsents, FirestoreOp } from './auth.service';
 import { db } from '../app/firebase';
 import { doc, getDoc, updateDoc, setDoc, collection, getDocs, addDoc, query, where, orderBy, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { environment } from '../environments/environment';
@@ -200,7 +200,7 @@ export class JuristService implements OnDestroy {
 
   private _aiInstance: GoogleGenAI | null = null;
 
-  private handleFirestoreError(error: unknown, operation: string, path: string | null = null) {
+  private handleFirestoreError(error: unknown, operation: FirestoreOp | string, path: string | null = null) {
     const errInfo = {
       error: error instanceof Error ? error.message : String(error),
       operation,
@@ -208,8 +208,13 @@ export class JuristService implements OnDestroy {
       userId: this.authService.currentUser()?.id,
       timestamp: new Date().toISOString()
     };
-    console.error('Firestore Error:', JSON.stringify(errInfo));
-    this.notificationService.error(`Eroare bază de date (${operation}). Reîncercați.`);
+    console.error('[FIRESTORE ERROR]', JSON.stringify(errInfo));
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.toLowerCase().includes('permission')) {
+      this.notificationService.error(`Lipsă permisiuni: ${operation} la ${path || 'resursă'}.`);
+    } else {
+      this.notificationService.error(`Eroare bază de date: ${msg}`);
+    }
   }
 
   // AUTOMATION: Computed observable for pending alerts within the 24h window
@@ -250,6 +255,16 @@ export class JuristService implements OnDestroy {
   promoCodes = this._promoCodes.asReadonly();
 
   private _announcementUnsub: (() => void) | null = null;
+  private _profileUnsub: (() => void) | null = null;
+  private _ticketsUnsub: (() => void) | null = null;
+  private _promoUnsub: (() => void) | null = null;
+
+  public stopAllListeners() {
+    if (this._announcementUnsub) { this._announcementUnsub(); this._announcementUnsub = null; }
+    if (this._profileUnsub) { this._profileUnsub(); this._profileUnsub = null; }
+    if (this._ticketsUnsub) { this._ticketsUnsub(); this._ticketsUnsub = null; }
+    if (this._promoUnsub) { this._promoUnsub(); this._promoUnsub = null; }
+  }
 
   constructor() {
     // 1. Listen for global announcements (Always active, public)
@@ -285,8 +300,13 @@ export class JuristService implements OnDestroy {
       }
 
       if (isRealUser) {
+        // Stop any previous listeners before starting new ones
+        if (this._profileUnsub) this._profileUnsub();
+        if (this._ticketsUnsub) this._ticketsUnsub();
+        if (this._promoUnsub) this._promoUnsub();
+
         // Load Profile Data (One-time or Snapshot)
-        const profileUnsub = onSnapshot(doc(db, 'profiles', user.id), (snap) => {
+        this._profileUnsub = onSnapshot(doc(db, 'profiles', user.id), (snap) => {
           if (snap.exists()) {
             const data = snap.data();
             if (data['cabinet_data']) {
@@ -300,7 +320,7 @@ export class JuristService implements OnDestroy {
           ? query(collection(db, 'tickets'), orderBy('created_at', 'desc'))
           : query(collection(db, 'tickets'), where('user_id', '==', user.id), orderBy('created_at', 'desc'));
 
-        const ticketsUnsub = onSnapshot(ticketsQuery, (snap) => {
+        this._ticketsUnsub = onSnapshot(ticketsQuery, (snap) => {
           this._tickets.set(snap.docs.map(doc => {
             const t = doc.data();
             return {
@@ -317,9 +337,8 @@ export class JuristService implements OnDestroy {
         }, (err) => console.warn('Tickets listener error:', err.message));
 
         // Load Promo Codes (Admin only, Snapshot with cleanup)
-        let promoUnsub: (() => void) | null = null;
         if (isAdmin) {
-          promoUnsub = onSnapshot(collection(db, 'promo_codes'), (snap) => {
+          this._promoUnsub = onSnapshot(collection(db, 'promo_codes'), (snap) => {
             this._promoCodes.set(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as PromoCode)));
           }, (err) => {
             console.error('Error listening to promo codes:', err.message);
@@ -330,9 +349,9 @@ export class JuristService implements OnDestroy {
 
         // Cleanup all listeners when user changes or service destroyed
         onCleanup(() => {
-          profileUnsub();
-          ticketsUnsub();
-          if (promoUnsub) promoUnsub();
+          if (this._profileUnsub) this._profileUnsub();
+          if (this._ticketsUnsub) this._ticketsUnsub();
+          if (this._promoUnsub) this._promoUnsub();
         });
 
         // Load initial one-time data (Events, Transactions)
@@ -407,15 +426,15 @@ export class JuristService implements OnDestroy {
   
   async updateAnnouncement(data: SystemAnnouncement) {
     this._announcement.set(data);
-    try {
-      const cleanData = { ...data };
-      if (cleanData.actionText === undefined) delete cleanData.actionText;
-      if (cleanData.discountCode === undefined) delete cleanData.discountCode;
-      
-      await setDoc(doc(db, 'system_settings', 'announcement'), cleanData);
-    } catch (error) {
-      console.error('Error updating announcement in Firestore:', error);
-    }
+      try {
+        const cleanData = { ...data };
+        if (cleanData.actionText === undefined) delete cleanData.actionText;
+        if (cleanData.discountCode === undefined) delete cleanData.discountCode;
+        
+        await setDoc(doc(db, 'system_settings', 'announcement'), cleanData);
+      } catch (error) {
+        this.handleFirestoreError(error, FirestoreOp.WRITE, 'system_settings/announcement');
+      }
   }
 
   updateTopUpPackage(pack: { id: string, name: string, price: number, credits: number }) {
@@ -547,7 +566,7 @@ export class JuristService implements OnDestroy {
         if (consents) updates.consents = consents;
         await updateDoc(doc(db, 'profiles', user.id), updates);
       } catch (e) {
-        this.handleFirestoreError(e, 'updateProfile', `profiles/${user.id}`);
+        this.handleFirestoreError(e, FirestoreOp.UPDATE, `profiles/${user.id}`);
       }
     }
   }
@@ -583,7 +602,7 @@ export class JuristService implements OnDestroy {
         this._events.update(e => [...e, newEvent]);
       }
     } catch (e) {
-      this.handleFirestoreError(e, 'addEvent', 'events');
+      this.handleFirestoreError(e, FirestoreOp.CREATE, 'events');
     }
   }
 
@@ -694,7 +713,7 @@ export class JuristService implements OnDestroy {
             this._tickets.update(t => [newTicket, ...t]);
          }
        } catch (e) {
-         this.handleFirestoreError(e, 'submitTicket', 'tickets');
+         this.handleFirestoreError(e, FirestoreOp.CREATE, 'tickets');
        }
     } else {
        const newTicket: SupportTicket = { ...ticket, id: 'local-'+Date.now(), userId: user?.id, date: new Date(), status: 'open' };
@@ -737,7 +756,9 @@ export class JuristService implements OnDestroy {
     if (!this.authService.isDemo()) {
        await addDoc(collection(db, 'transactions'), {
         user_id: user.id,
+        user_name: user.fullName,
         amount: amount,
+        currency: 'RON',
         type: type,
         status: 'completed',
         created_at: new Date().toISOString()

@@ -3,7 +3,6 @@ import process from 'process';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import fs from 'fs';
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
@@ -19,7 +18,7 @@ dotenv.config();
 let resendInstance: Resend | null = null;
 function getResend() {
   if (!resendInstance) {
-    resendInstance = new Resend(process.env.RESEND_SECRET_KEY || process.env.RESEND_API_KEY || 're_MJw9ShNW_GVQFqnVaQPNFHZqsgkDPGHcA');
+    resendInstance = new Resend(process.env.RESEND_SECRET_KEY || process.env.RESEND_API_KEY);
   }
   return resendInstance;
 }
@@ -39,15 +38,9 @@ function getAdminDb() {
       if (fs.existsSync(configPath)) {
         const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
         
-        // In AI Studio, the firestoreDatabaseId is often actually the GCP Project ID
-        // and matching them avoids PERMISSION_DENIED on the resource project.
-        if (!projectId) {
+        // Use projectId from config if it exists
+        if (config.projectId) {
            projectId = config.projectId;
-           // If we have a database identified by UUID and projector is "juristpro", 
-           // likely the databaseId IS the actual project identity.
-           if (config.firestoreDatabaseId && config.firestoreDatabaseId.startsWith('ai-studio-')) {
-             projectId = config.firestoreDatabaseId;
-           }
         }
 
         if (config.firestoreDatabaseId) {
@@ -59,12 +52,26 @@ function getAdminDb() {
     }
 
     if (!admin.apps.length) {
-      admin.initializeApp({
-        projectId: projectId || 'juristpro'
-      });
+      const finalProjectId = projectId || 'juristpro-d79ee';
+      console.log(`[FIREBASE] Initializing Admin SDK with projectId: ${finalProjectId}`);
+      try {
+        admin.initializeApp({
+          projectId: finalProjectId
+        });
+      } catch (initErr) {
+        console.error('[FIREBASE] Initialization error:', initErr);
+      }
     }
     
-    adminDbInstance = getFirestore(admin.app(), (databaseId === '(default)' || !databaseId) ? undefined : databaseId);
+    const app = admin.app();
+    adminDbInstance = getFirestore(app, (databaseId === '(default)' || !databaseId) ? undefined : databaseId);
+    
+    // Test connection
+    adminDbInstance.listCollections().then(() => {
+      console.log('[FIREBASE] Admin SDK connection successful');
+    }).catch(err => {
+      console.warn('[FIREBASE] Admin SDK connection warned (expected if external project without service account):', err.message);
+    });
   }
   return adminDbInstance;
 }
@@ -489,8 +496,12 @@ async function runDeadlineAutomation() {
         }
       }
     }
-  } catch (error) {
-    console.error('[ROBOT] Eroare critică în ciclul de automatizare:', error);
+  } catch (error: any) {
+    if (error.message && error.message.includes('PERMISSION_DENIED')) {
+      console.warn('[ROBOT] Sărire ciclu scanare din cauza lipsei de permisiuni pe proiectul curent (Admin SDK).');
+    } else {
+      console.error('[ROBOT] Eroare critică în ciclul de automatizare:', error);
+    }
   }
 }
 

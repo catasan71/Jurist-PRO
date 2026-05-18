@@ -14,7 +14,8 @@ interface ISpeechRecognition {
   continuous: boolean;
   interimResults: boolean;
   onresult: (event: SpeechRecognitionEvent) => void;
-  onerror: (event: unknown) => void;
+  onerror: (event: { error: string }) => void;
+  onstart: () => void;
   onend: () => void;
   start: () => void;
   stop: () => void;

@@ -198,8 +198,28 @@ export class AppComponent implements OnInit {
       const currentModule = this.juristService.currentModule();
       const currentUser = this.authService.currentUser();
       
+      // Auto-redirect from Landing to Dashboard/Admin if already logged in
+      if (currentModule === 'landing' && currentUser) {
+        if (this.authService.isAdmin()) {
+          this.juristService.setModule('admin-dashboard');
+        } else if (currentUser.status === 'pending_payment') {
+          this.juristService.setModule('payment');
+        } else {
+          this.juristService.setModule('dashboard');
+        }
+      }
+
+      // Auto-redirect to landing if not authenticated and trying to access protected routes
+      if (!currentUser && currentModule !== 'landing' && currentModule !== 'auth' && currentModule !== 'pricing') {
+         this.juristService.setModule('landing');
+      }
+
       if (currentModule === 'payment' && currentUser?.status === 'active') {
         this.juristService.setModule('dashboard');
+      }
+
+      if ((currentModule === 'dashboard' || currentModule === 'payment') && this.authService.isAdmin()) {
+        this.juristService.setModule('admin-dashboard');
       }
     });
 
@@ -242,7 +262,8 @@ export class AppComponent implements OnInit {
     this.mobileMenuOpen = !this.mobileMenuOpen;
   }
 
-  logout() {
+  async logout() {
+    await this.authService.logout();
     this.juristService.setModule('landing');
   }
 

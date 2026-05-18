@@ -10,8 +10,20 @@ import {
   signInWithPopup,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, setDoc, updateDoc, collection, getDocs, deleteDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, collection, getDocs, deleteDoc, onSnapshot, getDoc, FirestoreError } from 'firebase/firestore';
 import { NotificationService } from './notification.service';
+
+/**
+ * Tipuri de operațiuni Firestore pentru diagnostic
+ */
+export enum FirestoreOp {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
 
 export type UserRole = 'admin' | 'lawyer';
 export type SubscriptionStatus = 'active' | 'pending_payment' | 'expired' | 'trial' | 'cancelled';
@@ -54,11 +66,32 @@ export class AuthService {
   isAdmin = computed(() => {
     const user = this._currentUser();
     if (!user || !user.email) return false;
-    const email = user.email.toLowerCase();
-    return user.role === 'admin' || 
-           email === 'catalinsandu07@gmail.com' || 
-           email === 'admin@juristpro.ai';
+    
+    const email = user.email.toLowerCase().trim();
+    const adminEmails = ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'];
+    
+    const isHardcodedAdmin = adminEmails.includes(email);
+    const isRoleAdmin = user.role === 'admin';
+    
+    console.log(`[AUTH] Admin evaluation for ${email}: hardcoded=${isHardcodedAdmin}, role=${user.role}`);
+    
+    if (isHardcodedAdmin && !isRoleAdmin && !this.isDemo()) {
+      console.log(`[AUTH] Admin email detected (${email}). Syncing role to Firestore...`);
+      setTimeout(() => this.promoteToAdmin(user.id), 100);
+    }
+    
+    return isRoleAdmin || isHardcodedAdmin;
   });
+
+  private async promoteToAdmin(userId: string) {
+    try {
+      const docRef = doc(db, 'profiles', userId);
+      await updateDoc(docRef, { role: 'admin' });
+      console.log(`[AUTH] Utilizatorul ${userId} a fost promovat la rolul de admin.`);
+    } catch (error) {
+      console.error(`[AUTH] Eroare la promovarea utilizatorului ${userId}:`, error);
+    }
+  }
   
   isAuthenticated = computed(() => !!this._currentUser());
   
@@ -71,6 +104,27 @@ export class AuthService {
   isRealUser = computed(() => {
     return this.isAuthenticated() && !this.isDemo();
   });
+
+  private handleFirestoreError(error: unknown, operation: FirestoreOp, path: string | null) {
+    const errObj = {
+      error: error instanceof FirestoreError ? { code: error.code, message: error.message } : String(error),
+      auth: {
+        uid: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+      },
+      operation,
+      path,
+      timestamp: new Date().toISOString()
+    };
+    console.error('[FIRESTORE ERROR]', JSON.stringify(errObj));
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.toLowerCase().includes('permission')) {
+      this.notificationService.error(`Lipsă permisiuni: ${operation} pe ${path}.`);
+    } else {
+      this.notificationService.error(`Eroare bază de date: ${msg}`);
+    }
+    throw error;
+  }
 
   constructor() {
     this.initSession();
@@ -106,6 +160,29 @@ export class AuthService {
       console.error('Auth State Change Error:', error);
       this.notificationService.error('Eroare la verificarea sesiunii.');
     });
+  }
+
+  forceFallbackUserIfAuthenticated() {
+    const user = auth.currentUser;
+    if (user && !this._currentUser()) {
+        const lowerEmail = (user.email || '').toLowerCase().trim();
+        const isAdminEmail = lowerEmail === 'catalinsandu07@gmail.com' || 
+                             lowerEmail === 'admin@juristpro.ai' ||
+                             lowerEmail === 'juristpro.ai@gmail.com';
+        const role = isAdminEmail ? 'admin' : 'lawyer';
+
+        this._currentUser.set({
+            id: user.uid,
+            email: user.email || '',
+            fullName: user.displayName || user.email?.split('@')[0] || 'Utilizator',
+            role: role,
+            plan: 'expert',
+            status: 'active',
+            credits: 50,
+            consents: { terms: true, gdpr: true, marketing: false, tracking: true }
+        });
+        console.warn("[AUTH] Forced fallback profile because fetch timed out.");
+    }
   }
 
   // --- REAL-TIME UPDATE METHODS ---
@@ -176,12 +253,27 @@ export class AuthService {
       return { error: null };
     } catch (error: unknown) {
       const err = error as { message?: string, code?: string };
-      let msg = 'Eroare la autentificare cu Google.';
-      if (err.code === 'auth/popup-closed-by-user') {
-        msg = 'Fereastra de autentificare Google a fost închisă. Te rugăm să încerci din nou.';
+      let msg: string;
+      
+      console.error("Google Auth Error:", err);
+
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/popup-blocked') {
+        const isInIFrame = window.self !== window.top;
+        if (isInIFrame) {
+          msg = 'Fereastra Google a fost blocată de mediul de previzualizare. Te rugăm să deschizi aplicația într-un tab nou apăsând pe butonul din colțul dreapta-sus.';
+        } else {
+          msg = 'Fereastra de autentificare Google a fost închisă. Te rugăm să încerci din nou.';
+        }
       } else if (err.code === 'auth/too-many-requests') {
         msg = 'Prea multe încercări. Te rugăm să aștepți câteva minute.';
+      } else if (err.code === 'auth/unauthorized-domain') {
+        msg = 'Domeniul actual nu este autorizat în Firebase Console. Adaugă domain-ul aplicației în secțiunea "Authorized domains" din Authentication -> Settings.';
+      } else if (err.code === 'auth/operation-not-allowed') {
+        msg = 'Metoda de autentificare Google nu este activată în proiectul tău Firebase.';
+      } else {
+        msg = `Eroare Google: ${err.message || err.code || 'Necunoscută'}`;
       }
+      
       this.notificationService.error(msg);
       return { error: msg };
     }
@@ -310,13 +402,20 @@ export class AuthService {
         this.profileUnsubscribe();
         this.profileUnsubscribe = null;
       }
-      await signOut(auth);
       this._currentUser.set(null);
       this._allUsers.set([]);
+    } catch {
+      // Ignore cleanup errors
+    }
+    
+    // Sign out. We don't want partial unsubs to crash us.
+    try {
+      await signOut(auth);
       this.notificationService.info('V-ați deconectat.');
+      window.location.reload(); // Force full reload to wipe all listeners and state safely
     } catch (error) {
       console.error('Logout error:', error);
-      this.notificationService.error('Eroare la deconectare.');
+      window.location.reload();
     }
   }
 
@@ -329,6 +428,8 @@ export class AuthService {
 
   private profileUnsubscribe: (() => void) | null = null;
 
+  private _isCreatingProfile = false;
+
   private async fetchProfile(userId: string, email: string) {
     try {
       if (this.profileUnsubscribe) {
@@ -338,33 +439,71 @@ export class AuthService {
       const docRef = doc(db, 'profiles', userId);
       
       this.profileUnsubscribe = onSnapshot(docRef, (docSnap) => {
+        const lowerEmail = (email || '').toLowerCase().trim();
+        const isAdminEmail = lowerEmail === 'catalinsandu07@gmail.com' || 
+                             lowerEmail === 'admin@juristpro.ai' ||
+                             lowerEmail === 'juristpro.ai@gmail.com';
+
         if (docSnap.exists()) {
+          this._isCreatingProfile = false;
           const data = docSnap.data();
+          
+          let role = data['role'] || 'lawyer';
+          let status = data['status'];
+          let plan = data['plan'];
+          let credits = data['credits'];
+
+          if (isAdminEmail) {
+             let needsUpdate = false;
+             const updateObj: Record<string, string | number> = {};
+             if (role !== 'admin') { role = 'admin'; updateObj['role'] = 'admin'; needsUpdate = true; }
+             if (status !== 'active') { status = 'active'; updateObj['status'] = 'active'; needsUpdate = true; }
+             if (plan !== 'expert' && plan !== 'gold') { plan = 'expert'; updateObj['plan'] = 'expert'; needsUpdate = true; }
+             if (!credits || credits < 9999) { credits = 99999; updateObj['credits'] = 99999; needsUpdate = true; }
+
+             if (needsUpdate) {
+               // Automatically fix in db
+               Promise.resolve().then(() => {
+                  return updateDoc(docRef, updateObj);
+               }).catch(e => {
+                  console.warn('Could not auto-promote admin in DB', e);
+               });
+             }
+          }
+
           this._currentUser.set({
             id: userId,
-            email: email,
+            email: email || data['email'],
             fullName: data['full_name'],
-            role: data['role'] || 'lawyer',
-            plan: data['plan'],
-            status: data['status'],
-            credits: data['credits'],
+            role: role,
+            plan: plan,
+            status: status,
+            credits: credits,
             consents: data['consents'],
             billing_data: data['billing_data']
           });
         } else {
-          // If profile doesn't exist but auth does, create a basic profile
-          const plan = this._pendingRegistrationData?.plan || 'trial';
-          const consents = this._pendingRegistrationData?.consents || { terms: true, gdpr: true, marketing: false, tracking: true };
-          const credits = plan === 'trial' ? 5 : 0;
-          const status = plan === 'trial' ? 'trial' : 'pending_payment';
+          if (this._isCreatingProfile) return;
+          this._isCreatingProfile = true;
 
-          const isAdminEmail = email.toLowerCase() === 'catalinsandu07@gmail.com' || email.toLowerCase() === 'admin@juristpro.ai';
+          // If profile doesn't exist but auth does, create a basic profile
+          let plan = this._pendingRegistrationData?.plan || 'trial';
+          const consents = this._pendingRegistrationData?.consents || { terms: true, gdpr: true, marketing: false, tracking: true };
+          let credits = plan === 'trial' ? 5 : 0;
+          let status = plan === 'trial' ? 'trial' : 'pending_payment';
+
           const role = isAdminEmail ? 'admin' : 'lawyer';
           
+          if (isAdminEmail) {
+             status = 'active';
+             plan = 'expert';
+             credits = 99999;
+          }
+
           const newProfile = {
             id: userId,
             email: email,
-            full_name: email.split('@')[0],
+            full_name: email ? email.split('@')[0] : 'Utilizator Nou',
             role: role,
             plan: plan,
             status: status,
@@ -375,21 +514,17 @@ export class AuthService {
           
           this._pendingRegistrationData = null; // clear it
 
+          console.log(`[AUTH] Creating new profile for ${userId} (${email})...`);
           setDoc(docRef, newProfile).then(() => {
-            this._currentUser.set({
-              id: userId,
-              email: email,
-              fullName: newProfile.full_name,
-              role: role as UserRole,
-              plan: plan as 'trial' | 'expert' | 'gold',
-              status: status as SubscriptionStatus,
-              credits: credits,
-              consents: consents
-            });
+            console.log(`[AUTH] Profile created successfully for ${userId}`);
+            this._isCreatingProfile = false;
+          }).catch(err => {
+            this._isCreatingProfile = false;
+            this.handleFirestoreError(err, FirestoreOp.CREATE, `profiles/${userId}`);
           });
         }
       }, (error) => {
-        console.error("Error fetching profile:", error);
+        this.handleFirestoreError(error, FirestoreOp.GET, `profiles/${userId}`);
       });
     } catch (error) {
       console.error("Error setting up profile listener:", error);
@@ -416,7 +551,7 @@ export class AuthService {
         });
         this._allUsers.set(users);
       } catch (error) {
-        console.error("Error fetching all users:", error);
+        this.handleFirestoreError(error, FirestoreOp.LIST, 'profiles');
       }
   }
 
@@ -448,8 +583,7 @@ export class AuthService {
         this.notificationService.success(`S-au adăugat ${amount} credite.`);
       }
     } catch (error) {
-      console.error("Error adding credits:", error);
-      this.notificationService.error('Eroare la adăugarea creditelor.');
+      this.handleFirestoreError(error, FirestoreOp.UPDATE, `profiles/${id}`);
     }
   }
 

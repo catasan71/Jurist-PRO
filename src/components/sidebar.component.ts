@@ -96,8 +96,8 @@ export class SidebarComponent {
     this.linkClick.emit();
   }
   
-  logout() {
-    this.authService.logout();
+  async logout() {
+    await this.authService.logout();
     this.juristService.setModule('landing');
     this.linkClick.emit();
   }

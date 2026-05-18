@@ -274,6 +274,7 @@ export class AuthComponent {
         const timeoutId = setTimeout(() => {
           clearInterval(checkInterval);
           this.loading.set(false);
+          this.authService.forceFallbackUserIfAuthenticated();
           this.redirectUser();
         }, 5000);
       }
@@ -345,6 +346,7 @@ export class AuthComponent {
         const timeoutId = setTimeout(() => {
           clearInterval(checkInterval);
           this.loading.set(false);
+          this.authService.forceFallbackUserIfAuthenticated();
           this.redirectUser();
         }, 5000);
       }
@@ -352,18 +354,6 @@ export class AuthComponent {
        this.errorMessage.set("Eroare de conexiune la Google.");
        this.loading.set(false);
     }
-  }
-
-  async loginDemo() {
-    this.errorMessage.set('');
-    await this.authService.loginAsDemo();
-    this.redirectUser();
-  }
-
-  async loginAdminDemo() {
-    this.errorMessage.set('');
-    await this.authService.loginAsAdminDemo();
-    this.redirectUser();
   }
 
   async register() {
@@ -447,15 +437,13 @@ export class AuthComponent {
   }
 
   redirectUser() {
+    const user = this.authService.currentUser();
     if (this.authService.isAdmin()) {
-      this.juristService.setModule('admin-dashboard');
+        this.juristService.setModule('admin-dashboard');
+    } else if (user?.status === 'pending_payment') {
+      this.juristService.setModule('payment');
     } else {
-      const user = this.authService.currentUser();
-      if (user?.status === 'pending_payment') {
-        this.juristService.setModule('payment');
-      } else {
-        this.juristService.setModule('dashboard');
-      }
+      this.juristService.setModule('dashboard');
     }
   }
 

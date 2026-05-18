@@ -437,7 +437,9 @@ export class CalendarComponent implements OnInit {
 
   closeModal() {
     this.showModal.set(false);
-    this.stopDictation();
+    if (this.isListening && this.recognition) {
+      this.recognition.stop();
+    }
   }
 
   async saveEvent() {
