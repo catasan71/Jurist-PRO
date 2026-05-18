@@ -536,6 +536,9 @@ export class AdminDashboardComponent {
   };
 
   constructor() {
+     // Fetch admin data
+     this.authService.fetchAllUsers();
+     
      // Load current state securely
      effect(() => {
         const current = this.juristService.announcement();

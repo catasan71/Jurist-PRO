@@ -65,18 +65,15 @@ export class AuthService {
   
   isAdmin = computed(() => {
     const user = this._currentUser();
-    if (!user || !user.email) return false;
+    if (!user) return false;
     
-    const email = user.email.toLowerCase().trim();
+    // Fallback: true if the email is an admin email, regardless of what's in the DB
     const adminEmails = ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'];
-    
-    const isHardcodedAdmin = adminEmails.includes(email);
+    const emailToUse = (user.email || '').toLowerCase().trim();
+    const isHardcodedAdmin = emailToUse !== '' && adminEmails.includes(emailToUse);
     const isRoleAdmin = user.role === 'admin';
     
-    console.log(`[AUTH] Admin evaluation for ${email}: hardcoded=${isHardcodedAdmin}, role=${user.role}`);
-    
     if (isHardcodedAdmin && !isRoleAdmin && !this.isDemo()) {
-      console.log(`[AUTH] Admin email detected (${email}). Syncing role to Firestore...`);
       setTimeout(() => this.promoteToAdmin(user.id), 100);
     }
     
@@ -233,8 +230,15 @@ export class AuthService {
       this.notificationService.info('Email-ul de resetare a fost trimis.');
       return { error: null };
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      const msg = err.message || 'Eroare la trimiterea emailului.';
+      const err = error as { message?: string, code?: string };
+      let msg = err.message || 'Eroare la trimiterea emailului.';
+      
+      if (err.code === 'auth/network-request-failed' || msg.includes('network-request-failed')) {
+        msg = 'Eroare de rețea. Verificați conexiunea la internet sau dacă aveți un AdBlocker / Brave Shields activ, deoarece acesta poate bloca cererile către Firebase. Puteți încerca să deschideți aplicația într-un tab nou.';
+      } else if (err.code === 'auth/user-not-found' || msg.includes('user-not-found')) {
+        msg = 'Nu există niciun cont asociat cu această adresă de email.';
+      }
+      
       this.notificationService.error(msg);
       return { error: msg };
     }

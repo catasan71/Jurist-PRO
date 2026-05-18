@@ -438,7 +438,17 @@ export class AuthComponent {
 
   redirectUser() {
     const user = this.authService.currentUser();
-    if (this.authService.isAdmin()) {
+    let isAdmin = this.authService.isAdmin();
+    
+    // Explicit hardcoded check just in case the signal hasn't propagated or DB update delayed:
+    const adminEmails = ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'];
+    if (user && user.email) {
+      if (adminEmails.includes(user.email.toLowerCase().trim())) {
+         isAdmin = true;
+      }
+    }
+
+    if (isAdmin) {
         this.juristService.setModule('admin-dashboard');
     } else if (user?.status === 'pending_payment') {
       this.juristService.setModule('payment');

@@ -389,10 +389,15 @@ export class CalendarComponent implements OnInit {
     `;
 
     this.aiResponse.set(""); // Clear previous response
-    const res = await this.juristService.chatWithAssistant(context, (text) => {
-      this.aiResponse.set(text);
-    });
-    this.aiResponse.set(res.content);
+    try {
+      const res = await this.juristService.chatWithAssistant(context, (text) => {
+        this.aiResponse.set(text);
+      });
+      this.aiResponse.set(res.content);
+    } catch (e) {
+      console.error(e);
+      this.aiResponse.set("A apărut o eroare la calcularea termenelor. Verificați conexiunea sau creditele disponibile.");
+    }
   }
 
   openModal(event: CalendarEvent | null) {

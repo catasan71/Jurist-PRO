@@ -1004,7 +1004,7 @@ export class JuristService implements OnDestroy {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async _executeWithTimeout(ai: GoogleGenAI, parameters: AiCallParameters, timeoutMs: number): Promise<AsyncIterable<any>> {
-    const responsePromise = ai.models.generateContentStream({
+    const responsePromise = ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: parameters.contents,
       config: {
@@ -1016,8 +1016,13 @@ export class JuristService implements OnDestroy {
         tools: parameters.tools,
         safetySettings: LEGAL_SAFETY_SETTINGS
       }
+    }).then(result => {
+      // Convert single response into an AsyncIterable to maintain signature compatibility
+      return (async function* () {
+        yield result;
+      })();
     });
-    
+
     const timeoutPromise = new Promise<never>((_, reject) => 
       setTimeout(() => reject(new Error('AI_TIMEOUT')), timeoutMs)
     );
