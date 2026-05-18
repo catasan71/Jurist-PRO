@@ -200,13 +200,18 @@ export class AppComponent implements OnInit {
       
       // Auto-redirect from Landing to Dashboard/Admin if already logged in
       if (currentModule === 'landing' && currentUser) {
-        if (this.authService.isAdmin()) {
+        const isAdminByEmail = ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'].includes(currentUser.email || '');
+
+        if (this.authService.isAdmin() || isAdminByEmail) {
           this.juristService.setModule('admin-dashboard');
         } else if (currentUser.status === 'pending_payment') {
           this.juristService.setModule('payment');
         } else {
           this.juristService.setModule('dashboard');
         }
+      } else if (currentModule === 'landing' && currentUser && (this.authService.isAdmin() || ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'].includes(currentUser.email || ''))) {
+          // Direct admin bypass if already in an admin session perhaps?
+          this.juristService.setModule('admin-dashboard');
       }
 
       // Auto-redirect to landing if not authenticated and trying to access protected routes

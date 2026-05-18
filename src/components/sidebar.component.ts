@@ -57,7 +57,7 @@ import { AuthService } from '../services/auth.service';
         </button>
 
         <div class="text-[10px] text-gray-600 font-bold uppercase tracking-wider mb-2 px-2 mt-4">Administrativ</div>
-        @if (authService.isAdmin()) {
+        @if (authService.isAdmin() || ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'].includes(authService.currentUser()?.email || '')) {
           <button (click)="nav('admin-dashboard')" [class]="getBtnClass('admin-dashboard')">
             <span class="text-lg mr-3">👑</span> Panou Admin
           </button>
