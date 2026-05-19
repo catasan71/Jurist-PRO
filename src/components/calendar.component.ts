@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JuristService, CalendarEvent } from '../services/jurist.service';
@@ -42,17 +42,30 @@ interface WindowWithSpeechRecognition extends Window {
       }
 
       <!-- Header -->
-      <div class="p-6 border-b border-gray-800 bg-jurist-dark flex justify-between items-center">
+      <div class="p-6 border-b border-gray-800 bg-jurist-dark flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
            <h2 class="text-2xl font-bold text-jurist-orange mb-1">Calendar & Termene</h2>
            <p class="text-sm text-gray-400">Management dosare • Termene procedurale • Memento</p>
         </div>
-        <button (click)="openModal(null)" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm border border-gray-600 transition-colors flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          <span class="hidden sm:inline">Dosar Nou</span>
-        </button>
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <input 
+              type="text" 
+              [(ngModel)]="searchQuery" 
+              placeholder="Caută dosar..." 
+              class="bg-black border border-gray-700 rounded-lg py-2 pl-9 pr-3 text-sm text-white focus:border-jurist-orange outline-none w-full md:w-64"
+            >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+          </div>
+          <button (click)="openModal(null)" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm border border-gray-600 transition-colors flex items-center gap-2 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            <span class="hidden sm:inline">Dosar Nou</span>
+          </button>
+        </div>
       </div>
 
       <!-- Mobile Tabs Switcher -->
@@ -78,7 +91,7 @@ interface WindowWithSpeechRecognition extends Window {
           <h3 class="text-white font-bold mb-4 pl-2 border-l-4 border-jurist-orange hidden lg:block">Agenda Următoare</h3>
           
           <div class="space-y-4">
-             @for (event of juristService.events(); track event.id) {
+             @for (event of filteredEvents(); track event.id) {
                <div (click)="openModal(event)" (keyup.enter)="openModal(event)" tabindex="0" class="bg-gray-900 border border-gray-800 p-4 sm:p-5 rounded-xl flex items-start gap-3 sm:gap-4 hover:border-jurist-orange transition-all cursor-pointer relative overflow-hidden group">
                  <!-- Date Badge -->
                  <div class="bg-gray-800 rounded-lg p-2 text-center min-w-[70px] sm:min-w-[80px] self-stretch flex flex-col justify-center">
@@ -311,6 +324,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
   aiPrompt = '';
+  searchQuery = signal('');
   dateResult = signal<string>('');
   methodologyResult = signal<string>('');
   showMethodology = signal(false);
@@ -320,6 +334,19 @@ export class CalendarComponent implements OnInit, OnDestroy {
   
   showModal = signal(false);
   saving = signal(false);
+  
+  filteredEvents = computed(() => {
+    const q = this.searchQuery().toLowerCase().trim();
+    const events = this.juristService.events();
+    if (!q) return events;
+    return events.filter(e => 
+      e.title.toLowerCase().includes(q) || 
+      e.clientName.toLowerCase().includes(q) || 
+      e.caseObject.toLowerCase().includes(q) ||
+      e.details.toLowerCase().includes(q) ||
+      e.notes.toLowerCase().includes(q)
+    );
+  });
 
   defaultEvent: CalendarEvent = {
     id: '',
@@ -556,8 +583,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     try {
       this.recognition = new SpeechRecognitionObj();
       this.recognition.lang = 'ro-RO';
-      this.recognition.continuous = false;
-      this.recognition.interimResults = false;
+      this.recognition.continuous = true;
+      this.recognition.interimResults = true;
 
       this.recognition.onstart = () => {
         this.ngZone.run(() => {
@@ -567,12 +594,21 @@ export class CalendarComponent implements OnInit, OnDestroy {
         console.log('Calendar notes dictation started...');
       };
 
-      this.recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = event.results[0][0].transcript;
-        this.ngZone.run(() => {
-          this.editingEvent.notes = (this.editingEvent.notes || '') + (this.editingEvent.notes ? ' ' : '') + transcript;
-          this.cdr.detectChanges();
-        });
+      this.recognition.onresult = (event: any) => {
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        if (finalTranscript) {
+          this.ngZone.run(() => {
+            this.editingEvent.notes = (this.editingEvent.notes || '') + (this.editingEvent.notes ? ' ' : '') + finalTranscript;
+            this.cdr.detectChanges();
+          });
+        }
       };
 
       this.recognition.onerror = (event: { error?: string }) => {

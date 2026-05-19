@@ -222,8 +222,8 @@ export class StrategyComponent implements OnDestroy {
     try {
       this.recognition = new SpeechRecognitionObj();
       this.recognition.lang = 'ro-RO';
-      this.recognition.continuous = false;
-      this.recognition.interimResults = false;
+      this.recognition.continuous = true;
+      this.recognition.interimResults = true;
 
       this.recognition.onstart = () => {
         this.ngZone.run(() => {
@@ -233,12 +233,21 @@ export class StrategyComponent implements OnDestroy {
         console.log('Strategy dictation started...');
       };
 
-      this.recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = event.results[0][0].transcript;
-        this.ngZone.run(() => {
-          this.caseDetails += (this.caseDetails ? ' ' : '') + transcript;
-          this.cdr.detectChanges();
-        });
+      this.recognition.onresult = (event: any) => {
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        if (finalTranscript) {
+          this.ngZone.run(() => {
+            this.caseDetails += (this.caseDetails ? ' ' : '') + finalTranscript;
+            this.cdr.detectChanges();
+          });
+        }
       };
 
       this.recognition.onerror = (event: { error?: string }) => {

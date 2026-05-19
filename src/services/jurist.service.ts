@@ -2,7 +2,7 @@ import { Injectable, signal, computed, inject, effect, OnDestroy, PLATFORM_ID } 
 import { isPlatformBrowser } from '@angular/common';
 import { AuthService, UserConsents, FirestoreOp } from './auth.service';
 import { db } from '../app/firebase';
-import { doc, getDoc, updateDoc, setDoc, collection, getDocs, addDoc, query, where, orderBy, onSnapshot, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, collection, getDocs, addDoc, query, where, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { NotificationService } from './notification.service';
 
 /**
@@ -297,9 +297,9 @@ export class JuristService implements OnDestroy {
         }).catch(err => console.warn('Profile load error:', err.message));
 
         // Load Events (Snapshot with cleanup)
-        const eventsQuery = query(collection(db, 'events'), where('user_id', '==', user.id), orderBy('event_date', 'asc'));
+        const eventsQuery = query(collection(db, 'events'), where('user_id', '==', user.id));
         this._eventsUnsub = onSnapshot(eventsQuery, (snap) => {
-          this._events.set(snap.docs.map(doc => {
+          const events = snap.docs.map(doc => {
             const e = doc.data();
             return {
               id: doc.id,
@@ -314,16 +314,23 @@ export class JuristService implements OnDestroy {
               whatsappAlert: e['whatsapp_alert'],
               financial: e['financial'] || { total: 0, paid: 0, rest: 0 }
             };
-          }));
-        }, (err) => console.warn('Events listener error:', err.message));
+          });
+          
+          // Sort locally by date ascending
+          events.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+          this._events.set(events);
+        }, (err) => {
+          console.error('Events listener error:', err);
+          this.notificationService.error('Eroare la încărcarea dosarelor: ' + err.message);
+        });
 
         // Load Tickets (Snapshot with cleanup)
         const ticketsQuery = isAdmin
-          ? query(collection(db, 'tickets'), orderBy('created_at', 'desc'))
-          : query(collection(db, 'tickets'), where('user_id', '==', user.id), orderBy('created_at', 'desc'));
+          ? query(collection(db, 'tickets'))
+          : query(collection(db, 'tickets'), where('user_id', '==', user.id));
 
         this._ticketsUnsub = onSnapshot(ticketsQuery, (snap) => {
-          this._tickets.set(snap.docs.map(doc => {
+          const tickets = snap.docs.map(doc => {
             const t = doc.data();
             return {
               id: doc.id,
@@ -335,7 +342,11 @@ export class JuristService implements OnDestroy {
               status: t['status'],
               adminResponse: t['admin_response']
             };
-          }));
+          });
+          
+          // Sort locally by date descending
+          tickets.sort((a, b) => b.date.getTime() - a.date.getTime());
+          this._tickets.set(tickets);
         }, (err) => console.warn('Tickets listener error:', err.message));
 
         // Load Promo Codes (Admin only, Snapshot with cleanup)
@@ -367,11 +378,11 @@ export class JuristService implements OnDestroy {
     try {
       // Transactions
       const txQuery = isAdmin
-        ? query(collection(db, 'transactions'), orderBy('created_at', 'desc'))
-        : query(collection(db, 'transactions'), where('user_id', '==', userId), orderBy('created_at', 'desc'));
+        ? query(collection(db, 'transactions'))
+        : query(collection(db, 'transactions'), where('user_id', '==', userId));
       const txSnap = await getDocs(txQuery);
       if (!txSnap.empty) {
-        this._transactions.set(txSnap.docs.map(doc => {
+        const txs = txSnap.docs.map(doc => {
           const t = doc.data();
           return {
             id: doc.id,
@@ -384,7 +395,11 @@ export class JuristService implements OnDestroy {
             status: t['status'],
             billingData: t['billing_data']
           };
-        }));
+        });
+        
+        // Sort locally by date descending
+        txs.sort((a, b) => b.date.getTime() - a.date.getTime());
+        this._transactions.set(txs);
       }
     } catch (err) {
       console.warn('Initial data load warning:', err);
