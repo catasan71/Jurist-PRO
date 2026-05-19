@@ -438,8 +438,9 @@ app.post('/api/contact', async (req, res) => {
 app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env).filter(k => k.includes('GEMINI')).map(k => `${k}=${process.env[k]}`) }));
 
 // API Endpoint for Gemini Proxy
-app.post('/api/gemini', async (req, res) => {
-  const { contents, systemInstruction, tools } = req.body;
+  app.post('/api/gemini', async (req, res) => {
+  const { contents, systemInstruction } = req.body;
+  let { tools } = req.body;
   if (!process.env.GEMINI_API_KEY) {
     return res.status(500).json({ error: 'Cheia API Gemini nu este configurată pe server.' });
   }
@@ -451,6 +452,12 @@ app.post('/api/gemini', async (req, res) => {
       return res.status(500).json({ 
           error: 'Cheia API Gemini configurată în aplicație nu este validă. Vă rugăm să verificați setările (Secrets) aplicației.' 
       });
+  }
+  
+  // Remove googleSearch tool to avoid API key errors
+  if (tools && Array.isArray(tools)) {
+      tools = tools.filter(t => !t.googleSearch);
+      if (tools.length === 0) tools = undefined;
   }
   
   try {
@@ -494,9 +501,9 @@ app.post('/api/gemini', async (req, res) => {
     
     let errMsg = error.message || 'Eroare la generarea răspunsului';
     try {
-        // clean up ugly embedded json error format
-        if (errMsg.startsWith('{')) {
-            const parsed = JSON.parse(errMsg);
+        const jsonMatch = errMsg.match(/\{.*\}/s);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
             if (parsed.error && parsed.error.message) {
                 errMsg = parsed.error.message;
             }

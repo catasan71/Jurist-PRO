@@ -378,14 +378,25 @@ app.post("/api/contact", async (req, res) => {
 });
 app.get("/api/debug-key", (req, res) => res.json({ env: Object.keys(import_process.default.env).filter((k) => k.includes("GEMINI")).map((k) => `${k}=${import_process.default.env[k]}`) }));
 app.post("/api/gemini", async (req, res) => {
-  const { contents, systemInstruction, tools } = req.body;
+  const { contents, systemInstruction } = req.body;
+  let { tools } = req.body;
   if (!import_process.default.env.GEMINI_API_KEY) {
     return res.status(500).json({ error: "Cheia API Gemini nu este configurat\u0103 pe server." });
   }
-  console.log("[GEMINI] Using API key:", import_process.default.env.GEMINI_API_KEY.substring(0, 10) + "...");
+  const apiKey = import_process.default.env.GEMINI_API_KEY.trim();
+  console.log("[GEMINI] Using API key:", apiKey.substring(0, 5) + "...");
+  if (!apiKey.startsWith("AIza")) {
+    return res.status(500).json({
+      error: "Cheia API Gemini configurat\u0103 \xEEn aplica\u021Bie nu este valid\u0103. V\u0103 rug\u0103m s\u0103 verifica\u021Bi set\u0103rile (Secrets) aplica\u021Biei."
+    });
+  }
+  if (tools && Array.isArray(tools)) {
+    tools = tools.filter((t) => !t.googleSearch);
+    if (tools.length === 0) tools = void 0;
+  }
   try {
     const { GoogleGenAI, HarmCategory, HarmBlockThreshold } = await import("@google/genai");
-    const ai = new GoogleGenAI({ apiKey: import_process.default.env.GEMINI_API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const safetySettings = [
       { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
       { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -413,7 +424,18 @@ app.post("/api/gemini", async (req, res) => {
     res.end();
   } catch (error) {
     console.error("Gemini proxy error:", error);
-    res.status(500).json({ error: error.message });
+    let errMsg = error.message || "Eroare la generarea r\u0103spunsului";
+    try {
+      const jsonMatch = errMsg.match(/\{.*\}/s);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.error && parsed.error.message) {
+          errMsg = parsed.error.message;
+        }
+      }
+    } catch (err) {
+    }
+    res.status(500).json({ error: errMsg });
   }
 });
 async function runDeadlineAutomation() {
