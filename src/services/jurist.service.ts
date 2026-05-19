@@ -1081,7 +1081,6 @@ export class JuristService implements OnDestroy {
       const result = await this._callAi({
         systemInstruction: LEGAL_GUARDRAILS,
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        tools: [{ googleSearch: {} }]
       });
 
       interface AiChunk { 
@@ -1122,16 +1121,14 @@ export class JuristService implements OnDestroy {
   async generateStrategy(caseDetails: string, onChunk?: (chunk: string) => void): Promise<string> {
     return this._streamAiResponse({
       systemInstruction: LEGAL_GUARDRAILS,
-      contents: [{ role: 'user', parts: [{ text: `Analizează speța: ${caseDetails}. Oferă o strategie juridică exhaustivă (Rezumat, Încadrare, Opțiuni, Riscuri, Probatoriu, Recomandări).` }] }],
-      tools: [{ googleSearch: {} }]
+      contents: [{ role: 'user', parts: [{ text: `Analizează speța: ${caseDetails}. Oferă o strategie juridică exhaustivă (Rezumat, Încadrare, Opțiuni, Riscuri, Probatoriu, Recomandări).` }] }]
     }, 5, onChunk);
   }
 
   async analyzeEvidence(fileBase64: string, mimeType: string, prompt: string, onChunk?: (chunk: string) => void): Promise<string> {
     return this._streamAiResponse({
       systemInstruction: LEGAL_GUARDRAILS,
-      contents: [{ role: 'user', parts: [{ inlineData: { mimeType, data: fileBase64 } }, { text: `Audit juridic: ${prompt}` }] }],
-      tools: [{ googleSearch: {} }]
+      contents: [{ role: 'user', parts: [{ inlineData: { mimeType, data: fileBase64 } }, { text: `Audit juridic: ${prompt}` }] }]
     }, 5, onChunk);
   }
 
@@ -1150,16 +1147,14 @@ export class JuristService implements OnDestroy {
   async draftDocument(type: string, details: string, onChunk?: (chunk: string) => void): Promise<string> {
     return this._streamAiResponse({
       systemInstruction: LEGAL_GUARDRAILS,
-      contents: [{ role: 'user', parts: [{ text: `Redactează profesional: ${type}. Detalii: ${details}. Fără Markdown, limbaj formal instanță.` }] }],
-      tools: [{ googleSearch: {} }]
+      contents: [{ role: 'user', parts: [{ text: `Redactează profesional: ${type}. Detalii: ${details}. Fără Markdown, limbaj formal instanță.` }] }]
     }, 3, onChunk);
   }
 
   async calculateFees(context: string, onChunk?: (chunk: string) => void): Promise<string> {
     return this._streamAiResponse({
       systemInstruction: LEGAL_GUARDRAILS,
-      contents: [{ role: 'user', parts: [{ text: `Calculează taxe/onorarii (OUG 80/2013): ${context}` }] }],
-      tools: [{ googleSearch: {} }]
+      contents: [{ role: 'user', parts: [{ text: `Calculează taxe/onorarii (OUG 80/2013): ${context}` }] }]
     }, 2, onChunk);
   }
 
