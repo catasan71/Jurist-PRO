@@ -23,6 +23,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 
 // server.ts
+var import_process = __toESM(require("process"));
 var import_express = __toESM(require("express"));
 var import_path = __toESM(require("path"));
 var import_fs = __toESM(require("fs"));
@@ -31,12 +32,12 @@ var import_dotenv = __toESM(require("dotenv"));
 var import_firebase_admin = __toESM(require("firebase-admin"));
 var import_firestore = require("firebase-admin/firestore");
 var import_resend = require("resend");
-var __dirname = process.cwd();
+var __dirname = import_process.default.cwd();
 import_dotenv.default.config();
 var resendInstance = null;
 function getResend() {
   if (!resendInstance) {
-    resendInstance = new import_resend.Resend(process.env.RESEND_SECRET_KEY || process.env.RESEND_API_KEY || "re_MJw9ShNW_GVQFqnVaQPNFHZqsgkDPGHcA");
+    resendInstance = new import_resend.Resend(import_process.default.env.RESEND_SECRET_KEY || import_process.default.env.RESEND_API_KEY);
   }
   return resendInstance;
 }
@@ -45,35 +46,51 @@ var port = 3e3;
 var adminDbInstance = null;
 function getAdminDb() {
   if (!adminDbInstance) {
-    if (!import_firebase_admin.default.apps.length) {
-      import_firebase_admin.default.initializeApp({
-        projectId: process.env.FIREBASE_PROJECT_ID || "juristpro"
-      });
-    }
+    let projectId = import_process.default.env.FIREBASE_PROJECT_ID;
     let databaseId = "(default)";
     try {
       const configPath = import_path.default.join(__dirname, "firebase-applet-config.json");
       if (import_fs.default.existsSync(configPath)) {
         const config = JSON.parse(import_fs.default.readFileSync(configPath, "utf8"));
+        if (config.projectId) {
+          projectId = config.projectId;
+        }
         if (config.firestoreDatabaseId) {
           databaseId = config.firestoreDatabaseId;
         }
       }
     } catch (e) {
-      console.error("Failed to read firebase-applet-config.json:", e);
+      console.error("Failed to read config:", e);
     }
-    adminDbInstance = (0, import_firestore.getFirestore)(import_firebase_admin.default.app(), databaseId);
+    if (!import_firebase_admin.default.apps.length) {
+      const finalProjectId = projectId || "juristpro-d79ee";
+      console.log(`[FIREBASE] Initializing Admin SDK with projectId: ${finalProjectId}`);
+      try {
+        import_firebase_admin.default.initializeApp({
+          projectId: finalProjectId
+        });
+      } catch (initErr) {
+        console.error("[FIREBASE] Initialization error:", initErr);
+      }
+    }
+    const app2 = import_firebase_admin.default.app();
+    adminDbInstance = (0, import_firestore.getFirestore)(app2, databaseId === "(default)" || !databaseId ? void 0 : databaseId);
+    adminDbInstance.listCollections().then(() => {
+      console.log("[FIREBASE] Admin SDK connection successful");
+    }).catch((err) => {
+      console.warn("[FIREBASE] Admin SDK connection warned (expected if external project without service account):", err.message);
+    });
   }
   return adminDbInstance;
 }
 function getStripe() {
-  return new import_stripe.default(process.env.STRIPE_SECRET_KEY || "sk_test_dummy", {
+  return new import_stripe.default(import_process.default.env.STRIPE_SECRET_KEY || "sk_test_dummy", {
     apiVersion: "2024-12-18.acacia"
   });
 }
 app.post("/api/webhook", import_express.default.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const endpointSecret = import_process.default.env.STRIPE_WEBHOOK_SECRET;
   const stripe = getStripe();
   const adminDb = getAdminDb();
   let event;
@@ -218,7 +235,7 @@ app.post("/api/webhook", import_express.default.raw({ type: "application/json" }
 app.use(import_express.default.json());
 app.get("/api/test-stripe", async (req, res) => {
   try {
-    const stripeKey = process.env.STRIPE_SECRET_KEY || "sk_test_dummy";
+    const stripeKey = import_process.default.env.STRIPE_SECRET_KEY || "sk_test_dummy";
     if (stripeKey === "sk_test_dummy") {
       return res.status(500).json({ success: false, error: "Cheia Stripe nu este setat\u0103." });
     }
@@ -231,7 +248,7 @@ app.get("/api/test-stripe", async (req, res) => {
 });
 app.post("/api/create-checkout-session", async (req, res) => {
   try {
-    const stripeKey = process.env.STRIPE_SECRET_KEY || "sk_test_dummy";
+    const stripeKey = import_process.default.env.STRIPE_SECRET_KEY || "sk_test_dummy";
     if (stripeKey === "sk_test_dummy") {
       return res.status(500).json({ error: "Cheia Stripe (STRIPE_SECRET_KEY) lipse\u0219te din set\u0103rile aplica\u021Biei." });
     }
@@ -240,7 +257,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
       res.status(400).json({ error: "User ID is required" });
       return;
     }
-    const appUrl = req.headers.origin || process.env.APP_URL || `https://ais-dev-2gyoebyp2nbm3psmj7o4di-40090194019.europe-west2.run.app`;
+    const appUrl = req.headers.origin || import_process.default.env.APP_URL || `https://ais-dev-2gyoebyp2nbm3psmj7o4di-40090194019.europe-west2.run.app`;
     let sessionConfig = {
       payment_method_types: ["card"],
       client_reference_id: userId,
@@ -312,7 +329,7 @@ app.post("/api/create-portal-session", async (req, res) => {
       res.status(400).json({ error: "No active Stripe subscription found for this user." });
       return;
     }
-    const appUrl = req.headers.origin || process.env.APP_URL || `https://ais-dev-2gyoebyp2nbm3psmj7o4di-40090194019.europe-west2.run.app`;
+    const appUrl = req.headers.origin || import_process.default.env.APP_URL || `https://ais-dev-2gyoebyp2nbm3psmj7o4di-40090194019.europe-west2.run.app`;
     const stripe = getStripe();
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
@@ -359,9 +376,99 @@ app.post("/api/contact", async (req, res) => {
     res.status(500).json({ error: "Eroare la procesarea mesajului." });
   }
 });
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
+app.get("/api/debug-key", (req, res) => res.json({ env: Object.keys(import_process.default.env).filter((k) => k.includes("GEMINI")).map((k) => `${k}=${import_process.default.env[k]}`) }));
+app.post("/api/gemini", async (req, res) => {
+  const { contents, systemInstruction, tools } = req.body;
+  if (!import_process.default.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: "Cheia API Gemini nu este configurat\u0103 pe server." });
+  }
+  console.log("[GEMINI] Using API key:", import_process.default.env.GEMINI_API_KEY.substring(0, 10) + "...");
+  try {
+    const { GoogleGenAI, HarmCategory, HarmBlockThreshold } = await import("@google/genai");
+    const ai = new GoogleGenAI({ apiKey: import_process.default.env.GEMINI_API_KEY });
+    const safetySettings = [
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+    ];
+    const stream = await ai.models.generateContentStream({
+      model: "gemini-3-flash-preview",
+      contents,
+      config: {
+        systemInstruction,
+        tools,
+        temperature: 0.3,
+        topP: 0.9,
+        topK: 40,
+        safetySettings
+      }
+    });
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    for await (const chunk of stream) {
+      res.write(JSON.stringify(chunk) + "\n");
+    }
+    res.end();
+  } catch (error) {
+    console.error("Gemini proxy error:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
+async function runDeadlineAutomation() {
+  console.log("[ROBOT] Se scaneaz\u0103 pro-activ dosarele...");
+  const adminDb = getAdminDb();
+  try {
+    const tomorrow = /* @__PURE__ */ new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    const profilesSnapshot = await adminDb.collection("profiles").get();
+    for (const profileDoc of profilesSnapshot.docs) {
+      const profile = profileDoc.data();
+      const eventsRef = profileDoc.ref.collection("events");
+      const eventsSnapshot = await eventsRef.where("event_date", "==", tomorrowStr).where("whatsapp_alert", "==", true).get();
+      if (!eventsSnapshot.empty) {
+        for (const eventDoc of eventsSnapshot.docs) {
+          const event = eventDoc.data();
+          if (profile.email) {
+            console.log(`[ROBOT] ALERT\u0102 TRIGGER: Dosar ${event.title} - Email: ${profile.email}`);
+            try {
+              const resend = getResend();
+              await resend.emails.send({
+                from: "JuristPRO Robot <robot@developly.pro>",
+                to: [profile.email],
+                subject: `\u26A0\uFE0F ALERT\u0102 TERMEN: Dosar ${event.title}`,
+                html: `
+                  <div style="font-family: sans-serif; padding: 40px; background: #050505; color: white; border-radius: 20px;">
+                    <h1 style="color: #ea580c; font-size: 20px; font-weight: 900; text-transform: uppercase;">JuristPRO Automa\u021Biune</h1>
+                    <p style="color: #71717a;">Bun\u0103 ziua, Av. ${profile.full_name || "Colegu"},</p>
+                    <div style="background: #111; padding: 30px; border-radius: 20px; border: 1px solid #27272a; margin: 30px 0;">
+                      <p><strong>DOSAR:</strong> ${event.title}</p>
+                      <p><strong>TERMEN:</strong> ${event.event_date} la ${event.event_time}</p>
+                      <p><strong>INSTAN\u021A\u0102:</strong> ${event.details || "N/A"}</p>
+                    </div>
+                    <p style="font-size: 11px; color: #3f3f46;">Notificare automat\u0103 cu 24h \xEEnainte.</p>
+                  </div>
+                `
+              });
+            } catch (err) {
+              console.error("[ROBOT] Eroare trimitere email:", err);
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    if (error.message && error.message.includes("PERMISSION_DENIED")) {
+      console.warn("[ROBOT] S\u0103rire ciclu scanare din cauza lipsei de permisiuni pe proiectul curent (Admin SDK).");
+    } else {
+      console.error("[ROBOT] Eroare critic\u0103 \xEEn ciclul de automatizare:", error);
+    }
+  }
+}
+setInterval(runDeadlineAutomation, 8 * 60 * 60 * 1e3);
+setTimeout(runDeadlineAutomation, 15e3);
 var distPath = import_path.default.join(__dirname, "dist/juristpro/browser");
 console.log("Serving static files from:", distPath);
 app.use(import_express.default.static(distPath));

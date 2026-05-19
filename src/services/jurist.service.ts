@@ -1,6 +1,5 @@
 import { Injectable, signal, computed, inject, effect, OnDestroy, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import { AuthService, UserConsents, FirestoreOp } from './auth.service';
 import { db } from '../app/firebase';
 import { doc, getDoc, updateDoc, setDoc, collection, getDocs, addDoc, query, where, orderBy, onSnapshot, deleteDoc } from 'firebase/firestore';
@@ -140,13 +139,7 @@ REGULI ABSOLUTE DE REDACTARE (SANCȚIUNEA ESTE RESPINGEREA RĂSPUNSULUI):
 
 Oferă excelență sau nimic. Te adresezi unor avocați de top care au nevoie de analize de 10-15 pagini, nu de rezumate.`;
 
-// Safety settings - Force BLOCK_NONE to prevent evasive behavior on legal topics
-const LEGAL_SAFETY_SETTINGS = [
-  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
-];
+// Safety settings removed from client side.
 
 @Injectable({
   providedIn: 'root'
@@ -200,7 +193,6 @@ export class JuristService implements OnDestroy {
 
   totalRevenue = computed(() => this._transactions().reduce((acc, tx) => acc + tx.amount, 0));
 
-  private _aiInstance: GoogleGenAI | null = null;
 
   private handleFirestoreError(error: unknown, operation: FirestoreOp | string, path: string | null = null) {
     const errInfo = {
@@ -234,26 +226,7 @@ export class JuristService implements OnDestroy {
     }
   }
 
-  private async getAiInstance(): Promise<GoogleGenAI> {
-    if (this._aiInstance) return this._aiInstance;
-    
-    const apiKey = typeof GEMINI_API_KEY !== 'undefined' ? GEMINI_API_KEY : (environment as { geminiApiKey?: string }).geminiApiKey;
-    
-    if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey === '') {
-      const msg = 'Cheia API Gemini nu este configurată. Administratorul platformei trebuie să regenereze cheia API.';
-      this.notificationService.error(msg);
-      throw new Error(msg);
-    }
-    
-    try {
-      this._aiInstance = new GoogleGenAI({ apiKey });
-      return this._aiInstance;
-    } catch (error) {
-      this.notificationService.error('Eroare la inițializarea motorului AI.');
-      throw error;
-    }
-  }
-  
+
   promoCodes = this._promoCodes.asReadonly();
 
   private _announcementUnsub: (() => void) | null = null;

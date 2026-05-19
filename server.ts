@@ -444,12 +444,27 @@ app.post('/api/gemini', async (req, res) => {
     return res.status(500).json({ error: 'Cheia API Gemini nu este configurată pe server.' });
   }
   
-  console.log('[GEMINI] Using API key:', process.env.GEMINI_API_KEY.substring(0, 10) + '...');
+  const apiKey = process.env.GEMINI_API_KEY.trim();
+  console.log('[GEMINI] Using API key:', apiKey.substring(0, 5) + '...');
+  
+  if (!apiKey.startsWith('AIza')) {
+      return res.status(500).json({ 
+          error: 'Cheia API Gemini configurată în aplicație nu este validă. Vă rugăm să verificați setările (Secrets) aplicației.' 
+      });
+  }
   
   try {
-    const { GoogleGenAI } = await import('@google/genai');
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const { GoogleGenAI, HarmCategory, HarmBlockThreshold } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey });
     
+    // Safety settings - Force BLOCK_NONE to prevent evasive behavior on legal topics
+    const safetySettings = [
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+    ];
+
     // In a real implementation we would stream back the response, 
     // but for simplicity for now we send the full text back, 
     // or set up a streaming response
@@ -458,7 +473,11 @@ app.post('/api/gemini', async (req, res) => {
         contents,
         config: {
             systemInstruction,
-            tools
+            tools,
+            temperature: 0.3,
+            topP: 0.9,
+            topK: 40,
+            safetySettings
         }
     });
 
@@ -472,7 +491,21 @@ app.post('/api/gemini', async (req, res) => {
     res.end();
   } catch (error: any) {
     console.error('Gemini proxy error:', error);
-    res.status(500).json({ error: error.message });
+    
+    let errMsg = error.message || 'Eroare la generarea răspunsului';
+    try {
+        // clean up ugly embedded json error format
+        if (errMsg.startsWith('{')) {
+            const parsed = JSON.parse(errMsg);
+            if (parsed.error && parsed.error.message) {
+                errMsg = parsed.error.message;
+            }
+        }
+    } catch(err) {
+        // ignore
+    }
+    
+    res.status(500).json({ error: errMsg });
   }
 });
 
