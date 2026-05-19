@@ -272,6 +272,11 @@ interface WindowWithSpeechRecognition extends Window {
                     {{ isListening ? 'ASCULT...' : 'DICTARE VOCALĂ' }}
                   </button>
                 </div>
+                @if (isInIframe()) {
+                  <p class="text-[10px] text-jurist-orange bg-jurist-orange/5 border border-jurist-orange/20 rounded-lg p-2 mb-2 leading-relaxed">
+                    ⚠️ <strong>Restricție browser:</strong> Browserele blochează accesul la microfon în ferestrele tip iframe (AI Studio). Pentru a putea folosi funcția de dictare, vă rugăm să deschideți aplicația într-o filă nouă făcând click pe butonul <strong>"New Tab"</strong> din colțul dreapta-sus al ecranului!
+                  </p>
+                }
                 <textarea id="caseNotes" [ngModel]="currentEvent.notes" (ngModelChange)="updateCurrentEvent('notes', $event)" rows="5" class="w-full bg-black border border-gray-700 rounded-xl p-4 text-sm text-gray-200 focus:border-jurist-orange outline-none resize-none transition-all placeholder-gray-800" placeholder="Strategia, probe, martori propuși..."></textarea>
               </div>
 
@@ -378,6 +383,10 @@ export class CalendarComponent implements OnInit {
     }
   }
 
+  isInIframe() {
+    return typeof window !== 'undefined' && window.self !== window.top;
+  }
+
   async askAI() {
     // 1. Get Today's Date in Romanian Format
     const today = new Date().toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -409,7 +418,7 @@ export class CalendarComponent implements OnInit {
     
     try {
       this.juristService.toggleLoading(true);
-      const res = await this.juristService.chatWithAssistant(context, (text) => {
+      const res = await this.juristService.chatWithAssistant(context, () => {
         // We might want to handle partial updates, but for parsing logic, 
         // it's easier to handle after the full response.
       });

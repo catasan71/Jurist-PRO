@@ -3,7 +3,6 @@ import { isPlatformBrowser } from '@angular/common';
 import { AuthService, UserConsents, FirestoreOp } from './auth.service';
 import { db } from '../app/firebase';
 import { doc, getDoc, updateDoc, setDoc, collection, getDocs, addDoc, query, where, orderBy, onSnapshot, deleteDoc } from 'firebase/firestore';
-import { environment } from '../environments/environment';
 import { NotificationService } from './notification.service';
 
 /**
@@ -1037,7 +1036,7 @@ export class JuristService implements OnDestroy {
                 }
               }
               yield parsed;
-            } catch (err) {
+            } catch {
               // ignore
             }
           }

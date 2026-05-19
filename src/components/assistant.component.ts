@@ -112,6 +112,11 @@ interface WindowWithSpeechRecognition extends Window {
 
       <!-- Input Area -->
       <div class="p-4 bg-jurist-dark border-t border-gray-800 flex-shrink-0">
+        @if (isInIframe()) {
+          <p class="text-[10px] text-jurist-orange bg-jurist-orange/5 border border-jurist-orange/20 rounded-lg p-2 mb-3 leading-relaxed">
+            ⚠️ <strong>Dictare vocală (restricție iframe):</strong> Browserele blochează microfonul în iframe (AI Studio). Vă rugăm să apăsați butonul <strong>"New Tab"</strong> din colțul dreapta-sus al ecranului pentru a o folosi direct!
+          </p>
+        }
         <div class="flex gap-2 items-center">
           <div class="flex-1 relative flex items-center">
             <input 
@@ -180,6 +185,10 @@ export class AssistantComponent {
             setTimeout(() => this.scrollToBottom(), 100);
         }
     });
+  }
+
+  isInIframe() {
+    return typeof window !== 'undefined' && window.self !== window.top;
   }
 
   toggleDictation() {

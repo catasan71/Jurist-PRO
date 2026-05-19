@@ -214,9 +214,6 @@ export class AppComponent implements OnInit {
         } else {
           this.juristService.setModule('dashboard');
         }
-      } else if (currentModule === 'landing' && currentUser && (this.authService.isAdmin() || ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'].includes(currentUser.email || ''))) {
-          // Direct admin bypass if already in an admin session perhaps?
-          this.juristService.setModule('admin-dashboard');
       }
 
       // Auto-redirect to landing if not authenticated and trying to access protected routes
