@@ -465,10 +465,11 @@ export class AuthService {
           let credits = data['credits'];
 
           if (isAdminEmail) {
+             console.log(`[AUTH] Force-promoting ${email} to admin`);
              role = 'admin';
-             if (status !== 'active') { status = 'active'; }
-             if (plan !== 'expert' && plan !== 'gold') { plan = 'expert'; }
-             if (!credits || credits < 9999) { credits = 99999; }
+             status = 'active';
+             plan = 'expert';
+             credits = 99999;
           }
 
           this._currentUser.set({

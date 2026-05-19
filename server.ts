@@ -435,9 +435,41 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// HEALTH CHECK & AUTOMATION
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// API Endpoint for Gemini Proxy
+app.post('/api/gemini', async (req, res) => {
+  const { contents, systemInstruction, tools } = req.body;
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'Cheia API Gemini nu este configurată pe server.' });
+  }
+  
+  try {
+    const { GoogleGenAI } = await import('@google/genai');
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    
+    // In a real implementation we would stream back the response, 
+    // but for simplicity for now we send the full text back, 
+    // or set up a streaming response
+    const model = ai.models.generateContentStream({
+        model: 'gemini-3-flash-preview',
+        contents,
+        config: {
+            systemInstruction,
+            tools
+        }
+    });
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    for await (const chunk of model) {
+        res.write(JSON.stringify(chunk) + '\n');
+    }
+    res.end();
+  } catch (error: any) {
+    console.error('Gemini proxy error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // --- BACKGROUND AUTOMATION ROBOT ---

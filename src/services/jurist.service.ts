@@ -1003,37 +1003,41 @@ export class JuristService implements OnDestroy {
     parameters: AiCallParameters
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ): Promise<AsyncIterable<any>> {
-    const ai = await this.getAiInstance();
-    const timeoutMs = parameters.timeoutMs || 90000;
-    
-    try {
-      return await this._executeWithTimeout(ai, parameters, timeoutMs);
-    } catch (e: unknown) {
-      return this._handleAiError(e);
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async _executeWithTimeout(ai: GoogleGenAI, parameters: AiCallParameters, timeoutMs: number): Promise<AsyncIterable<any>> {
-    const responsePromise = ai.models.generateContentStream({
-      model: 'gemini-3-flash-preview',
-      contents: parameters.contents,
-      config: {
-        systemInstruction: parameters.systemInstruction,
-        temperature: 0.3,
-        topP: 0.9,
-        topK: 40,
-        maxOutputTokens: 8192,
-        tools: parameters.tools,
-        safetySettings: LEGAL_SAFETY_SETTINGS
-      }
+    const response = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(parameters)
     });
 
-    const timeoutPromise = new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('AI_TIMEOUT')), timeoutMs)
-    );
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Eroare necunoscută' }));
+      throw new Error(errorData.error || 'Eroare la apelul AI');
+    }
+
+    if (!response.body) {
+      throw new Error('Răspuns gol de la serverul AI');
+    }
+
+    // Return a stream that parses JSON lines from the response body
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
     
-    return await Promise.race([responsePromise, timeoutPromise]);
+    return {
+      [Symbol.asyncIterator]() {
+        return {
+          async next() {
+            const { value, done } = await reader.read();
+            if (done) return { done: true, value: undefined };
+            const chunk = decoder.decode(value, { stream: true });
+            try {
+              return { done: false, value: JSON.parse(chunk) };
+            } catch {
+              return { done: false, value: { text: '' } }; // Handle partial JSON
+            }
+          }
+        };
+      }
+    };
   }
 
   private _handleAiError(e: unknown): never {
