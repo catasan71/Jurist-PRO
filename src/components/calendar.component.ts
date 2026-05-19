@@ -196,7 +196,7 @@ interface WindowWithSpeechRecognition extends Window {
             <div class="p-6 border-b border-gray-800 flex justify-between items-center bg-jurist-dark">
               <div class="flex items-center gap-3">
                 <div class="w-3 h-3 rounded-full bg-jurist-orange animate-pulse"></div>
-                <h3 class="text-xl text-white font-bold">{{ currentEventSignal().id ? 'Editare Dosar' : 'Constituire Dosar Nou' }}</h3>
+                <h3 class="text-xl text-white font-bold">{{ editingEvent.id ? 'Editare Dosar' : 'Constituire Dosar Nou' }}</h3>
               </div>
               <button (click)="closeModal()" class="text-gray-400 hover:text-white p-2 hover:bg-gray-800 rounded-lg transition-colors">✕</button>
             </div>
@@ -205,11 +205,11 @@ interface WindowWithSpeechRecognition extends Window {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label for="caseTitle" class="block text-xs font-bold text-gray-400 uppercase mb-1">Număr / Titlu Dosar</label>
-                  <input id="caseTitle" [ngModel]="currentEventSignal().title" (ngModelChange)="updateCurrentEvent('title', $event)" placeholder="Ex: 1234/3/2024" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none transition-all">
+                  <input id="caseTitle" [(ngModel)]="editingEvent.title" placeholder="Ex: 1234/3/2024" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none transition-all">
                 </div>
                 <div>
                   <label for="caseType" class="block text-xs font-bold text-gray-400 uppercase mb-1">Tipologie</label>
-                  <select id="caseType" [ngModel]="currentEventSignal().type" (ngModelChange)="updateCurrentEvent('type', $event)" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none cursor-pointer">
+                  <select id="caseType" [(ngModel)]="editingEvent.type" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none cursor-pointer">
                     <option value="court">Instanță Judecătorească</option>
                     <option value="deadline">Termen Procedural</option>
                     <option value="meeting">Întâlnire Client</option>
@@ -220,22 +220,22 @@ interface WindowWithSpeechRecognition extends Window {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label for="caseDate" class="block text-xs font-bold text-gray-400 uppercase mb-1">Data</label>
-                  <input id="caseDate" type="date" [ngModel]="currentEventSignal().date" (ngModelChange)="updateCurrentEvent('date', $event)" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none [color-scheme:dark]">
+                  <input id="caseDate" type="date" [(ngModel)]="editingEvent.date" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none [color-scheme:dark]">
                 </div>
                 <div>
                   <label for="caseTime" class="block text-xs font-bold text-gray-400 uppercase mb-1">Ora</label>
-                  <input id="caseTime" type="time" [ngModel]="currentEventSignal().time" (ngModelChange)="updateCurrentEvent('time', $event)" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none [color-scheme:dark]">
+                  <input id="caseTime" type="time" [(ngModel)]="editingEvent.time" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none [color-scheme:dark]">
                 </div>
               </div>
 
               <div>
                 <label for="caseClient" class="block text-xs font-bold text-gray-400 uppercase mb-1">Client Beneficiar</label>
-                <input id="caseClient" [ngModel]="currentEventSignal().clientName" (ngModelChange)="updateCurrentEvent('clientName', $event)" placeholder="Nume client" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none transition-all">
+                <input id="caseClient" [(ngModel)]="editingEvent.clientName" placeholder="Nume client" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none transition-all">
               </div>
 
               <div>
                 <label for="caseDetails" class="block text-xs font-bold text-gray-400 uppercase mb-1">Instanța / Detalii Locație</label>
-                <input id="caseDetails" [ngModel]="currentEventSignal().details" (ngModelChange)="updateCurrentEvent('details', $event)" placeholder="Ex: Judecătoria Sector 1" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none transition-all">
+                <input id="caseDetails" [(ngModel)]="editingEvent.details" placeholder="Ex: Judecătoria Sector 1" class="w-full bg-black border border-gray-700 rounded-lg p-3 text-white focus:border-jurist-orange outline-none transition-all">
               </div>
 
               <div class="bg-gray-800/20 p-5 rounded-xl border border-gray-800 shadow-inner">
@@ -243,16 +243,16 @@ interface WindowWithSpeechRecognition extends Window {
                 <div class="grid grid-cols-2 gap-4">
                   <div>
                     <label for="caseTotal" class="text-[10px] text-gray-400 block mb-1">Onorariu Total</label>
-                    <input id="caseTotal" type="number" [ngModel]="currentEventSignal().financial!.total" (ngModelChange)="updateFinancial('total', $event)" class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white outline-none focus:border-green-500">
+                    <input id="caseTotal" type="number" [(ngModel)]="editingEvent.financial.total" class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white outline-none focus:border-green-500">
                   </div>
                   <div>
                     <label for="casePaid" class="text-[10px] text-gray-400 block mb-1">Suma Încasată</label>
-                    <input id="casePaid" type="number" [ngModel]="currentEventSignal().financial!.paid" (ngModelChange)="updateFinancial('paid', $event)" class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white outline-none focus:border-green-500">
+                    <input id="casePaid" type="number" [(ngModel)]="editingEvent.financial.paid" class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white outline-none focus:border-green-500">
                   </div>
                 </div>
                 <div class="mt-4 pt-3 border-t border-gray-800 flex justify-between items-center text-sm">
                   <span class="text-gray-400 font-medium">Rest de plată estimat:</span>
-                  <span class="font-bold text-jurist-orange text-lg">{{ currentEventSignal().financial!.rest }} RON</span>
+                  <span class="font-bold text-jurist-orange text-lg">{{ (editingEvent.financial.total || 0) - (editingEvent.financial.paid || 0) }} RON</span>
                 </div>
               </div>
 
@@ -277,12 +277,12 @@ interface WindowWithSpeechRecognition extends Window {
                     ⚠️ <strong>Restricție browser:</strong> Browserele blochează accesul la microfon în ferestrele tip iframe (AI Studio). Pentru a putea folosi funcția de dictare, vă rugăm să deschideți aplicația într-o filă nouă făcând click pe butonul <strong>"New Tab"</strong> din colțul dreapta-sus al ecranului!
                   </p>
                 }
-                <textarea id="caseNotes" [ngModel]="currentEventSignal().notes" (ngModelChange)="updateCurrentEvent('notes', $event)" rows="5" class="w-full bg-black border border-gray-700 rounded-xl p-4 text-sm text-gray-200 focus:border-jurist-orange outline-none resize-none transition-all placeholder-gray-800" placeholder="Strategia, probe, martori propuși..."></textarea>
+                <textarea id="caseNotes" [(ngModel)]="editingEvent.notes" rows="5" class="w-full bg-black border border-gray-700 rounded-xl p-4 text-sm text-gray-200 focus:border-jurist-orange outline-none resize-none transition-all placeholder-gray-800" placeholder="Strategia, probe, martori propuși..."></textarea>
               </div>
 
               <div class="flex items-center gap-4 bg-emerald-500/5 p-4 rounded-xl border border-emerald-500/10 hover:border-emerald-500/30 transition-all group">
                 <div class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="alert" [ngModel]="currentEventSignal().whatsappAlert" (ngModelChange)="updateCurrentEvent('whatsappAlert', $event)" [disabled]="!juristService.profile().phone" class="w-5 h-5 accent-jurist-orange cursor-pointer">
+                  <input type="checkbox" id="alert" [(ngModel)]="editingEvent.whatsappAlert" [disabled]="!juristService.profile().phone" class="w-5 h-5 accent-jurist-orange cursor-pointer">
                 </div>
                 <label for="alert" class="text-sm text-gray-300 cursor-pointer select-none">
                   <span class="font-bold text-white block">Alertă WhatsApp Automată</span>
@@ -293,11 +293,11 @@ interface WindowWithSpeechRecognition extends Window {
 
             <div class="p-6 border-t border-gray-800 flex justify-end gap-3 bg-jurist-dark">
               <button (click)="closeModal()" class="px-6 py-2.5 rounded-xl text-gray-400 hover:text-white font-bold transition-colors">Renunță</button>
-              <button (click)="saveEvent()" [disabled]="saving() || !currentEventSignal().title" class="bg-jurist-orange hover:bg-orange-600 text-black px-10 py-2.5 rounded-xl font-black transition-all active:scale-95 disabled:opacity-30 shadow-lg flex items-center justify-center gap-2">
+              <button (click)="saveEvent()" [disabled]="saving() || !editingEvent.title" class="bg-jurist-orange hover:bg-orange-600 text-black px-10 py-2.5 rounded-xl font-black transition-all active:scale-95 disabled:opacity-30 shadow-lg flex items-center justify-center gap-2">
                 @if (saving()) {
                   <div class="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"></div>
                 }
-                {{ currentEventSignal().id ? 'Actualizează Dosar' : 'Salvează Dosar' }}
+                {{ editingEvent.id ? 'Actualizează Dosar' : 'Salvează Dosar' }}
               </button>
             </div>
           </div>
@@ -321,19 +321,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
   showModal = signal(false);
   saving = signal(false);
 
-  isListening = signal(false);
-  recognition: ISpeechRecognition | null = null;
-
-  ngOnDestroy() {
-    if (this.isListening() && this.recognition) {
-      try {
-        this.recognition.stop();
-      } catch (e) {
-        console.warn('Speech stop error on destroy:', e);
-      }
-    }
-  }
-
   defaultEvent: CalendarEvent = {
     id: '',
     title: '',
@@ -347,6 +334,22 @@ export class CalendarComponent implements OnInit, OnDestroy {
     whatsappAlert: false,
     financial: { total: 0, paid: 0, rest: 0 }
   };
+
+  // Local object for modal to decouple from signals during editing
+  editingEvent: CalendarEvent = { ...this.defaultEvent };
+
+  isListening = signal(false);
+  recognition: ISpeechRecognition | null = null;
+
+  ngOnDestroy() {
+    if (this.isListening() && this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch (e) {
+        console.warn('Speech stop error on destroy:', e);
+      }
+    }
+  }
 
   currentEventSignal = signal<Partial<CalendarEvent>>({ ...this.defaultEvent });
   
@@ -452,18 +455,18 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   openModal(event: CalendarEvent | null) {
     if (event) {
-      // Deep copy to avoid binding issues
-      this.currentEventSignal.set(JSON.parse(JSON.stringify(event)));
+      // Deep copy to local editing object
+      this.editingEvent = JSON.parse(JSON.stringify(event));
     } else {
-      const newEvent = JSON.parse(JSON.stringify(this.defaultEvent));
-      newEvent.id = ''; // Ensure it's empty for creation
+      this.editingEvent = JSON.parse(JSON.stringify(this.defaultEvent));
+      this.editingEvent.id = ''; // Ensure it's empty for creation
       
       if (this.juristService.profile().phone) {
-        newEvent.whatsappAlert = true;
+        this.editingEvent.whatsappAlert = true;
       }
-      this.currentEventSignal.set(newEvent);
     }
     this.showModal.set(true);
+    this.cdr.detectChanges();
   }
 
   ngOnInit() {
@@ -498,17 +501,19 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   async saveEvent() {
-    const current = this.currentEventSignal();
-    if(!current.title) return;
+    if(!this.editingEvent.title) {
+       this.juristService.notificationService.warning("Vă rugăm să introduceți un titlu pentru dosar.");
+       return;
+    }
 
     this.saving.set(true);
     try {
-      const financial = current.financial || { total: 0, paid: 0, rest: 0 };
-      const eventToSave: CalendarEvent = {
-        ...this.defaultEvent,
-        ...current,
-        financial: { ...financial }
-      } as CalendarEvent;
+      const eventToSave: CalendarEvent = JSON.parse(JSON.stringify(this.editingEvent));
+      
+      // Ensure financial rest is calculated correctly
+      const total = eventToSave.financial?.total || 0;
+      const paid = eventToSave.financial?.paid || 0;
+      eventToSave.financial = { total, paid, rest: total - paid };
 
       if (eventToSave.id) {
         await this.juristService.updateEvent(eventToSave);
@@ -521,6 +526,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     } catch (err) {
       console.error('Error saving event:', err);
       this.saving.set(false);
+      this.cdr.detectChanges();
     }
   }
 
@@ -564,8 +570,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       this.recognition.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript;
         this.ngZone.run(() => {
-          const currentNotes = this.currentEventSignal().notes || '';
-          this.updateCurrentEvent('notes', currentNotes + (currentNotes ? ' ' : '') + transcript);
+          this.editingEvent.notes = (this.editingEvent.notes || '') + (this.editingEvent.notes ? ' ' : '') + transcript;
           this.cdr.detectChanges();
         });
       };

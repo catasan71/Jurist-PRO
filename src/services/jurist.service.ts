@@ -232,12 +232,14 @@ export class JuristService implements OnDestroy {
   private _profileUnsub: (() => void) | null = null;
   private _ticketsUnsub: (() => void) | null = null;
   private _promoUnsub: (() => void) | null = null;
+  private _eventsUnsub: (() => void) | null = null;
 
   public stopAllListeners() {
     if (this._announcementUnsub) { this._announcementUnsub(); this._announcementUnsub = null; }
     if (this._profileUnsub) { this._profileUnsub(); this._profileUnsub = null; }
     if (this._ticketsUnsub) { this._ticketsUnsub(); this._ticketsUnsub = null; }
     if (this._promoUnsub) { this._promoUnsub(); this._promoUnsub = null; }
+    if (this._eventsUnsub) { this._eventsUnsub(); this._eventsUnsub = null; }
   }
 
   constructor() {
@@ -282,6 +284,7 @@ export class JuristService implements OnDestroy {
         if (this._profileUnsub) this._profileUnsub();
         if (this._ticketsUnsub) this._ticketsUnsub();
         if (this._promoUnsub) this._promoUnsub();
+        if (this._eventsUnsub) this._eventsUnsub();
 
         // Load Profile Data
         getDoc(doc(db, 'profiles', user.id)).then((snap) => {
@@ -292,6 +295,27 @@ export class JuristService implements OnDestroy {
             }
           }
         }).catch(err => console.warn('Profile load error:', err.message));
+
+        // Load Events (Snapshot with cleanup)
+        const eventsQuery = query(collection(db, 'events'), where('user_id', '==', user.id), orderBy('event_date', 'asc'));
+        this._eventsUnsub = onSnapshot(eventsQuery, (snap) => {
+          this._events.set(snap.docs.map(doc => {
+            const e = doc.data();
+            return {
+              id: doc.id,
+              title: e['title'],
+              clientName: e['client_name'],
+              caseObject: e['case_object'],
+              date: e['event_date'],
+              time: e['event_time'],
+              type: e['type'] as 'court' | 'deadline' | 'meeting',
+              details: e['details'],
+              notes: e['notes'],
+              whatsappAlert: e['whatsapp_alert'],
+              financial: e['financial'] || { total: 0, paid: 0, rest: 0 }
+            };
+          }));
+        }, (err) => console.warn('Events listener error:', err.message));
 
         // Load Tickets (Snapshot with cleanup)
         const ticketsQuery = isAdmin
@@ -330,9 +354,10 @@ export class JuristService implements OnDestroy {
           if (this._profileUnsub) this._profileUnsub();
           if (this._ticketsUnsub) this._ticketsUnsub();
           if (this._promoUnsub) this._promoUnsub();
+          if (this._eventsUnsub) this._eventsUnsub();
         });
 
-        // Load initial one-time data (Events, Transactions)
+        // Load initial one-time data (Transactions)
         this.loadOneTimeData(user.id, isAdmin);
       }
     });
@@ -340,28 +365,6 @@ export class JuristService implements OnDestroy {
 
   private async loadOneTimeData(userId: string, isAdmin: boolean) {
     try {
-      // Events
-      const eventsQuery = query(collection(db, 'events'), where('user_id', '==', userId), orderBy('event_date', 'asc'));
-      const eventsSnap = await getDocs(eventsQuery);
-      if (!eventsSnap.empty) {
-        this._events.set(eventsSnap.docs.map(doc => {
-          const e = doc.data();
-          return {
-            id: doc.id,
-            title: e['title'],
-            clientName: e['client_name'],
-            caseObject: e['case_object'],
-            date: e['event_date'],
-            time: e['event_time'],
-            type: e['type'] as 'court' | 'deadline' | 'meeting',
-            details: e['details'],
-            notes: e['notes'],
-            whatsappAlert: e['whatsapp_alert'],
-            financial: e['financial'] || { total: 0, paid: 0, rest: 0 }
-          };
-        }));
-      }
-
       // Transactions
       const txQuery = isAdmin
         ? query(collection(db, 'transactions'), orderBy('created_at', 'desc'))
@@ -586,8 +589,6 @@ export class JuristService implements OnDestroy {
       console.log('[FIRESTORE] Adăugare dosar:', dbPayload);
       const docRef = await addDoc(collection(db, 'events'), dbPayload);
       if (docRef.id) {
-        const newEvent = { ...event, id: docRef.id };
-        this._events.update(e => [...e, newEvent]);
         this.notificationService.success("Dosarul a fost salvat cu succes în baza de date!");
       } else {
         throw new Error("ID-ul documentului generat este invalid.");
@@ -630,7 +631,7 @@ export class JuristService implements OnDestroy {
         throw e;
       }
     } else {
-      this.notificationService.success("Dosar local actualizat (Mod Demo).");
+      this.notificationService.info("Dosar local actualizat (Mod Demo).");
     }
   }
 
