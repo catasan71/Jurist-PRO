@@ -422,13 +422,17 @@ export class AuthComponent {
 
            if (this.selectedPlan === 'trial') {
              if (this.authService.currentUser()) {
-                 this.juristService.setModule('dashboard');
+                 this.redirectUser();
              } else {
                  this.errorMessage.set("Cont creat! Vă rugăm verificați emailul pentru confirmare.");
                  this.view.set('login');
              }
            } else {
-             this.juristService.setModule('payment');
+             if (this.authService.currentUser()) {
+                 this.redirectUser();
+             } else {
+                 this.juristService.setModule('payment');
+             }
            }
         }
     } catch {

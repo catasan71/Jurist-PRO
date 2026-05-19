@@ -435,12 +435,16 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
+app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env).filter(k => k.includes('GEMINI')).map(k => `${k}=${process.env[k]}`) }));
+
 // API Endpoint for Gemini Proxy
 app.post('/api/gemini', async (req, res) => {
   const { contents, systemInstruction, tools } = req.body;
   if (!process.env.GEMINI_API_KEY) {
     return res.status(500).json({ error: 'Cheia API Gemini nu este configurată pe server.' });
   }
+  
+  console.log('[GEMINI] Using API key:', process.env.GEMINI_API_KEY.substring(0, 10) + '...');
   
   try {
     const { GoogleGenAI } = await import('@google/genai');
