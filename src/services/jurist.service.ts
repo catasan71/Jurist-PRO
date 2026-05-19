@@ -424,6 +424,7 @@ export class JuristService implements OnDestroy {
   }
 
   setModule(module: ModuleType) {
+    console.log('DEBUG: setModule', module, new Error().stack);
     this._currentModule.set(module);
     if (typeof window !== 'undefined') {
       window.scrollTo(0, 0);

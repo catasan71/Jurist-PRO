@@ -438,24 +438,27 @@ export class AuthComponent {
     }
   }
 
-  redirectUser() {
-    const user = this.authService.currentUser();
+  async redirectUser() {
+    this.loading.set(true);
+    const user = await this.authService.waitForProfile();
+    this.loading.set(false);
+    
     let isAdmin = this.authService.isAdmin();
     
     // Explicit hardcoded check just in case the signal hasn't propagated or DB update delayed:
     const adminEmails = ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'];
     if (user && user.email) {
       if (adminEmails.includes(user.email.toLowerCase().trim())) {
-         isAdmin = true;
+          isAdmin = true;
       }
     }
     
-    console.log('DEBUG: AuthComponent.redirectUser', { user: user?.email, isAdmin, userRole: user?.role });
+    console.log('DEBUG: AuthComponent.redirectUser', { user: user.email, isAdmin, role: user.role, status: user.status });
 
     if (isAdmin) {
         console.log('DEBUG: Redirecting to admin-dashboard');
         this.juristService.setModule('admin-dashboard');
-    } else if (user?.status === 'pending_payment') {
+    } else if (user.status === 'pending_payment') {
       this.juristService.setModule('payment');
     } else {
       console.log('DEBUG: Redirecting to dashboard');

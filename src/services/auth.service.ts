@@ -531,6 +531,20 @@ export class AuthService {
     }
   }
   
+  async waitForProfile(): Promise<AppUser> {
+    return new Promise((resolve) => {
+        const check = () => {
+            const user = this._currentUser();
+            if (user) {
+                resolve(user);
+            } else {
+                setTimeout(check, 100);
+            }
+        };
+        check();
+    });
+  }
+  
   // Admin Method
   async fetchAllUsers() {
       try {
