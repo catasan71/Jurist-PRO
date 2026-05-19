@@ -458,6 +458,8 @@ export class AuthService {
         if (docSnap.exists()) {
           this._isCreatingProfile = false;
           const data = docSnap.data();
+          const emailFromData = data['email'] || email;
+          console.log(`[AUTH] fetchProfile for ${userId}. Data:`, data, 'Email:', emailFromData, 'isAdminEmail:', isAdminEmail);
           
           let role = data['role'] || 'lawyer';
           let status = data['status'];
@@ -465,7 +467,7 @@ export class AuthService {
           let credits = data['credits'];
 
           if (isAdminEmail) {
-             console.log(`[AUTH] Force-promoting ${email} to admin`);
+             console.log(`[AUTH] Force-promoting ${emailFromData} to admin`);
              role = 'admin';
              status = 'active';
              plan = 'expert';

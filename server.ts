@@ -449,7 +449,7 @@ app.post('/api/gemini', async (req, res) => {
     // In a real implementation we would stream back the response, 
     // but for simplicity for now we send the full text back, 
     // or set up a streaming response
-    const model = ai.models.generateContentStream({
+    const stream = await ai.models.generateContentStream({
         model: 'gemini-3-flash-preview',
         contents,
         config: {
@@ -462,7 +462,7 @@ app.post('/api/gemini', async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    for await (const chunk of model) {
+    for await (const chunk of stream) {
         res.write(JSON.stringify(chunk) + '\n');
     }
     res.end();

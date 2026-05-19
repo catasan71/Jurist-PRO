@@ -228,10 +228,11 @@ export class AppComponent implements OnInit {
         this.juristService.setModule('dashboard');
       }
 
-      // Uncomment if you want to automatically redirect admins ONLY from landing
-      // if ((currentModule === 'dashboard' || currentModule === 'payment') && this.authService.isAdmin() ) {
-      //   this.juristService.setModule('admin-dashboard');
-      // }
+      // Redirect admins from standard dashboard/payment to admin-dashboard
+      if ((currentModule === 'dashboard' || currentModule === 'payment') && this.authService.isAdmin()) {
+        console.log('DEBUG: Admin detected on client side, redirecting to admin-dashboard');
+        this.juristService.setModule('admin-dashboard');
+      }
     });
 
     if (typeof window !== 'undefined') {

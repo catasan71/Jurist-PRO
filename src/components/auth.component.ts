@@ -447,13 +447,18 @@ export class AuthComponent {
     
     // Explicit hardcoded check just in case the signal hasn't propagated or DB update delayed:
     const adminEmails = ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'];
-    if (user && user.email) {
-      if (adminEmails.includes(user.email.toLowerCase().trim())) {
-          isAdmin = true;
-      }
+    const emailToUse = user.email ? user.email.toLowerCase().trim() : '';
+    
+    if (adminEmails.includes(emailToUse)) {
+        isAdmin = true;
     }
     
-    console.log('DEBUG: AuthComponent.redirectUser', { user: user.email, isAdmin, role: user.role, status: user.status });
+    console.log('DEBUG: AuthComponent.redirectUser [FINAL]', { 
+        userEmail: emailToUse, 
+        isAdminStatus: isAdmin, 
+        role: user.role, 
+        status: user.status 
+    });
 
     if (isAdmin) {
         console.log('DEBUG: Redirecting to admin-dashboard');
