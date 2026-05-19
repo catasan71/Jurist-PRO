@@ -259,8 +259,8 @@ interface WindowWithSpeechRecognition extends Window {
               <div>
                 <div class="flex justify-between items-center mb-2">
                   <label for="caseNotes" class="block text-xs font-bold text-gray-400 uppercase">Strategie & Note Tactice</label>
-                  <button (click)="toggleDictation()" [class]="'flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black transition-all border shadow-lg ' + (isListening ? 'bg-red-600 text-white border-red-500 animate-pulse' : 'bg-gray-800 text-gray-300 border-gray-700 hover:border-jurist-orange hover:text-white')">
-                    @if (isListening) {
+                  <button (click)="toggleDictation()" [class]="'flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black transition-all border shadow-lg ' + (isListening() ? 'bg-red-600 text-white border-red-500 animate-pulse' : 'bg-gray-800 text-gray-300 border-gray-700 hover:border-jurist-orange hover:text-white')">
+                    @if (isListening()) {
                       <span class="relative flex h-2 w-2">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                         <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
@@ -269,7 +269,7 @@ interface WindowWithSpeechRecognition extends Window {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
                     </svg>
-                    {{ isListening ? 'ASCULT...' : 'DICTARE VOCALĂ' }}
+                    {{ isListening() ? 'ASCULT...' : 'DICTARE VOCALĂ' }}
                   </button>
                 </div>
                 @if (isInIframe()) {
@@ -321,7 +321,7 @@ export class CalendarComponent implements OnInit {
   showModal = signal(false);
   saving = signal(false);
 
-  isListening = false;
+  isListening = signal(false);
   recognition: ISpeechRecognition | null = null;
 
   defaultEvent: CalendarEvent = {
@@ -482,7 +482,7 @@ export class CalendarComponent implements OnInit {
 
   closeModal() {
     this.showModal.set(false);
-    if (this.isListening && this.recognition) {
+    if (this.isListening() && this.recognition) {
       this.recognition.stop();
     }
   }
@@ -515,7 +515,7 @@ export class CalendarComponent implements OnInit {
   }
 
   toggleDictation() {
-    if (this.isListening) {
+    if (this.isListening()) {
       if (this.recognition) {
         try {
           this.recognition.stop();
@@ -523,7 +523,7 @@ export class CalendarComponent implements OnInit {
           console.warn('Silent stop error:', e);
         }
       }
-      this.isListening = false;
+      this.isListening.set(false);
       this.cdr.detectChanges();
       return;
     }
@@ -545,7 +545,7 @@ export class CalendarComponent implements OnInit {
 
       this.recognition.onstart = () => {
         this.ngZone.run(() => {
-          this.isListening = true;
+          this.isListening.set(true);
           this.cdr.detectChanges();
         });
         console.log('Calendar notes dictation started...');
@@ -564,7 +564,7 @@ export class CalendarComponent implements OnInit {
         console.error('Calendar speech error:', event.error || event);
         const errType = event.error;
         this.ngZone.run(() => {
-          this.isListening = false;
+          this.isListening.set(false);
           this.cdr.detectChanges();
           
           if (errType === 'not-allowed') {
@@ -577,7 +577,7 @@ export class CalendarComponent implements OnInit {
 
       this.recognition.onend = () => {
         this.ngZone.run(() => {
-          this.isListening = false;
+          this.isListening.set(false);
           this.cdr.detectChanges();
         });
         console.log('Calendar notes dictation ended.');
@@ -588,7 +588,7 @@ export class CalendarComponent implements OnInit {
     } catch (e) {
       console.error('Failed to initialize speech recognition:', e);
       alert('Nu s-a putut inițializa microfonul. Vă rugăm să deschideți aplicația într-o filă nouă (New Tab) pentru a acorda permisiuni direct.');
-      this.isListening = false;
+      this.isListening.set(false);
       this.cdr.detectChanges();
     }
   }

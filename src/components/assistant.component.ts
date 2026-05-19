@@ -129,10 +129,10 @@ interface WindowWithSpeechRecognition extends Window {
             >
             <button 
               (click)="toggleDictation()"
-              [class]="'absolute right-2 p-2 rounded-full transition-all ' + (isListening ? 'bg-red-600 text-white animate-pulse' : 'text-gray-400 hover:text-jurist-orange')"
-              [title]="isListening ? 'Oprește dictarea' : 'Dictare vocală'"
+              [class]="'absolute right-2 p-2 rounded-full transition-all ' + (isListening() ? 'bg-red-600 text-white animate-pulse' : 'text-gray-400 hover:text-jurist-orange')"
+              [title]="isListening() ? 'Oprește dictarea' : 'Dictare vocală'"
             >
-              @if (isListening) {
+              @if (isListening()) {
                 <span class="absolute inset-0 rounded-full bg-red-600 animate-ping opacity-25"></span>
               }
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 relative z-10">
@@ -174,7 +174,7 @@ export class AssistantComponent {
 
   @ViewChild('scrollContainer') private scrollContainer!: ElementRef;
 
-  isListening = false;
+  isListening = signal(false);
   recognition: ISpeechRecognition | null = null;
 
   constructor() {
@@ -192,7 +192,7 @@ export class AssistantComponent {
   }
 
   toggleDictation() {
-    if (this.isListening) {
+    if (this.isListening()) {
       if (this.recognition) {
         try {
           this.recognition.stop();
@@ -200,7 +200,7 @@ export class AssistantComponent {
           console.warn('Silent stop error:', e);
         }
       }
-      this.isListening = false;
+      this.isListening.set(false);
       this.cdr.detectChanges();
       return;
     }
@@ -222,7 +222,7 @@ export class AssistantComponent {
 
       this.recognition.onstart = () => {
         this.ngZone.run(() => {
-          this.isListening = true;
+          this.isListening.set(true);
           this.cdr.detectChanges();
         });
         console.log('Dictation started...');
@@ -240,7 +240,7 @@ export class AssistantComponent {
         console.error('Speech recognition error:', event.error || event);
         const errType = event.error;
         this.ngZone.run(() => {
-          this.isListening = false;
+          this.isListening.set(false);
           this.cdr.detectChanges();
           
           if (errType === 'not-allowed') {
@@ -253,7 +253,7 @@ export class AssistantComponent {
 
       this.recognition.onend = () => {
         this.ngZone.run(() => {
-          this.isListening = false;
+          this.isListening.set(false);
           this.cdr.detectChanges();
         });
         console.log('Dictation ended.');
@@ -264,7 +264,7 @@ export class AssistantComponent {
     } catch (e) {
       console.error('Failed to initialize speech recognition:', e);
       alert('Nu s-a putut inițializa microfonul. Vă rugăm să deschideți aplicația într-o filă nouă (New Tab) pentru a acorda permisiuni direct.');
-      this.isListening = false;
+      this.isListening.set(false);
       this.cdr.detectChanges();
     }
   }

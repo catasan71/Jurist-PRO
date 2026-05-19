@@ -51,11 +51,11 @@ interface WindowWithSpeechRecognition extends Window {
                 Descrieți situația de fapt
               </span>
               <div class="flex items-center gap-3">
-                <button (click)="toggleDictation()" [class]="'flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border ' + (isListening ? 'bg-red-600 text-white border-red-500 animate-pulse' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-jurist-orange')">
-                  @if (isListening) {
+                <button (click)="toggleDictation()" [class]="'flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border ' + (isListening() ? 'bg-red-600 text-white border-red-500 animate-pulse' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-jurist-orange')">
+                  @if (isListening()) {
                     <span class="w-2 h-2 rounded-full bg-white"></span>
                   }
-                  {{ isListening ? 'ASCULTĂM...' : '🎤 DICTARE VOCALĂ' }}
+                  {{ isListening() ? 'ASCULTĂM...' : '🎤 DICTARE VOCALĂ' }}
                 </button>
                 <span class="text-[10px] text-orange-400 bg-orange-900/20 px-2 py-1 rounded border border-orange-500/50 font-bold uppercase tracking-wider">Cost: 5 Credite</span>
               </div>
@@ -175,7 +175,7 @@ export class StrategyComponent {
   caseDetails = '';
   strategyResult = signal<string>('');
 
-  isListening = false;
+  isListening = signal(false);
   recognition: ISpeechRecognition | null = null;
 
   constructor() {
@@ -187,7 +187,7 @@ export class StrategyComponent {
   }
 
   toggleDictation() {
-    if (this.isListening) {
+    if (this.isListening()) {
       if (this.recognition) {
         try {
           this.recognition.stop();
@@ -195,7 +195,7 @@ export class StrategyComponent {
           console.warn('Silent stop error:', e);
         }
       }
-      this.isListening = false;
+      this.isListening.set(false);
       this.cdr.detectChanges();
       return;
     }
@@ -217,7 +217,7 @@ export class StrategyComponent {
 
       this.recognition.onstart = () => {
         this.ngZone.run(() => {
-          this.isListening = true;
+          this.isListening.set(true);
           this.cdr.detectChanges();
         });
         console.log('Strategy dictation started...');
@@ -235,7 +235,7 @@ export class StrategyComponent {
         console.error('Strategy speech error:', event.error || event);
         const errType = event.error;
         this.ngZone.run(() => {
-          this.isListening = false;
+          this.isListening.set(false);
           this.cdr.detectChanges();
           
           if (errType === 'not-allowed') {
@@ -248,7 +248,7 @@ export class StrategyComponent {
 
       this.recognition.onend = () => {
         this.ngZone.run(() => {
-          this.isListening = false;
+          this.isListening.set(false);
           this.cdr.detectChanges();
         });
         console.log('Strategy dictation ended.');
@@ -259,7 +259,7 @@ export class StrategyComponent {
     } catch (e) {
       console.error('Failed to initialize speech recognition:', e);
       alert('Nu s-a putut inițializa microfonul. Vă rugăm să deschideți aplicația într-o filă nouă (New Tab) pentru a acorda permisiuni direct.');
-      this.isListening = false;
+      this.isListening.set(false);
       this.cdr.detectChanges();
     }
   }
