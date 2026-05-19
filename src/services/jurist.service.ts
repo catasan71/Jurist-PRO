@@ -556,59 +556,81 @@ export class JuristService implements OnDestroy {
 
   async addEvent(event: CalendarEvent) {
     const user = this.authService.currentUser();
-    if (!user) return;
+    if (!user) {
+      this.notificationService.error("Eroare: Trebuie să fiți autentificat pentru a adăuga un dosar.");
+      return;
+    }
 
     if (this.authService.isDemo()) {
       const demoEvent = { ...event, id: 'local-' + Date.now() };
       this._events.update(e => [...e, demoEvent]);
+      this.notificationService.success("Dosar local salvat (Mod Demo).");
       return;
     }
 
     try {
       const dbPayload = {
         user_id: user.id,
-        title: event.title,
-        client_name: event.clientName,
-        case_object: event.caseObject,
-        event_date: event.date,
-        event_time: event.time,
-        type: event.type,
-        details: event.details,
-        notes: event.notes,
-        whatsapp_alert: event.whatsappAlert,
-        financial: event.financial
+        title: event.title || '',
+        client_name: event.clientName || '',
+        case_object: event.caseObject || '',
+        event_date: event.date || '',
+        event_time: event.time || '09:00',
+        type: event.type || 'court',
+        details: event.details || '',
+        notes: event.notes || '',
+        whatsapp_alert: !!event.whatsappAlert,
+        financial: event.financial || { total: 0, paid: 0, rest: 0 }
       };
 
+      console.log('[FIRESTORE] Adăugare dosar:', dbPayload);
       const docRef = await addDoc(collection(db, 'events'), dbPayload);
       if (docRef.id) {
         const newEvent = { ...event, id: docRef.id };
         this._events.update(e => [...e, newEvent]);
+        this.notificationService.success("Dosarul a fost salvat cu succes în baza de date!");
+      } else {
+        throw new Error("ID-ul documentului generat este invalid.");
       }
     } catch (e) {
       this.handleFirestoreError(e, FirestoreOp.CREATE, 'events');
+      throw e;
     }
   }
 
   async updateEvent(updatedEvent: CalendarEvent) {
     const user = this.authService.currentUser();
-    if (!user) return;
+    if (!user) {
+      this.notificationService.error("Eroare: Trebuie să fiți autentificat pentru a edita un dosar.");
+      return;
+    }
 
     this._events.update(events => events.map(e => e.id === updatedEvent.id ? updatedEvent : e));
 
     if (!this.authService.isDemo()) {
-      const dbPayload = {
-        title: updatedEvent.title,
-        client_name: updatedEvent.clientName,
-        case_object: updatedEvent.caseObject,
-        event_date: updatedEvent.date,
-        event_time: updatedEvent.time,
-        type: updatedEvent.type,
-        details: updatedEvent.details,
-        notes: updatedEvent.notes,
-        whatsapp_alert: updatedEvent.whatsappAlert,
-        financial: updatedEvent.financial
-      };
-      await updateDoc(doc(db, 'events', updatedEvent.id), dbPayload);
+      try {
+        const dbPayload = {
+          title: updatedEvent.title || '',
+          client_name: updatedEvent.clientName || '',
+          case_object: updatedEvent.caseObject || '',
+          event_date: updatedEvent.date || '',
+          event_time: updatedEvent.time || '09:00',
+          type: updatedEvent.type || 'court',
+          details: updatedEvent.details || '',
+          notes: updatedEvent.notes || '',
+          whatsapp_alert: !!updatedEvent.whatsappAlert,
+          financial: updatedEvent.financial || { total: 0, paid: 0, rest: 0 }
+        };
+
+        const docRef = doc(db, 'events', updatedEvent.id);
+        await updateDoc(docRef, dbPayload);
+        this.notificationService.success("Dosarul a fost actualizat cu succes în baza de date!");
+      } catch (e) {
+        this.handleFirestoreError(e, FirestoreOp.UPDATE, `events/${updatedEvent.id}`);
+        throw e;
+      }
+    } else {
+      this.notificationService.success("Dosar local actualizat (Mod Demo).");
     }
   }
 

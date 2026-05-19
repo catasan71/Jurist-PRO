@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JuristService, CalendarEvent } from '../services/jurist.service';
@@ -259,7 +259,7 @@ interface WindowWithSpeechRecognition extends Window {
               <div>
                 <div class="flex justify-between items-center mb-2">
                   <label for="caseNotes" class="block text-xs font-bold text-gray-400 uppercase">Strategie & Note Tactice</label>
-                  <button (click)="toggleDictation()" [class]="'flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black transition-all border shadow-lg ' + (isListening() ? 'bg-red-600 text-white border-red-500 animate-pulse' : 'bg-gray-800 text-gray-300 border-gray-700 hover:border-jurist-orange hover:text-white')">
+                  <button type="button" (click)="toggleDictation()" [class]="'flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black transition-all border shadow-lg ' + (isListening() ? 'bg-red-600 text-white border-red-500 animate-pulse' : 'bg-gray-800 text-gray-300 border-gray-700 hover:border-jurist-orange hover:text-white')">
                     @if (isListening()) {
                       <span class="relative flex h-2 w-2">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -306,7 +306,7 @@ interface WindowWithSpeechRecognition extends Window {
     </div>
   `
 })
-export class CalendarComponent implements OnInit {
+export class CalendarComponent implements OnInit, OnDestroy {
   juristService = inject(JuristService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
@@ -323,6 +323,16 @@ export class CalendarComponent implements OnInit {
 
   isListening = signal(false);
   recognition: ISpeechRecognition | null = null;
+
+  ngOnDestroy() {
+    if (this.isListening() && this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch (e) {
+        console.warn('Speech stop error on destroy:', e);
+      }
+    }
+  }
 
   defaultEvent: CalendarEvent = {
     id: '',

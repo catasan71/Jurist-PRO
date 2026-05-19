@@ -1,4 +1,4 @@
-import { Component, inject, signal, ChangeDetectorRef, ChangeDetectionStrategy, NgZone } from '@angular/core';
+import { Component, inject, signal, ChangeDetectorRef, ChangeDetectionStrategy, NgZone, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JuristService } from '../services/jurist.service';
@@ -51,7 +51,7 @@ interface WindowWithSpeechRecognition extends Window {
                 Descrieți situația de fapt
               </span>
               <div class="flex items-center gap-3">
-                <button (click)="toggleDictation()" [class]="'flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border ' + (isListening() ? 'bg-red-600 text-white border-red-500 animate-pulse' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-jurist-orange')">
+                <button type="button" (click)="toggleDictation()" [class]="'flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border ' + (isListening() ? 'bg-red-600 text-white border-red-500 animate-pulse' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-jurist-orange')">
                   @if (isListening()) {
                     <span class="w-2 h-2 rounded-full bg-white"></span>
                   }
@@ -168,7 +168,7 @@ interface WindowWithSpeechRecognition extends Window {
     </div>
   `
 })
-export class StrategyComponent {
+export class StrategyComponent implements OnDestroy {
   juristService = inject(JuristService);
   authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
@@ -178,6 +178,16 @@ export class StrategyComponent {
 
   isListening = signal(false);
   recognition: ISpeechRecognition | null = null;
+
+  ngOnDestroy() {
+    if (this.isListening() && this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch (e) {
+        console.warn('Speech stop error on destroy:', e);
+      }
+    }
+  }
 
   constructor() {
     // Lazy-loaded speech recognition initialized on-demand

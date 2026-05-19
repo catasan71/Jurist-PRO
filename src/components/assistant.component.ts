@@ -1,4 +1,4 @@
-import { Component, inject, signal, ElementRef, ViewChild, effect, ChangeDetectorRef, ChangeDetectionStrategy, NgZone } from '@angular/core';
+import { Component, inject, signal, ElementRef, ViewChild, effect, ChangeDetectorRef, ChangeDetectionStrategy, NgZone, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JuristService, ChatMessage } from '../services/jurist.service';
@@ -162,7 +162,7 @@ interface WindowWithSpeechRecognition extends Window {
     </div>
   `
 })
-export class AssistantComponent {
+export class AssistantComponent implements OnDestroy {
   juristService = inject(JuristService);
   authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
@@ -176,6 +176,16 @@ export class AssistantComponent {
 
   isListening = signal(false);
   recognition: ISpeechRecognition | null = null;
+
+  ngOnDestroy() {
+    if (this.isListening() && this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch (e) {
+        console.warn('Speech stop error on destroy:', e);
+      }
+    }
+  }
 
   constructor() {
     // Only scroll when messages update, preventing loop
