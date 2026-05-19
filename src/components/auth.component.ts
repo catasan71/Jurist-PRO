@@ -449,12 +449,16 @@ export class AuthComponent {
          isAdmin = true;
       }
     }
+    
+    console.log('DEBUG: AuthComponent.redirectUser', { user: user?.email, isAdmin, userRole: user?.role });
 
     if (isAdmin) {
+        console.log('DEBUG: Redirecting to admin-dashboard');
         this.juristService.setModule('admin-dashboard');
     } else if (user?.status === 'pending_payment') {
       this.juristService.setModule('payment');
     } else {
+      console.log('DEBUG: Redirecting to dashboard');
       this.juristService.setModule('dashboard');
     }
   }

@@ -75,6 +75,8 @@ export class AuthService {
     const isHardcodedAdmin = emailToUse !== '' && adminEmails.includes(emailToUse);
     const isRoleAdmin = user.role === 'admin';
     
+    console.log('DEBUG: Auth check', { email: emailToUse, isHardcodedAdmin, isRoleAdmin, user });
+
     if (isHardcodedAdmin && !isRoleAdmin && !this.isDemo()) {
       setTimeout(() => this.promoteToAdmin(user.id), 100);
     }
@@ -231,17 +233,19 @@ export class AuthService {
   }
 
   async resetPassword(email: string): Promise<{ error: string | null }> {
+    console.log('DEBUG: Resetting password for:', email);
     try {
       await sendPasswordResetEmail(auth, email);
       this.notificationService.info('Email-ul de resetare a fost trimis.');
       return { error: null };
     } catch (error: unknown) {
+      console.error('DEBUG: Reset password error:', error);
       const err = error as { message?: string, code?: string };
       let msg = err.message || 'Eroare la trimiterea emailului.';
       
-      if (err.code === 'auth/network-request-failed' || msg.includes('network-request-failed')) {
+      if (err.code === 'auth/network-request-failed' || (msg && msg.includes('network-request-failed'))) {
         msg = 'Eroare de rețea. Verificați conexiunea la internet sau dacă aveți un AdBlocker / Brave Shields activ, deoarece acesta poate bloca cererile către Firebase. Puteți încerca să deschideți aplicația într-un tab nou.';
-      } else if (err.code === 'auth/user-not-found' || msg.includes('user-not-found')) {
+      } else if (err.code === 'auth/user-not-found' || (msg && msg.includes('user-not-found'))) {
         msg = 'Nu există niciun cont asociat cu această adresă de email.';
       }
       
@@ -464,7 +468,7 @@ export class AuthService {
           let credits = data['credits'];
 
           if (isAdminEmail) {
-             if (role !== 'admin') { role = 'admin'; }
+             role = 'admin';
              if (status !== 'active') { status = 'active'; }
              if (plan !== 'expert' && plan !== 'gold') { plan = 'expert'; }
              if (!credits || credits < 9999) { credits = 99999; }
