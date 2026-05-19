@@ -991,26 +991,63 @@ export class JuristService implements OnDestroy {
       throw new Error('Răspuns gol de la serverul AI');
     }
 
-    // Return a stream that parses JSON lines from the response body
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    
-    return {
-      [Symbol.asyncIterator]() {
-        return {
-          async next() {
+
+    const stream = {
+      async *[Symbol.asyncIterator]() {
+        let buffer = '';
+        try {
+          while (true) {
             const { value, done } = await reader.read();
-            if (done) return { done: true, value: undefined };
-            const chunk = decoder.decode(value, { stream: true });
-            try {
-              return { done: false, value: JSON.parse(chunk) };
-            } catch {
-              return { done: false, value: { text: '' } }; // Handle partial JSON
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed) {
+                try {
+                  const parsed = JSON.parse(trimmed);
+                  if (parsed && typeof parsed === 'object') {
+                    // Enrich with text property if missing for easy client consumption
+                    if (!parsed.text) {
+                      const textVal = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                      if (textVal) {
+                        parsed.text = textVal;
+                      }
+                    }
+                  }
+                  yield parsed;
+                } catch (err) {
+                  console.warn('Eroare parsing JSON-Line:', err, trimmed);
+                }
+              }
             }
           }
-        };
+          if (buffer.trim()) {
+            try {
+              const parsed = JSON.parse(buffer.trim());
+              if (parsed && typeof parsed === 'object') {
+                if (!parsed.text) {
+                  const textVal = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                  if (textVal) {
+                    parsed.text = textVal;
+                  }
+                }
+              }
+              yield parsed;
+            } catch (err) {
+              // ignore
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
       }
     };
+
+    return stream;
   }
 
   private _handleAiError(e: unknown): never {
