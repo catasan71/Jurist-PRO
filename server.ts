@@ -512,6 +512,10 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
         // ignore
     }
     
+    if (errMsg.includes('API key not valid')) {
+        errMsg = 'Cheia API Gemini furnizată nu este validă. Vă rugăm să verificați meniul Settings (Secrets) și să introduceți o cheie API validă din Google AI Studio.';
+    }
+    
     res.status(500).json({ error: errMsg });
   }
 });

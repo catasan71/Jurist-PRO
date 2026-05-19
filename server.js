@@ -435,6 +435,9 @@ app.post("/api/gemini", async (req, res) => {
       }
     } catch (err) {
     }
+    if (errMsg.includes("API key not valid")) {
+      errMsg = "Cheia API Gemini furnizat\u0103 nu este valid\u0103. V\u0103 rug\u0103m s\u0103 verifica\u021Bi meniul Settings (Secrets) \u0219i s\u0103 introduce\u021Bi o cheie API valid\u0103 din Google AI Studio.";
+    }
     res.status(500).json({ error: errMsg });
   }
 });
