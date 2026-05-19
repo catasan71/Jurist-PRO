@@ -357,7 +357,7 @@ export class CalendarComponent implements OnInit {
   }
 
   constructor() {
-    this.initSpeechRecognition();
+    // Lazy-loaded speech recognition initialized on-demand
   }
 
   getBadgeClass(type: string) {
@@ -505,69 +505,82 @@ export class CalendarComponent implements OnInit {
     }
   }
 
-  initSpeechRecognition() {
-    if (typeof window !== 'undefined') {
-      const win = window as unknown as WindowWithSpeechRecognition;
-      const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        this.recognition = new SpeechRecognition();
-        if (this.recognition) {
-          this.recognition.lang = 'ro-RO';
-          this.recognition.continuous = false;
-          this.recognition.interimResults = false;
-
-          this.recognition.onstart = () => {
-            this.ngZone.run(() => {
-              this.isListening = true;
-              this.cdr.detectChanges();
-            });
-            console.log('Calendar notes dictation started...');
-          };
-
-          this.recognition.onresult = (event: SpeechRecognitionEvent) => {
-            const transcript = event.results[0][0].transcript;
-            this.ngZone.run(() => {
-              const currentNotes = this.currentEventSignal().notes || '';
-              this.updateCurrentEvent('notes', currentNotes + (currentNotes ? ' ' : '') + transcript);
-              this.cdr.detectChanges();
-            });
-          };
-
-          this.recognition.onerror = (event: { error?: string }) => {
-            console.error('Calendar speech error:', event.error || event);
-            this.ngZone.run(() => {
-              this.isListening = false;
-              this.cdr.detectChanges();
-            });
-          };
-          
-          this.recognition.onend = () => {
-            this.ngZone.run(() => {
-              this.isListening = false;
-              this.cdr.detectChanges();
-            });
-          };
+  toggleDictation() {
+    if (this.isListening) {
+      if (this.recognition) {
+        try {
+          this.recognition.stop();
+        } catch (e) {
+          console.warn('Silent stop error:', e);
         }
       }
-    }
-  }
-
-  toggleDictation() {
-    if (!this.recognition) {
-      alert('Recunoașterea vocală nu este suportată în acest browser.');
+      this.isListening = false;
+      this.cdr.detectChanges();
       return;
     }
 
-    if (this.isListening) {
-      this.recognition.stop();
-    } else {
-      try {
-        this.recognition.start();
-      } catch (e) {
-        console.error('Calendar recognition start fail:', e);
-        this.isListening = false;
-        this.cdr.detectChanges();
-      }
+    if (typeof window === 'undefined') return;
+
+    const win = window as unknown as WindowWithSpeechRecognition;
+    const SpeechRecognitionObj = win.SpeechRecognition || win.webkitSpeechRecognition;
+    if (!SpeechRecognitionObj) {
+      alert('Recunoașterea vocală nu este suportată în acest browser sau mediu. Vă recomandăm să folosiți Google Chrome sau Safari.');
+      return;
+    }
+
+    try {
+      this.recognition = new SpeechRecognitionObj();
+      this.recognition.lang = 'ro-RO';
+      this.recognition.continuous = false;
+      this.recognition.interimResults = false;
+
+      this.recognition.onstart = () => {
+        this.ngZone.run(() => {
+          this.isListening = true;
+          this.cdr.detectChanges();
+        });
+        console.log('Calendar notes dictation started...');
+      };
+
+      this.recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = event.results[0][0].transcript;
+        this.ngZone.run(() => {
+          const currentNotes = this.currentEventSignal().notes || '';
+          this.updateCurrentEvent('notes', currentNotes + (currentNotes ? ' ' : '') + transcript);
+          this.cdr.detectChanges();
+        });
+      };
+
+      this.recognition.onerror = (event: { error?: string }) => {
+        console.error('Calendar speech error:', event.error || event);
+        const errType = event.error;
+        this.ngZone.run(() => {
+          this.isListening = false;
+          this.cdr.detectChanges();
+          
+          if (errType === 'not-allowed') {
+            alert('Accesul la microfon a fost refuzat sau blocat.\n\nSFAT IMPORTANT: Dacă folosiți preview-ul AI Studio (modul iframe), browserele blochează accesul la microfon dintr-un cadru de securitate. Vă rugăm să faceți click pe butonul de deschidere în filă nouă (New Tab) din colțul din dreapta-sus al ecranului, pentru ca aplicația să poată solicita permisiunea de microfon direct!');
+          } else if (errType === 'network') {
+            alert('Eroare de rețea la serviciul de recunoaștere vocală al browserului.');
+          }
+        });
+      };
+
+      this.recognition.onend = () => {
+        this.ngZone.run(() => {
+          this.isListening = false;
+          this.cdr.detectChanges();
+        });
+        console.log('Calendar notes dictation ended.');
+      };
+
+      this.recognition.start();
+
+    } catch (e) {
+      console.error('Failed to initialize speech recognition:', e);
+      alert('Nu s-a putut inițializa microfonul. Vă rugăm să deschideți aplicația într-o filă nouă (New Tab) pentru a acorda permisiuni direct.');
+      this.isListening = false;
+      this.cdr.detectChanges();
     }
   }
 }
