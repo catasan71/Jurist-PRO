@@ -650,6 +650,24 @@ export class JuristService implements OnDestroy {
     }
   }
 
+  async deleteEvent(eventId: string) {
+    const user = this.authService.currentUser();
+    if (!user) return;
+
+    if (this.authService.isDemo()) {
+      this._events.update(events => events.filter(e => e.id !== eventId));
+      this.notificationService.info("Dosar local șters (Mod Demo).");
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'events', eventId));
+      this.notificationService.success("Dosarul a fost șters cu succes!");
+    } catch (e) {
+      this.handleFirestoreError(e, FirestoreOp.DELETE, `events/${eventId}`);
+    }
+  }
+
   sendWhatsAppAlert(event: CalendarEvent) {
     const phone = this.profile().phone;
     if (!phone) {

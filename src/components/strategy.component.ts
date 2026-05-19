@@ -5,8 +5,17 @@ import { JuristService } from '../services/jurist.service';
 import { AuthService } from '../services/auth.service';
 import { MarkdownPipe } from '../pipes/markdown.pipe';
 
+interface SpeechResult {
+  isFinal: boolean;
+  [key: number]: { transcript: string };
+}
+
 interface SpeechRecognitionEvent {
-  results: { transcript: string }[][];
+  results: {
+    [key: number]: SpeechResult;
+    length: number;
+  };
+  resultIndex: number;
 }
 
 interface ISpeechRecognition {
@@ -62,9 +71,23 @@ interface WindowWithSpeechRecognition extends Window {
             </div>
             
             @if (isInIframe()) {
-              <p class="text-[10px] text-jurist-orange bg-jurist-orange/5 border border-jurist-orange/20 rounded-lg p-2 mb-3 leading-relaxed">
-                ⚠️ <strong>Restricție browser:</strong> Browserele blochează accesul la microfon în ferestrele tip iframe (AI Studio). Pentru a putea folosi funcția de dictare, vă rugăm să deschideți aplicația într-o filă nouă făcând click pe butonul <strong>"New Tab"</strong> din colțul dreapta-sus al ecranului!
-              </p>
+              <div class="bg-jurist-orange/10 border border-jurist-orange/30 rounded-xl p-4 mb-4 animate-pulse">
+                <p class="text-xs text-jurist-orange font-bold flex items-center gap-2 mb-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.38c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                  RESTRICȚIE BROWSER (MICROFON)
+                </p>
+                <p class="text-[10px] text-gray-300 leading-relaxed mb-3">
+                  Browserele blochează accesul la microfon în ferestrele tip iframe (AI Studio). Pentru a folosi dictarea, trebuie să deschideți aplicația într-o filă nouă!
+                </p>
+                <button (click)="openInNewTab()" class="w-full bg-jurist-orange hover:bg-jurist-orangeHover text-black text-[10px] font-black py-2 rounded-lg transition-all flex items-center justify-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-black">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                  </svg>
+                  DESCHIDE ÎN TAB NOU (NEW TAB)
+                </button>
+              </div>
             }
             
             <textarea 
@@ -196,6 +219,12 @@ export class StrategyComponent implements OnDestroy {
     return typeof window !== 'undefined' && window.self !== window.top;
   }
 
+  openInNewTab() {
+    if (typeof window !== 'undefined') {
+      window.open(window.location.href, '_blank');
+    }
+  }
+
   toggleDictation() {
     if (this.isListening()) {
       if (this.recognition) {
@@ -233,7 +262,7 @@ export class StrategyComponent implements OnDestroy {
         console.log('Strategy dictation started...');
       };
 
-      this.recognition.onresult = (event: any) => {
+      this.recognition.onresult = (event: SpeechRecognitionEvent) => {
         let finalTranscript = '';
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {

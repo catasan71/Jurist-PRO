@@ -3,8 +3,17 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JuristService, CalendarEvent } from '../services/jurist.service';
 
+interface SpeechResult {
+  isFinal: boolean;
+  [key: number]: { transcript: string };
+}
+
 interface SpeechRecognitionEvent {
-  results: { transcript: string }[][];
+  results: {
+    [key: number]: SpeechResult;
+    length: number;
+  };
+  resultIndex: number;
 }
 
 interface ISpeechRecognition {
@@ -91,9 +100,14 @@ interface WindowWithSpeechRecognition extends Window {
           <h3 class="text-white font-bold mb-4 pl-2 border-l-4 border-jurist-orange hidden lg:block">Agenda Următoare</h3>
           
           <div class="space-y-4">
-             @for (event of filteredEvents(); track event.id) {
-               <div (click)="openModal(event)" (keyup.enter)="openModal(event)" tabindex="0" class="bg-gray-900 border border-gray-800 p-4 sm:p-5 rounded-xl flex items-start gap-3 sm:gap-4 hover:border-jurist-orange transition-all cursor-pointer relative overflow-hidden group">
-                 <!-- Date Badge -->
+              @for (event of filteredEvents(); track event.id) {
+                <div (click)="openModal(event)" (keyup.enter)="openModal(event)" tabindex="0" class="bg-gray-900 border border-gray-800 p-4 sm:p-5 rounded-xl flex items-start gap-3 sm:gap-4 hover:border-jurist-orange transition-all cursor-pointer relative overflow-hidden group">
+                  <button (click)="$event.stopPropagation(); confirmDelete(event.id)" class="absolute top-2 right-2 text-gray-500 hover:text-red-500 transition-colors p-2 z-10 opacity-0 group-hover:opacity-100" title="Șterge Dosar">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                    </svg>
+                  </button>
+                  <!-- Date Badge -->
                  <div class="bg-gray-800 rounded-lg p-2 text-center min-w-[70px] sm:min-w-[80px] self-stretch flex flex-col justify-center">
                    <span class="block text-xs text-gray-400 uppercase">{{ event.date | date:'MMM' }}</span>
                    <span class="block text-2xl sm:text-3xl font-bold text-white">{{ event.date | date:'dd' }}</span>
@@ -286,9 +300,23 @@ interface WindowWithSpeechRecognition extends Window {
                   </button>
                 </div>
                 @if (isInIframe()) {
-                  <p class="text-[10px] text-jurist-orange bg-jurist-orange/5 border border-jurist-orange/20 rounded-lg p-2 mb-2 leading-relaxed">
-                    ⚠️ <strong>Restricție browser:</strong> Browserele blochează accesul la microfon în ferestrele tip iframe (AI Studio). Pentru a putea folosi funcția de dictare, vă rugăm să deschideți aplicația într-o filă nouă făcând click pe butonul <strong>"New Tab"</strong> din colțul dreapta-sus al ecranului!
-                  </p>
+                  <div class="bg-jurist-orange/10 border border-jurist-orange/30 rounded-xl p-4 mb-4 animate-pulse">
+                    <p class="text-xs text-jurist-orange font-bold flex items-center gap-2 mb-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.38c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                      </svg>
+                      RESTRICȚIE BROWSER (MICROFON)
+                    </p>
+                    <p class="text-[10px] text-gray-300 leading-relaxed mb-3">
+                      Browserele blochează accesul la microfon în ferestrele tip iframe (AI Studio). Pentru a folosi dictarea, trebuie să deschideți aplicația într-o filă nouă!
+                    </p>
+                    <button type="button" (click)="openInNewTab()" class="w-full bg-jurist-orange hover:bg-orange-600 text-black text-[10px] font-black py-2 rounded-lg transition-all flex items-center justify-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-black">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                      </svg>
+                      DESCHIDE ÎN TAB NOU
+                    </button>
+                  </div>
                 }
                 <textarea id="caseNotes" [(ngModel)]="editingEvent.notes" rows="5" class="w-full bg-black border border-gray-700 rounded-xl p-4 text-sm text-gray-200 focus:border-jurist-orange outline-none resize-none transition-all placeholder-gray-800" placeholder="Strategia, probe, martori propuși..."></textarea>
               </div>
@@ -304,14 +332,24 @@ interface WindowWithSpeechRecognition extends Window {
               </div>
             </div>
 
-            <div class="p-6 border-t border-gray-800 flex justify-end gap-3 bg-jurist-dark">
-              <button (click)="closeModal()" class="px-6 py-2.5 rounded-xl text-gray-400 hover:text-white font-bold transition-colors">Renunță</button>
-              <button (click)="saveEvent()" [disabled]="saving() || !editingEvent.title" class="bg-jurist-orange hover:bg-orange-600 text-black px-10 py-2.5 rounded-xl font-black transition-all active:scale-95 disabled:opacity-30 shadow-lg flex items-center justify-center gap-2">
-                @if (saving()) {
-                  <div class="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"></div>
-                }
-                {{ editingEvent.id ? 'Actualizează Dosar' : 'Salvează Dosar' }}
-              </button>
+            <div class="p-6 border-t border-gray-800 flex justify-between gap-3 bg-jurist-dark">
+              @if (editingEvent.id) {
+                <button (click)="confirmDelete(editingEvent.id)" class="px-4 py-2.5 rounded-xl text-red-500 hover:bg-red-500/10 font-bold transition-all flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                  </svg>
+                  Șterge Dosar
+                </button>
+              }
+              <div class="flex gap-3 ml-auto">
+                <button (click)="closeModal()" class="px-6 py-2.5 rounded-xl text-gray-400 hover:text-white font-bold transition-colors">Renunță</button>
+                <button (click)="saveEvent()" [disabled]="saving() || !editingEvent.title" class="bg-jurist-orange hover:bg-orange-600 text-black px-10 py-2.5 rounded-xl font-black transition-all active:scale-95 disabled:opacity-30 shadow-lg flex items-center justify-center gap-2">
+                  @if (saving()) {
+                    <div class="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin"></div>
+                  }
+                  {{ editingEvent.id ? 'Actualizează Dosar' : 'Salvează Dosar' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -425,6 +463,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   isInIframe() {
     return typeof window !== 'undefined' && window.self !== window.top;
+  }
+
+  openInNewTab() {
+    if (typeof window !== 'undefined') {
+      window.open(window.location.href, '_blank');
+    }
   }
 
   async askAI() {
@@ -557,6 +601,19 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
   }
 
+  async confirmDelete(eventId: string) {
+    if (confirm('Sunteți sigur că doriți să ștergeți acest dosar? Această acțiune este ireversibilă.')) {
+      try {
+        await this.juristService.deleteEvent(eventId);
+        if (this.showModal()) {
+          this.closeModal();
+        }
+      } catch (err) {
+        console.error('Error deleting event:', err);
+      }
+    }
+  }
+
   toggleDictation() {
     if (this.isListening()) {
       if (this.recognition) {
@@ -594,7 +651,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
         console.log('Calendar notes dictation started...');
       };
 
-      this.recognition.onresult = (event: any) => {
+      this.recognition.onresult = (event: SpeechRecognitionEvent) => {
         let finalTranscript = '';
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
