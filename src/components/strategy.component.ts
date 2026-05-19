@@ -68,7 +68,8 @@ interface WindowWithSpeechRecognition extends Window {
             }
             
             <textarea 
-              [(ngModel)]="caseDetails" 
+              [ngModel]="caseDetails()" 
+              (ngModelChange)="caseDetails.set($event)" 
               rows="5" 
               class="w-full bg-black border border-gray-800 rounded-lg p-4 text-sm focus:border-jurist-orange focus:ring-1 focus:ring-jurist-orange transition-all placeholder-gray-600 resize-y"
               placeholder="Ex: Clientul a fost notificat pentru evacuare din spațiul comercial, deși a plătit chiria la timp, dar proprietarul invocă o clauză de forță majoră neclară..."
@@ -92,7 +93,7 @@ interface WindowWithSpeechRecognition extends Window {
             <div class="mt-4 flex justify-end">
               <button 
                 (click)="generate()" 
-                [disabled]="!caseDetails || juristService.isLoading()"
+                [disabled]="!caseDetails() || juristService.isLoading()"
                 class="bg-jurist-orange hover:bg-jurist-orangeHover text-white px-8 py-3 rounded-lg font-bold transition-all shadow-[0_0_15px_rgba(255,140,0,0.3)] disabled:opacity-50 disabled:shadow-none flex items-center gap-2"
               >
                 @if (juristService.isLoading()) {
@@ -172,7 +173,7 @@ export class StrategyComponent {
   authService = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
-  caseDetails = '';
+  caseDetails = signal<string>('');
   strategyResult = signal<string>('');
 
   isListening = signal(false);
@@ -226,7 +227,8 @@ export class StrategyComponent {
       this.recognition.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript;
         this.ngZone.run(() => {
-          this.caseDetails += (this.caseDetails ? ' ' : '') + transcript;
+          const currentText = this.caseDetails();
+          this.caseDetails.set(currentText + (currentText ? ' ' : '') + transcript);
           this.cdr.detectChanges();
         });
       };
@@ -265,9 +267,9 @@ export class StrategyComponent {
   }
 
   async generate() {
-    if (!this.caseDetails) return;
+    if (!this.caseDetails()) return;
     this.strategyResult.set(""); // Clear previous result
-    const result = await this.juristService.generateStrategy(this.caseDetails, (text) => {
+    const result = await this.juristService.generateStrategy(this.caseDetails(), (text) => {
       this.strategyResult.set(text);
       this.cdr.detectChanges();
     });
@@ -275,7 +277,7 @@ export class StrategyComponent {
   }
 
   exportDoc() {
-    const filenamePrompt = this.caseDetails ? `Strategie_${this.caseDetails}` : 'Strategie_Juridica';
+    const filenamePrompt = this.caseDetails() ? `Strategie_${this.caseDetails()}` : 'Strategie_Juridica';
     this.juristService.downloadDocx(this.strategyResult(), filenamePrompt);
   }
 }
