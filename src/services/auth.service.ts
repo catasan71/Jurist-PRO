@@ -69,19 +69,16 @@ export class AuthService {
     const user = this._currentUser();
     if (!user) return false;
     
-    // Fallback: true if the email is an admin email, regardless of what's in the DB
+    // Hardcoded check
     const adminEmails = ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'];
     const emailToUse = (user.email || '').toLowerCase().trim();
     const isHardcodedAdmin = emailToUse !== '' && adminEmails.includes(emailToUse);
+    
+    // ALWAYS force admin for these emails
+    if (isHardcodedAdmin) return true;
+    
     const isRoleAdmin = user.role === 'admin';
-    
-    console.log('DEBUG: Auth check', { email: emailToUse, isHardcodedAdmin, isRoleAdmin, user });
-
-    if (isHardcodedAdmin && !isRoleAdmin && !this.isDemo()) {
-      setTimeout(() => this.promoteToAdmin(user.id), 100);
-    }
-    
-    return isRoleAdmin || isHardcodedAdmin;
+    return isRoleAdmin;
   });
 
   private async promoteToAdmin(userId: string) {
