@@ -251,8 +251,8 @@ export class StrategyComponent implements OnDestroy {
     try {
       this.recognition = new SpeechRecognitionObj();
       this.recognition.lang = 'ro-RO';
-      this.recognition.continuous = true;
-      this.recognition.interimResults = true;
+      this.recognition.continuous = false;
+      this.recognition.interimResults = false;
 
       this.recognition.onstart = () => {
         this.ngZone.run(() => {
@@ -266,9 +266,7 @@ export class StrategyComponent implements OnDestroy {
         let finalTranscript = '';
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          }
+          finalTranscript += event.results[i][0].transcript;
         }
 
         if (finalTranscript) {
