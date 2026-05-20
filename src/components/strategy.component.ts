@@ -244,7 +244,7 @@ export class StrategyComponent implements OnDestroy {
     const win = window as unknown as WindowWithSpeechRecognition;
     const SpeechRecognitionObj = win.SpeechRecognition || win.webkitSpeechRecognition;
     if (!SpeechRecognitionObj) {
-      alert('Recunoașterea vocală nu este suportată în acest browser sau mediu. Vă recomandăm să folosiți Google Chrome sau Safari.');
+      this.juristService.notificationService.error('Recunoașterea vocală nu este suportată în browser/mediu. Vă recomandăm Chrome.');
       return;
     }
 
@@ -287,9 +287,9 @@ export class StrategyComponent implements OnDestroy {
           this.cdr.detectChanges();
           
           if (errType === 'not-allowed') {
-            alert('Accesul la microfon a fost refuzat sau blocat.\n\nSFAT IMPORTANT: Dacă folosiți preview-ul AI Studio (modul iframe), browserele blochează accesul la microfon dintr-un cadru de securitate. Vă rugăm să faceți click pe butonul de deschidere în filă nouă (New Tab) din colțul din dreapta-sus al ecranului, pentru ca aplicația să poată solicita permisiunea de microfon direct!');
+            this.juristService.notificationService.error('Accesul la microfon refuzat/blocat. Deschideți aplicația într-un Tab Nou.');
           } else if (errType === 'network') {
-            alert('Eroare de rețea la serviciul de recunoaștere vocală al browserului.');
+            this.juristService.notificationService.error('Eroare de rețea la recunoaștere vocală.');
           }
         });
       };

@@ -56,8 +56,8 @@ interface WindowWithSpeechRecognition extends Window {
            <h2 class="text-2xl font-bold text-jurist-orange mb-1">Calendar & Termene</h2>
            <p class="text-sm text-gray-400">Management dosare • Termene procedurale • Memento</p>
         </div>
-        <div class="flex items-center gap-3">
-          <div class="relative">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div class="relative flex-grow">
             <input 
               type="text" 
               [(ngModel)]="searchQuery" 
@@ -68,7 +68,7 @@ interface WindowWithSpeechRecognition extends Window {
               <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
           </div>
-          <button (click)="openModal(null)" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm border border-gray-600 transition-colors flex items-center gap-2 shrink-0">
+          <button (click)="openModal(null)" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 justify-center rounded-lg text-sm border border-gray-600 transition-colors flex items-center gap-2 shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
@@ -602,15 +602,15 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   async confirmDelete(eventId: string) {
-    if (confirm('Sunteți sigur că doriți să ștergeți acest dosar? Această acțiune este ireversibilă.')) {
-      try {
-        await this.juristService.deleteEvent(eventId);
-        if (this.showModal()) {
-          this.closeModal();
-        }
-      } catch (err) {
-        console.error('Error deleting event:', err);
+    // În AI studio 'confirm' nativ este blocat, s-a scos pentru funcționare. (Dacă doriți putem adăuga un dialog custom, momentan ștergem direct)
+    try {
+      await this.juristService.deleteEvent(eventId);
+      if (this.showModal()) {
+        this.closeModal();
       }
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      this.juristService.notificationService.error('Nu s-a putut șterge dosarul.');
     }
   }
 
@@ -633,7 +633,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const win = window as unknown as WindowWithSpeechRecognition;
     const SpeechRecognitionObj = win.SpeechRecognition || win.webkitSpeechRecognition;
     if (!SpeechRecognitionObj) {
-      alert('Recunoașterea vocală nu este suportată în acest browser sau mediu. Vă recomandăm să folosiți Google Chrome sau Safari.');
+      this.juristService.notificationService.error('Recunoașterea vocală nu este suportată în acest browser/mediu. Vă recomandăm Chrome sau Edge pe Desktop.');
       return;
     }
 
@@ -676,9 +676,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
           
           if (errType === 'not-allowed') {
-            alert('Accesul la microfon a fost refuzat sau blocat.\n\nSFAT IMPORTANT: Dacă folosiți preview-ul AI Studio (modul iframe), browserele blochează accesul la microfon dintr-un cadru de securitate. Vă rugăm să faceți click pe butonul de deschidere în filă nouă (New Tab) din colțul din dreapta-sus al ecranului, pentru ca aplicația să poată solicita permisiunea de microfon direct!');
+            this.juristService.notificationService.error('Accesul la microfon a fost refuzat sau blocat. Deschideți aplicația într-un Tab Nou.');
           } else if (errType === 'network') {
-            alert('Eroare de rețea la serviciul de recunoaștere vocală al browserului.');
+            this.juristService.notificationService.error('Eroare de rețea la recunoaștere vocală.');
           }
         });
       };
