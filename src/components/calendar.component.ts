@@ -217,10 +217,10 @@ interface WindowWithSpeechRecognition extends Window {
 
       <!-- Edit/Create Modal - CLEAN STABLE DESIGN -->
       @if (showModal()) {
-        <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
-          <div class="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl max-h-[95vh] flex flex-col overflow-hidden">
+        <div class="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
+          <div class="bg-gray-900 border-x-0 border-y sm:border border-gray-800 sm:rounded-2xl w-full h-[100dvh] sm:h-auto sm:max-h-[95vh] max-w-2xl shadow-2xl flex flex-col overflow-hidden">
             
-            <div class="p-6 border-b border-gray-800 flex justify-between items-center bg-jurist-dark">
+            <div class="p-4 sm:p-6 border-b border-gray-800 flex justify-between items-center bg-jurist-dark shrink-0">
               <div class="flex items-center gap-3">
                 <div class="w-3 h-3 rounded-full bg-jurist-orange animate-pulse"></div>
                 <h3 class="text-xl text-white font-bold">{{ editingEvent.id ? 'Editare Dosar' : 'Constituire Dosar Nou' }}</h3>
@@ -640,8 +640,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     try {
       this.recognition = new SpeechRecognitionObj();
       this.recognition.lang = 'ro-RO';
-      this.recognition.continuous = false;
-      this.recognition.interimResults = false;
+      this.recognition.continuous = true;
+      this.recognition.interimResults = true;
 
       this.recognition.onstart = () => {
         this.ngZone.run(() => {
@@ -655,7 +655,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
         let finalTranscript = '';
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          finalTranscript += event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
         }
 
         if (finalTranscript) {
