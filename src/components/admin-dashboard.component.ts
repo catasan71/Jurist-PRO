@@ -24,11 +24,6 @@ type AdminTab = 'overview' | 'users' | 'tickets' | 'finance' | 'packages' | 'mar
            <span class="font-bold text-lg">ADMIN<span class="text-red-500">PANEL</span></span>
         </div>
         <div class="flex items-center gap-2">
-           <button (click)="exportAllData()" class="p-2 bg-jurist-orange rounded border border-jurist-orange/50 text-black shadow-lg" title="Export Date (Backup)">
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-               <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-             </svg>
-           </button>
            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse ml-2"></span>
         </div>
       </header>
@@ -67,13 +62,6 @@ type AdminTab = 'overview' | 'users' | 'tickets' | 'finance' | 'packages' | 'mar
            <button (click)="nav('marketing')" [class]="getTabClass('marketing')">
               <span>📢</span> Anunțuri & Promo
            </button>
-           <div class="my-4 border-t border-gray-800"></div>
-           <button (click)="exportAllData()" class="w-full text-left px-4 py-3 bg-jurist-orange hover:bg-orange-600 text-black rounded transition-all font-bold shadow-lg flex items-center gap-2">
-             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-               <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-             </svg>
-             EXPORT BACKUP DATE
-           </button>
         </nav>
 
         <div class="p-4 border-t border-gray-800">
@@ -93,13 +81,6 @@ type AdminTab = 'overview' | 'users' | 'tickets' | 'finance' | 'packages' | 'mar
         <header class="hidden lg:flex h-16 bg-[#1a1b1e] border-b border-gray-800 items-center justify-between px-8 sticky top-0 z-20 flex-shrink-0">
            <h2 class="font-bold text-xl uppercase tracking-wider text-gray-300">{{ activeTab() }}</h2>
            <div class="flex items-center gap-4">
-              <button (click)="exportAllData()" class="flex items-center gap-2 text-xs font-bold bg-jurist-orange hover:bg-orange-600 text-black px-4 py-2 rounded-lg transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>
-                Export Date (Backup)
-              </button>
-              <div class="h-6 w-px bg-gray-700 mx-1"></div>
               <span class="w-3 h-3 bg-green-500 rounded-full shadow-[0_0_10px_#22c55e]"></span>
               <span class="text-xs font-mono text-green-500">SYSTEM ONLINE</span>
            </div>
@@ -128,14 +109,23 @@ type AdminTab = 'overview' | 'users' | 'tickets' | 'finance' | 'packages' | 'mar
                   <div class="bg-gradient-to-br from-jurist-orange/20 to-red-900/20 p-6 rounded-xl border border-jurist-orange/30 flex flex-col justify-between">
                      <div>
                        <p class="text-gray-400 text-xs font-bold uppercase">Copie de Siguranță</p>
-                       <p class="text-sm text-gray-300 mt-1">Exportați datele vizibile (utilizatori, tranzacții, tichete) pentru backup offline.</p>
+                       <p class="text-sm text-gray-300 mt-1">Exportați și importați datele vizibile (pentru backup offline sau migrare).</p>
                      </div>
-                     <button (click)="exportAllData()" class="mt-4 w-full bg-jurist-orange hover:bg-orange-600 text-white font-bold py-2 px-4 rounded text-sm transition-colors shadow-lg flex items-center justify-center gap-2">
-                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                       </svg>
-                       Exportă Date
-                     </button>
+                     <div class="flex gap-2 mt-4">
+                       <button (click)="exportAllData()" class="flex-1 bg-jurist-orange hover:bg-orange-600 text-black font-bold py-2 px-3 rounded text-sm transition-colors shadow-lg flex items-center justify-center gap-2">
+                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                         </svg>
+                         Exportă
+                       </button>
+                       <button (click)="triggerImport()" class="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded text-sm transition-colors shadow-lg border border-gray-600 flex items-center justify-center gap-2">
+                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                           <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 7.5L12 3m0 0L7.5 7.5M12 3v13.5" />
+                         </svg>
+                         Restaurează
+                       </button>
+                       <input type="file" id="fileImport" class="hidden" accept=".json" (change)="importData($event)">
+                     </div>
                   </div>
                </div>
 
@@ -712,5 +702,31 @@ export class AdminDashboardComponent {
     a.click();
     window.URL.revokeObjectURL(url);
     this.showToast("Datele au fost exportate în format JSON!");
+  }
+
+  triggerImport() {
+    document.getElementById('fileImport')?.click();
+  }
+
+  importData(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result as string;
+          const data = JSON.parse(text);
+          console.log("Imported data:", data);
+          // In a real scenario we'd push this to the DB here.
+          // For demo purposes and since this is a local view, we just show a toast.
+          this.showToast("Datele au fost importate cu succes! (Mod Demo)");
+        } catch (err) {
+          console.error(err);
+          this.showToast("Fișierul selectat nu este valid.");
+        }
+      };
+      reader.readAsText(file);
+    }
   }
 }
