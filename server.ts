@@ -526,20 +526,6 @@ async function runDeadlineAutomation() {
   console.log('[ROBOT] Se scanează pro-activ dosarele...');
   const adminDb = getAdminDb();
   
-  let twilioClient: any = null;
-  const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-  const twilioToken = process.env.TWILIO_AUTH_TOKEN;
-  const twilioSender = process.env.TWILIO_WHATSAPP_NUMBER || '+14155238886'; // default sandbox number
-  
-  if (twilioSid && twilioToken) {
-    try {
-      const twilio = await import('twilio');
-      twilioClient = twilio.default(twilioSid, twilioToken);
-    } catch (e) {
-      console.error('[TWILIO] Eroare inițializare client Twilio:', e);
-    }
-  }
-  
   try {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -590,34 +576,12 @@ async function runDeadlineAutomation() {
             }
           }
           
-          // --- SEND WHATSAPP TO AVOCAT VIA TWILIO ---
-          const targetPhone = profile.phone || '+40700000000'; // Target the attorney's phone number
-          const messageText = `🔔 *ALERTA JURISTPRO: REAMINTIRE 24H*\n\n⚖️ *DOSAR:* ${event.title}\n👤 *CLIENT:* ${event.client_name}\n📅 *DATA:* ${event.event_date}\n🕒 *ORA:* ${event.event_time}\n📍 *LOCAȚIE:* ${event.details}\n\n_Mesaj automat generat de către JuristPRO AI_`;
-
-          if (twilioClient) {
-            try {
-              await twilioClient.messages.create({
-                from: `whatsapp:${twilioSender}`,
-                body: messageText,
-                to: `whatsapp:${targetPhone}`
-              });
-              console.log(`[TWILIO] WhatsApp transmis prin Twilio către ${targetPhone} pentru dosarul ${event.title}`);
-              
-              // update status in DB
-              await eventDoc.ref.update({
-                whatsapp_alert_sent: true
-              });
-            } catch (twErr) {
-              console.error(`[TWILIO] Eroare la trimiterea mesajului WhatsApp pentru dosarul ${event.title}:`, twErr);
-            }
-          } else {
-             // Mock sending if keys are missing
-             console.log(`[TWILIO-MOCK] Mesaj pentru ${targetPhone} generat, dar cheile Twilio lispesc (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN). Message: ${messageText}`);
-             // Still marked as sent in demo mode to prevent loop
-             await eventDoc.ref.update({
-                whatsapp_alert_sent: true
-             });
-          }
+          // --- PRELIMINAR: MARCĂM CA TRIMIS STRICT ÎN EMAIL ---
+          // Twilio was removed. We only send the email.
+          console.log(`[ROBOT] Funcția de SMS/Twilio a fost scoasă. Alerta s-a trimis pe email.`);
+          await eventDoc.ref.update({
+            whatsapp_alert_sent: true
+          });
         }
       }
     }

@@ -220,6 +220,44 @@ export class JuristService implements OnDestroy {
     return this.events().filter(e => e.whatsappAlert && this.isWithinAlertWindow(e));
   });
 
+  // NATIVE BROWSER PUSH NOTIFICATION SYSTEM
+  async requestNativeNotificationPermission() {
+    if (!('Notification' in window)) {
+      this.notificationService.warning('Browser-ul dumneavoastră nu suportă notificări native de sistem.');
+      return;
+    }
+    
+    if (Notification.permission === 'granted') {
+      this.notificationService.success('Alertele native de sistem sunt deja activate.');
+      return;
+    }
+    
+    if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        this.notificationService.success('Alertele native de sistem au fost activate cu succes!');
+      }
+    }
+  }
+
+  sendNativeSystemAlert(event: CalendarEvent) {
+     if ('Notification' in window && Notification.permission === 'granted') {
+         const marker = event.clientName ? event.clientName : '';
+         const n = new Notification(`JuristPRO: Termen Mâine - ${event.title}`, {
+            body: `Dosar alocat clientului ${marker} la locația ${event.details || 'Nesupecificat'}. \nOra preconizată: ${event.time}`,
+            icon: '/favicon.ico',
+            requireInteraction: true
+         });
+         
+         n.onclick = () => {
+             window.focus();
+             n.close();
+         };
+         return true;
+     }
+     return false;
+  }
+
   ngOnDestroy() {
     if (this._announcementUnsub) {
       this._announcementUnsub();

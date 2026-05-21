@@ -331,8 +331,8 @@ interface WindowWithSpeechRecognition extends Window {
                   <input type="checkbox" id="alert" [(ngModel)]="editingEvent.whatsappAlert" class="w-5 h-5 accent-jurist-orange cursor-pointer">
                 </div>
                 <label for="alert" class="text-sm text-gray-300 cursor-pointer select-none">
-                  <span class="font-bold text-white block">Alertă WhatsApp Automată</span>
-                  <span class="text-xs text-gray-500 group-hover:text-gray-400">Primiți o alertă pe numărul dvs. de telefon cu 24h înainte de termen.</span>
+                  <span class="font-bold text-white block">Alertă Nativă de Sistem</span>
+                  <span class="text-xs text-gray-500 group-hover:text-gray-400">Primiți o notificare Web/Push direct pe device cu 24h înainte.</span>
                 </label>
               </div>
             </div>

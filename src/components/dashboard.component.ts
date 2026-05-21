@@ -46,7 +46,31 @@ import { AuthService } from '../services/auth.service';
          </div>
       }
 
-      <!-- WHATSAPP AUTOMATION BANNER - STABLE CLEAN DESIGN -->
+      <!-- NATIVE NOTIFICATION BANNER -->
+      @if (juristService.readyAlertsCount() > 0) {
+        <div class="bg-gray-900 border border-jurist-orange/30 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 animate-slideDown mb-8 shadow-xl transition-all">
+           <div class="flex items-center gap-5">
+             <div class="bg-jurist-orange p-4 rounded-2xl text-black shadow-lg">
+               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8">
+                 <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0M3.124 7.5A8.969 8.969 0 015.292 3m13.416 0a8.969 8.969 0 012.168 4.5" />
+               </svg>
+             </div>
+             <div>
+               <h3 class="text-white font-bold text-lg">Alerte Nativ de Sistem</h3>
+               <p class="text-gray-400 text-sm">Aveți {{ juristService.readyAlertsCount() }} alerte prioritare pentru termenele de mâine.</p>
+             </div>
+           </div>
+           <div class="flex gap-3 w-full md:w-auto">
+             <button (click)="juristService.requestNativeNotificationPermission()" class="w-full md:w-auto bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-bold transition-all text-sm">
+               Permite Notificări
+             </button>
+             <button (click)="triggerNativeAlerts()" class="w-full md:w-auto bg-jurist-orange hover:bg-orange-500 text-black px-6 py-3 rounded-xl font-black shadow-lg transition-all active:scale-95 text-center text-sm">
+               TESTEAZĂ ALERTELE
+             </button>
+           </div>
+        </div>
+      }
+
       <!-- Stats Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-slideUp" style="animation-delay: 0.1s; animation-fill-mode: both;">
         <!-- Card 1: Credits -->
@@ -306,17 +330,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   // AUTOMATION: Sequences all pending alerts within the 24h window
-  async sendAllAlerts() {
+  async triggerNativeAlerts() {
     const alerts = this.juristService.readyAlerts();
     if (alerts.length === 0) return;
+    
+    if (Notification.permission !== 'granted') {
+       this.juristService.notificationService.warning('Pentru a testa, trebuie să permiteți mai întâi notificările native.');
+       return;
+    }
 
     for (let i = 0; i < alerts.length; i++) {
-       this.juristService.sendWhatsAppAlert(alerts[i]);
+       const delivered = this.juristService.sendNativeSystemAlert(alerts[i]);
+       if (delivered) {
+          // Marking them as 'sent' in our database flag just to not show them continuously
+          const updated = { ...alerts[i], whatsappAlertSent: true };
+          await this.juristService.updateEvent(updated);
+       }
        
        if (i < alerts.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 800));
        }
     }
+    
+    this.juristService.notificationService.success('Alertele native au fost trimise!');
   }
 
 }
