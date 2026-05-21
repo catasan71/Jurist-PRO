@@ -700,7 +700,9 @@ export class JuristService implements OnDestroy {
     if (!event.date || !event.time || !event.whatsappAlert) return false;
     
     try {
-      // LOGIC: Check if event is exactly tomorrow (approx 24h away)
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(0,0,0,0);
@@ -708,8 +710,10 @@ export class JuristService implements OnDestroy {
       const checkDate = new Date(event.date);
       checkDate.setHours(0,0,0,0);
 
-      // Return true only if it is exactly tomorrow
-      return checkDate.getTime() === tomorrow.getTime();
+      const isToday = checkDate.getTime() === today.getTime();
+      const isTomorrow = checkDate.getTime() === tomorrow.getTime();
+
+      return isToday || isTomorrow;
     } catch (e) {
       console.error('Data error for event:', event.id, e);
       return false;
