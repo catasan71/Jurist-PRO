@@ -229,26 +229,8 @@ export class JuristService implements OnDestroy {
 
   promoCodes = this._promoCodes.asReadonly();
 
-  private startAutomation() {
-    // Check every 15 seconds to simulate automated cron execution
-    this._automationInterval = setInterval(() => {
-      const ready = this.readyAlerts();
-      if (ready.length > 0) {
-        ready.forEach(async (event) => {
-          if (!event.whatsappAlertSent) {
-            // "Send" the alert
-            this.sendWhatsAppAlert(event, true);
-            // Mark as sent internally
-            const updated = { ...event, whatsappAlertSent: true };
-            await this.updateEvent(updated as CalendarEvent);
-            this.notificationService.success(`(Sistem) Alerta WhatsApp a fost trimisă 100% automat pentru dosarul ${event.title}`);
-          }
-        });
-      }
-    }, 15000);
-  }
-
   private _announcementUnsub: (() => void) | null = null;
+
   private _profileUnsub: (() => void) | null = null;
   private _ticketsUnsub: (() => void) | null = null;
   private _promoUnsub: (() => void) | null = null;
@@ -268,8 +250,6 @@ export class JuristService implements OnDestroy {
     if (!isPlatformBrowser(this.platformId)) {
        return;
     }
-
-    this.startAutomation();
 
     // 1. Listen for global announcements (Always active, public)
     this._announcementUnsub = onSnapshot(doc(db, 'system_settings', 'announcement'), (docSnap) => {

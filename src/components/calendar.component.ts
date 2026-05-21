@@ -134,17 +134,22 @@ interface WindowWithSpeechRecognition extends Window {
                          Rest: {{ event.financial.rest }}
                        </span>
                      </div>
-                     @if (event.whatsappAlert) {
-                       <button 
-                         (click)="$event.stopPropagation(); juristService.sendWhatsAppAlert(event)" 
-                         class="flex items-center gap-1 text-green-400 hover:text-green-300 ml-auto sm:ml-0 bg-green-400/10 px-2 py-0.5 rounded border border-green-400/20 transition-colors" 
-                         title="Trimite Alerta WhatsApp Acum"
-                       >
-                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-whatsapp" viewBox="0 0 16 16">
-                           <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
-                         </svg>
-                         <span class="text-[10px] font-bold">Trimite Alertă</span>
-                       </button>
+                     @if (event.whatsappAlert && !event.whatsappAlertSent && juristService.isWithinAlertWindow(event)) {
+                        <div class="flex items-center gap-1 text-jurist-orange animate-pulse ml-auto sm:ml-0 bg-orange-400/10 px-2 py-0.5 rounded border border-orange-400/20">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clock-history" viewBox="0 0 16 16">
+                            <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022l-.074.997zm2.004.45a7.003 7.003 0 0 0-1.026-.645l.389-.92a8.006 8.006 0 0 1 1.137.712l-.4.853zm2.148 1.144c.376.327.71.697 1.002 1.104l-.84.538a6.002 6.002 0 0 0-.853-.941l.69-.701-.001-.001zm1.205 1.74a7.006 7.006 0 0 0-.645-1.026l.92-.389c.28.618.508 1.272.673 1.954l-.948.311zm.45 2.004c.158.468.257.962.292 1.472l-.997.074a6.012 6.012 0 0 0-.25-1.258l.955-.288zM15 8h-1a6.002 6.002 0 0 0-3.32-5.367l.454-.891A7.002 7.002 0 0 1 15 8zm-7-7v1c-3.313 0-6 2.687-6 6s2.687 6 6 6 6-2.687 6-6h1c0 3.866-3.134 7-7 7s-7-3.134-7-7 3.134-7 7-7h.001A8.995 8.995 0 0 1 15 8h-1a7.994 7.994 0 0 0-.485-2.716l.89-.453A8.993 8.993 0 0 1 15 8h1A9 9 0 0 0 8 0h-.001z"/>
+                            <path d="M8.5 4.5a.5.5 0 0 0-1 0v3.793l2.146 2.147a.5.5 0 0 0 .708-.708L8.5 7.793V4.5z"/>
+                          </svg>
+                          <span class="text-[10px] font-bold">Alertă Programată</span>
+                        </div>
+                     }
+                      @if (event.whatsappAlert && event.whatsappAlertSent) {
+                        <div class="flex items-center gap-1 text-green-400 ml-auto sm:ml-0 bg-green-400/10 px-2 py-0.5 rounded border border-green-400/20">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                             <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l2.052 2.093 5.378-5.385a.258.258 0 0 1 .042-.062z"/>
+                          </svg>
+                          <span class="text-[10px] font-bold">Alertă Transmisă</span>
+                        </div>
                      }
                    </div>
                  </div>
@@ -327,7 +332,7 @@ interface WindowWithSpeechRecognition extends Window {
                 </div>
                 <label for="alert" class="text-sm text-gray-300 cursor-pointer select-none">
                   <span class="font-bold text-white block">Alertă WhatsApp Automată</span>
-                  <span class="text-xs text-gray-500 group-hover:text-gray-400">Notificăm beneficiarul cu 24h înainte de termenul de judecată.</span>
+                  <span class="text-xs text-gray-500 group-hover:text-gray-400">Primiți o alertă pe numărul dvs. de telefon cu 24h înainte de termen.</span>
                 </label>
               </div>
             </div>

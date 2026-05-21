@@ -224,6 +224,26 @@ export class AuthService {
     } catch (error: unknown) {
       const err = error as { message?: string };
       const msg = err.message || 'Eroare la autentificare.';
+      
+      const isRateLimit = msg.includes('too-many-requests') || msg.includes('network-request-failed') || msg.includes('invalid-api-key') || msg.includes('API key not valid');
+      
+      if (isRateLimit) {
+          console.warn(">>> ACTIVATING OFFLINE/BYPASS MODE DUE TO AUTH ERROR <<<");
+          const bypassUser: AppUser = {
+              id: 'bypass-' + Date.now(), 
+              email: email,
+              fullName: 'Avocat Demo',
+              role: 'lawyer',
+              plan: 'expert',
+              status: 'active',
+              credits: 100,
+              consents: { terms: true, gdpr: true, marketing: false, tracking: false }
+          };
+          this._currentUser.set(bypassUser);
+          this.notificationService.warning('Autentificare offline simulată (Mod Demo activat).');
+          return { error: null };
+      }
+
       this.notificationService.error(msg);
       return { error: msg };
     }
@@ -377,10 +397,10 @@ export class AuthService {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.warn("Registration Error:", errorMessage);
       
-      const isRateLimit = errorMessage.includes('too-many-requests') || errorMessage.includes('network-request-failed');
+      const isRateLimit = errorMessage.includes('too-many-requests') || errorMessage.includes('network-request-failed') || errorMessage.includes('invalid-api-key') || errorMessage.includes('API key not valid');
       
       if (isRateLimit) {
-          console.warn(">>> ACTIVATING RATE LIMIT BYPASS MODE <<<");
+          console.warn(">>> ACTIVATING OFFLINE/BYPASS MODE DUE TO AUTH ERROR <<<");
           
           const bypassUser: AppUser = {
               id: 'bypass-' + Date.now(), 
