@@ -264,7 +264,8 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
 });
 
 // Standard JSON parsing for other routes
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // API Endpoint for Stripe Checkout
 app.get('/api/test-stripe', async (req, res) => {
