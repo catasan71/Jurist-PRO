@@ -669,22 +669,6 @@ export class JuristService implements OnDestroy {
   }
 
   sendWhatsAppAlert(event: CalendarEvent) {
-    const phone = this.profile().phone;
-    if (!phone) {
-      this.notificationService.warning('Vă rugăm să configurați numărul de telefon în profil pentru a trimite alerte.');
-      return;
-    }
-
-    // Clean phone number (keep only digits)
-    let cleanPhone = phone.replace(/\D/g, '');
-    
-    // Ensure it starts with 40 (Romania)
-    if (cleanPhone.startsWith('0')) {
-      cleanPhone = '40' + cleanPhone.substring(1);
-    } else if (cleanPhone.startsWith('7') && cleanPhone.length === 9) {
-      cleanPhone = '40' + cleanPhone;
-    }
-
     // Constructing message with high-visibility markers
     const location = event.details || 'Nespecificat';
     const notes = event.notes || 'Fără note adiționale';
@@ -705,7 +689,7 @@ export class JuristService implements OnDestroy {
     ];
 
     const message = encodeURIComponent(messageLines.join('\n'));
-    const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${message}`;
+    const url = `https://api.whatsapp.com/send?text=${message}`;
     window.open(url, '_blank');
   }
 

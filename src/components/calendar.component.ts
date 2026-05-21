@@ -323,7 +323,7 @@ interface WindowWithSpeechRecognition extends Window {
 
               <div class="flex items-center gap-4 bg-emerald-500/5 p-4 rounded-xl border border-emerald-500/10 hover:border-emerald-500/30 transition-all group">
                 <div class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="alert" [(ngModel)]="editingEvent.whatsappAlert" [disabled]="!juristService.profile().phone" class="w-5 h-5 accent-jurist-orange cursor-pointer">
+                  <input type="checkbox" id="alert" [(ngModel)]="editingEvent.whatsappAlert" class="w-5 h-5 accent-jurist-orange cursor-pointer">
                 </div>
                 <label for="alert" class="text-sm text-gray-300 cursor-pointer select-none">
                   <span class="font-bold text-white block">Alertă WhatsApp Automată</span>
