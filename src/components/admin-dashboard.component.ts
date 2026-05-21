@@ -106,9 +106,17 @@ type AdminTab = 'overview' | 'users' | 'tickets' | 'finance' | 'packages' | 'mar
                      <p class="text-gray-400 text-xs font-bold uppercase">Tichete Deschise</p>
                      <p class="text-3xl font-bold text-yellow-400 mt-2">{{ getOpenTicketsCount() }}</p>
                   </div>
-                  <div class="bg-[#25262b] p-6 rounded-xl border border-gray-700">
-                     <p class="text-gray-400 text-xs font-bold uppercase">Server Load</p>
-                     <p class="text-3xl font-bold text-blue-400 mt-2">12%</p>
+                  <div class="bg-gradient-to-br from-jurist-orange/20 to-red-900/20 p-6 rounded-xl border border-jurist-orange/30 flex flex-col justify-between">
+                     <div>
+                       <p class="text-gray-400 text-xs font-bold uppercase">Copie de Siguranță</p>
+                       <p class="text-sm text-gray-300 mt-1">Exportați datele vizibile (utilizatori, tranzacții, tichete) pentru backup offline.</p>
+                     </div>
+                     <button (click)="exportAllData()" class="mt-4 w-full bg-jurist-orange hover:bg-orange-600 text-white font-bold py-2 px-4 rounded text-sm transition-colors shadow-lg flex items-center justify-center gap-2">
+                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                       </svg>
+                       Exportă Date
+                     </button>
                   </div>
                </div>
 
@@ -666,5 +674,24 @@ export class AdminDashboardComponent {
     }
     await this.authService.addCreditsToUser(userId, amount);
     this.showToast(`S-au adăugat ${amount} credite utilizatorului.`);
+  }
+
+  exportAllData() {
+    const data = {
+      timestamp: new Date().toISOString(),
+      users: this.authService.allUsers(),
+      transactions: this.juristService.transactions(),
+      tickets: this.juristService.tickets(),
+      promoCodes: this.juristService.promoCodes()
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `juristpro-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    this.showToast("Datele au fost exportate în format JSON!");
   }
 }
