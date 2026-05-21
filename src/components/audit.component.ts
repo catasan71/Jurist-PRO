@@ -102,7 +102,7 @@ interface UploadedFile {
                 <div class="flex flex-col gap-4">
                   <div class="flex justify-between items-center">
                     <label for="auditPrompt" class="text-sm font-bold text-gray-400">Context Speță (Opțional)</label>
-                    <span class="text-xs text-orange-400 font-bold bg-orange-900/10 px-2 py-1 rounded border border-orange-500/30">3 Credite - Analiză Deep Dive</span>
+                    <span class="text-xs text-orange-400 font-bold bg-orange-900/10 px-2 py-1 rounded border border-orange-500/30">5 Credite - Analiză Deep Dive</span>
                   </div>
                   <textarea 
                     id="auditPrompt"
@@ -263,15 +263,38 @@ export class AuditComponent {
 
   async analyze() {
     const file = this.uploadedFile();
-    if (!file) return;
+    if (!file) {
+      this.juristService.notificationService.warning("Vă rugăm să încărcați un fișier mai întâi.");
+      return;
+    }
     
-    const base64Data = file.base64.split(',')[1];
-    this.auditResult.set(""); // Clear previous result
-    const result = await this.juristService.analyzeEvidence(base64Data, file.type, this.auditPrompt, (text) => {
-      this.auditResult.set(text);
-      this.cdr.detectChanges();
-    });
-    this.auditResult.set(result);
+    try {
+      let mimeType = file.type;
+      if (!mimeType || mimeType === 'unknown') {
+        if (file.name.endsWith('.pdf')) mimeType = 'application/pdf';
+        else if (file.name.endsWith('.txt')) mimeType = 'text/plain';
+        else if (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg')) mimeType = 'image/jpeg';
+        else if (file.name.endsWith('.png')) mimeType = 'image/png';
+        else mimeType = 'application/pdf'; // fallback
+      }
+
+      const base64Parts = file.base64.split(',');
+      if (base64Parts.length < 2) {
+        this.juristService.notificationService.error("Fișierul nu a putut fi procesat.");
+        return;
+      }
+      const base64Data = base64Parts[1];
+      
+      this.auditResult.set(""); // Clear previous result
+      const result = await this.juristService.analyzeEvidence(base64Data, mimeType, this.auditPrompt, (text) => {
+        this.auditResult.set(text);
+        this.cdr.detectChanges();
+      });
+      this.auditResult.set(result);
+    } catch (e: any) {
+      this.juristService.notificationService.error(e.message || "A apărut o eroare la generarea auditului.");
+      console.error("Audit analyze error:", e);
+    }
   }
 
   async generateEvidence() {
