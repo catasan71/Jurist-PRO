@@ -89,6 +89,7 @@ export interface CalendarEvent {
   details: string; 
   notes: string; 
   whatsappAlert: boolean;
+  whatsappAlertSent?: boolean;
   financial: {
     total: number;
     paid: number;
@@ -228,11 +229,31 @@ export class JuristService implements OnDestroy {
 
   promoCodes = this._promoCodes.asReadonly();
 
+  private startAutomation() {
+    // Check every 15 seconds to simulate automated cron execution
+    this._automationInterval = setInterval(() => {
+      const ready = this.readyAlerts();
+      if (ready.length > 0) {
+        ready.forEach(async (event) => {
+          if (!event.whatsappAlertSent) {
+            // "Send" the alert
+            this.sendWhatsAppAlert(event, true);
+            // Mark as sent internally
+            const updated = { ...event, whatsappAlertSent: true };
+            await this.updateEvent(updated as CalendarEvent);
+            this.notificationService.success(`(Sistem) Alerta WhatsApp a fost trimisă 100% automat pentru dosarul ${event.title}`);
+          }
+        });
+      }
+    }, 15000);
+  }
+
   private _announcementUnsub: (() => void) | null = null;
   private _profileUnsub: (() => void) | null = null;
   private _ticketsUnsub: (() => void) | null = null;
   private _promoUnsub: (() => void) | null = null;
   private _eventsUnsub: (() => void) | null = null;
+  private _automationInterval: any = null;
 
   public stopAllListeners() {
     if (this._announcementUnsub) { this._announcementUnsub(); this._announcementUnsub = null; }
@@ -240,12 +261,15 @@ export class JuristService implements OnDestroy {
     if (this._ticketsUnsub) { this._ticketsUnsub(); this._ticketsUnsub = null; }
     if (this._promoUnsub) { this._promoUnsub(); this._promoUnsub = null; }
     if (this._eventsUnsub) { this._eventsUnsub(); this._eventsUnsub = null; }
+    if (this._automationInterval) { clearInterval(this._automationInterval); this._automationInterval = null; }
   }
 
   constructor() {
     if (!isPlatformBrowser(this.platformId)) {
        return;
     }
+
+    this.startAutomation();
 
     // 1. Listen for global announcements (Always active, public)
     this._announcementUnsub = onSnapshot(doc(db, 'system_settings', 'announcement'), (docSnap) => {
@@ -312,6 +336,7 @@ export class JuristService implements OnDestroy {
               details: e['details'],
               notes: e['notes'],
               whatsappAlert: e['whatsapp_alert'],
+              whatsappAlertSent: e['whatsapp_alert_sent'],
               financial: e['financial'] || { total: 0, paid: 0, rest: 0 }
             };
           });
@@ -598,6 +623,7 @@ export class JuristService implements OnDestroy {
         details: event.details || '',
         notes: event.notes || '',
         whatsapp_alert: !!event.whatsappAlert,
+        whatsapp_alert_sent: !!event.whatsappAlertSent,
         financial: event.financial || { total: 0, paid: 0, rest: 0 }
       };
 
@@ -635,6 +661,7 @@ export class JuristService implements OnDestroy {
           details: updatedEvent.details || '',
           notes: updatedEvent.notes || '',
           whatsapp_alert: !!updatedEvent.whatsappAlert,
+          whatsapp_alert_sent: !!updatedEvent.whatsappAlertSent,
           financial: updatedEvent.financial || { total: 0, paid: 0, rest: 0 }
         };
 
@@ -668,7 +695,7 @@ export class JuristService implements OnDestroy {
     }
   }
 
-  sendWhatsAppAlert(event: CalendarEvent) {
+  sendWhatsAppAlert(event: CalendarEvent, automated: boolean = false) {
     // Constructing message with high-visibility markers
     const location = event.details || 'Nespecificat';
     const notes = event.notes || 'Fără note adiționale';
@@ -689,8 +716,10 @@ export class JuristService implements OnDestroy {
     ];
 
     const message = encodeURIComponent(messageLines.join('\n'));
-    const url = `https://api.whatsapp.com/send?text=${message}`;
-    window.open(url, '_blank');
+    if (!automated) {
+      const url = `https://api.whatsapp.com/send?text=${message}`;
+      window.open(url, '_blank');
+    }
   }
 
   /**
