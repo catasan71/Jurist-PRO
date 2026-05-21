@@ -231,20 +231,38 @@ export class AuditComponent {
   evidencePrompt = '';
   evidenceImage = signal<string>('');
 
-  handleFileUpload(event: Event) {
+  async handleFileUpload(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
-      const file = input.files[0];
+      let file = input.files[0];
       
       if (file.name.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-        console.warn('Formatul .docx nu este suportat direct pentru analiza AI. Vă rugăm să salvați documentul ca PDF și să îl încărcați din nou.');
+        this.juristService.notificationService.warning('Formatul .docx nu este suportat direct. Vă rugăm să salvați documentul ca PDF.');
         this.auditResult.set('Eroare: Formatul .docx nu este suportat direct pentru analiza AI. Vă rugăm să salvați documentul ca PDF și să îl încărcați din nou.');
         input.value = ''; // Reset input
         return;
       }
+      
+      // Dacă este imagine, încercăm să o comprimăm (reducem dimensiunea pe loc)
+      if (file.type.startsWith('image/')) {
+         this.juristService.notificationService.success('Se optimizează imaginea pentru upload rapid...');
+         try {
+            file = await this.compressImage(file);
+         } catch (err) {
+            console.error('Eroare la comprimarea imaginii:', err);
+         }
+      }
+
+      // Verificăm dimensiunea (Limită maximă 15MB)
+      const MAX_MB = 15;
+      const MAX_BYTES = MAX_MB * 1024 * 1024;
+      if (file.size > MAX_BYTES) {
+         this.juristService.notificationService.error(`Fișierul este prea mare (${(file.size / 1024 / 1024).toFixed(1)} MB). Limita maximă este de ${MAX_MB} MB. Vă rugăm să utilizați platforme precum iLovePDF pentru a comprima PDF-urile.`);
+         input.value = ''; // Reset input
+         return;
+      }
 
       const reader = new FileReader();
-      
       reader.onload = (e) => {
         const result = e.target?.result as string;
         const isImage = file.type.startsWith('image/');
@@ -256,9 +274,58 @@ export class AuditComponent {
           previewUrl: isImage ? result : undefined
         });
       };
-      
       reader.readAsDataURL(file);
     }
+  }
+
+  // Comprimarea inteligentă a imaginilor nativ din browser (fără server intermediar)
+  compressImage(file: File): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Max dimensions
+          const MAX_DIM = 2000;
+          if (width > height && width > MAX_DIM) {
+            height *= MAX_DIM / width;
+            width = MAX_DIM;
+          } else if (height > MAX_DIM) {
+            width *= MAX_DIM / height;
+            height = MAX_DIM;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(file); // fail gracefully
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            if (blob) {
+               const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+               });
+               resolve(compressedFile);
+            } else {
+               resolve(file);
+            }
+          }, 'image/jpeg', 0.8); // 80% calitate
+        };
+        img.onerror = () => resolve(file); // fallback la fișierul original
+      };
+      reader.onerror = () => resolve(file);
+    });
   }
 
   async analyze() {
