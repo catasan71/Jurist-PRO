@@ -213,11 +213,11 @@ export class JuristService implements OnDestroy {
 
   // AUTOMATION: Computed observable for pending alerts within the 24h window
   readyAlertsCount = computed(() => {
-    return this.events().filter(e => e.whatsappAlert && this.isWithinAlertWindow(e)).length;
+    return this.events().filter(e => e.whatsappAlert && !e.whatsappAlertSent && this.isWithinAlertWindow(e)).length;
   });
 
   readyAlerts = computed(() => {
-    return this.events().filter(e => e.whatsappAlert && this.isWithinAlertWindow(e));
+    return this.events().filter(e => e.whatsappAlert && !e.whatsappAlertSent && this.isWithinAlertWindow(e));
   });
 
   // NATIVE BROWSER PUSH NOTIFICATION SYSTEM

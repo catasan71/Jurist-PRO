@@ -68,11 +68,32 @@
       -webkit-tap-highlight-color: transparent;
       touch-action: pan-y;
     }
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: #111; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #111; border-radius: 4px; }
     ::-webkit-scrollbar-thumb { background: #FF8C00; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #FFA500; }
     .glass-panel { background: rgba(26, 26, 26, 0.8); backdrop-filter: blur(10px); }
+    
+    /* Utility clasa pt scroll orizontal vizibil pe mobil */
+    .custom-scrollbar-orange {
+       scrollbar-width: thin;
+       scrollbar-color: #FF8C00 #1a1a1a;
+       -webkit-overflow-scrolling: touch;
+    }
+    .custom-scrollbar-orange::-webkit-scrollbar { 
+       height: 8px; 
+       -webkit-appearance: none;
+       display: block;
+    }
+    .custom-scrollbar-orange::-webkit-scrollbar-track { 
+       background: #1a1a1a; 
+       border-radius: 4px;
+       margin: 0px 4px;
+    }
+    .custom-scrollbar-orange::-webkit-scrollbar-thumb { 
+       background: #FF8C00; 
+       border-radius: 4px; 
+    }
   </style>
 <script type="importmap">
 {

@@ -282,13 +282,13 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                       
                       <div class="flex flex-col lg:flex-row gap-8 opacity-0 translate-y-10 transition-all duration-1000 delay-100" #anim>
                          <!-- Tabs Sidebar -->
-                         <div class="lg:w-1/4 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-4 lg:pb-0 scrollbar-hide">
+                         <div class="lg:w-1/4 flex flex-row lg:flex-col gap-2 overflow-x-auto pb-4 lg:pb-0 custom-scrollbar-orange">
                             <button (click)="activeDemoTab.set('assistant')" 
                                     [class.bg-jurist-orange]="activeDemoTab() === 'assistant'"
                                     [class.text-black]="activeDemoTab() === 'assistant'"
                                     [class.bg-[#111]]="activeDemoTab() !== 'assistant'"
                                     [class.text-gray-400]="activeDemoTab() !== 'assistant'"
-                                    class="text-left px-6 py-4 rounded-xl font-bold transition-all hover:bg-jurist-orange/20 hover:text-white flex items-center gap-3 whitespace-nowrap lg:whitespace-normal">
+                                    class="text-left px-6 py-4 rounded-xl font-bold transition-all hover:bg-jurist-orange/20 hover:text-white flex items-center gap-3 whitespace-nowrap lg:whitespace-normal shrink-0">
                                <span class="text-xl">🤖</span> Asistent AI
                             </button>
                             <button (click)="activeDemoTab.set('drafting')" 
@@ -296,7 +296,7 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                                     [class.text-black]="activeDemoTab() === 'drafting'"
                                     [class.bg-[#111]]="activeDemoTab() !== 'drafting'"
                                     [class.text-gray-400]="activeDemoTab() !== 'drafting'"
-                                    class="text-left px-6 py-4 rounded-xl font-bold transition-all hover:bg-jurist-orange/20 hover:text-white flex items-center gap-3 whitespace-nowrap lg:whitespace-normal">
+                                    class="text-left px-6 py-4 rounded-xl font-bold transition-all hover:bg-jurist-orange/20 hover:text-white flex items-center gap-3 whitespace-nowrap lg:whitespace-normal shrink-0">
                                <span class="text-xl">📝</span> Redactare
                             </button>
                             <button (click)="activeDemoTab.set('fees')" 
@@ -304,7 +304,7 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                                     [class.text-black]="activeDemoTab() === 'fees'"
                                     [class.bg-[#111]]="activeDemoTab() !== 'fees'"
                                     [class.text-gray-400]="activeDemoTab() !== 'fees'"
-                                    class="text-left px-6 py-4 rounded-xl font-bold transition-all hover:bg-jurist-orange/20 hover:text-white flex items-center gap-3 whitespace-nowrap lg:whitespace-normal">
+                                    class="text-left px-6 py-4 rounded-xl font-bold transition-all hover:bg-jurist-orange/20 hover:text-white flex items-center gap-3 whitespace-nowrap lg:whitespace-normal shrink-0">
                                <span class="text-xl">💰</span> Taxe & Onorarii
                             </button>
                             <button (click)="activeDemoTab.set('strategy')" 
@@ -312,7 +312,7 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                                     [class.text-black]="activeDemoTab() === 'strategy'"
                                     [class.bg-[#111]]="activeDemoTab() !== 'strategy'"
                                     [class.text-gray-400]="activeDemoTab() !== 'strategy'"
-                                    class="text-left px-6 py-4 rounded-xl font-bold transition-all hover:bg-jurist-orange/20 hover:text-white flex items-center gap-3 whitespace-nowrap lg:whitespace-normal">
+                                    class="text-left px-6 py-4 rounded-xl font-bold transition-all hover:bg-jurist-orange/20 hover:text-white flex items-center gap-3 whitespace-nowrap lg:whitespace-normal shrink-0">
                                <span class="text-xl">🎯</span> Strategie
                             </button>
                          </div>

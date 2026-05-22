@@ -68,6 +68,14 @@ interface WindowWithSpeechRecognition extends Window {
               <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
           </div>
+          @if (juristService.readyAlertsCount() > 0) {
+            <button (click)="syncWhatsAppAlerts()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 justify-center rounded-lg text-sm transition-colors flex items-center gap-2 shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.38-.433 2.16-1.522 3.166-1.554 3.195a.25.25 0 00.31.365c1.94-.783 3.32-1.42 4.103-1.87 1.543.593 3.18.88 4.868.88z" />
+              </svg>
+              <span class="hidden sm:inline">Trimite Alerte ({{juristService.readyAlertsCount()}})</span>
+            </button>
+          }
           <button (click)="openModal(null)" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 justify-center rounded-lg text-sm border border-gray-600 transition-colors flex items-center gap-2 shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -331,8 +339,8 @@ interface WindowWithSpeechRecognition extends Window {
                   <input type="checkbox" id="alert" [(ngModel)]="editingEvent.whatsappAlert" class="w-5 h-5 accent-jurist-orange cursor-pointer">
                 </div>
                 <label for="alert" class="text-sm text-gray-300 cursor-pointer select-none">
-                  <span class="font-bold text-white block">Alertă Nativă de Sistem</span>
-                  <span class="text-xs text-gray-500 group-hover:text-gray-400">Primiți o notificare Web/Push direct pe device cu 24h înainte.</span>
+                  <span class="font-bold text-white block">Alerte WhatsApp Automate</span>
+                  <span class="text-xs text-gray-500 group-hover:text-gray-400">Primiți o notificare pe WhatsApp cu 24h înainte.</span>
                 </label>
               </div>
             </div>
@@ -574,6 +582,20 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (this.isListening() && this.recognition) {
       this.recognition.stop();
     }
+  }
+
+  syncWhatsAppAlerts() {
+    const alerts = this.juristService.readyAlerts();
+    if (alerts.length === 0) return;
+
+    for (let i = 0; i < alerts.length; i++) {
+        const event = alerts[i];
+        this.juristService.sendWhatsAppAlert(event, false);
+        // Mark as sent
+        const updated = { ...event, whatsappAlertSent: true };
+        this.juristService.updateEvent(updated);
+    }
+    this.juristService.notificationService.success('Alertele au fost generate spre WhatsApp!');
   }
 
   async saveEvent() {
