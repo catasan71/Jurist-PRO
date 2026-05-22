@@ -685,7 +685,7 @@ export class AdminDashboardComponent {
     this.showToast(`S-au adăugat ${amount} credite utilizatorului.`);
   }
 
-  exportAllData() {
+  async exportAllData() {
     const data = {
       timestamp: new Date().toISOString(),
       users: this.authService.allUsers(),
@@ -694,14 +694,48 @@ export class AdminDashboardComponent {
       promoCodes: this.juristService.promoCodes()
     };
     
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const content = JSON.stringify(data, null, 2);
+    const filename = `juristpro-backup-${new Date().toISOString().split('T')[0]}.json`;
+
+    // 1. Mobile First: Încercăm Web Share API pentru mobile
+    if (navigator.share && navigator.canShare) {
+      try {
+        const file = new File([content], filename, { type: 'application/json' });
+        // Verificăm dacă browserul poate share-ui tipul de fișier direct
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Backup JuristPRO',
+            text: 'Backup date JuristPRO',
+          });
+          this.showToast("Export partajat cu succes!");
+          return;
+        }
+      } catch (err: any) {
+        console.warn("Share API a fost abandonat sau a eșuat, folosim metoda standard de descărcare.", err);
+        // Fallthrough towards traditional download
+      }
+    }
+
+    // 2. Metoda standard pentru Desktop sau Mobile Fără Share API Support
+    const blob = new Blob([content], { type: 'application/json' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
+    a.style.display = 'none';
     a.href = url;
-    a.download = `juristpro-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = filename;
+    
+    // Necesită adăugare în DOM pentru unele browsere mobile
+    document.body.appendChild(a);
     a.click();
-    window.URL.revokeObjectURL(url);
-    this.showToast("Datele au fost exportate în format JSON!");
+    
+    // Cleanup întârziat pentru a asigura capturarea pe mobile iOS
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 1500);
+    
+    this.showToast("Descărcarea a fost inițiată!");
   }
 
   triggerImport() {
