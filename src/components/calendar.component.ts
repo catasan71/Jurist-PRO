@@ -367,6 +367,85 @@ interface WindowWithSpeechRecognition extends Window {
           </div>
         </div>
       }
+
+      <!-- WhatsApp Alert Queue Assistant Modal -->
+      @if (showQueueModal() && queueAlertsList().length > 0) {
+        <div class="fixed inset-0 z-[120] flex items-center justify-center p-0 sm:p-4 bg-black/95 backdrop-blur-md animate-fadeIn">
+          <div class="bg-gray-900 border-x-0 border-y sm:border border-gray-800 sm:rounded-2xl w-full h-[100dvh] sm:h-auto max-w-lg shadow-2xl flex flex-col overflow-hidden">
+            
+            <div class="p-4 sm:p-6 border-b border-gray-800 flex justify-between items-center bg-jurist-dark shrink-0">
+              <div class="flex items-center gap-3">
+                <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+                <h3 class="text-xl text-white font-bold">Asistent Alerte WhatsApp</h3>
+              </div>
+              <button (click)="closeQueueModal()" class="text-gray-400 hover:text-white p-2 hover:bg-gray-800 rounded-lg transition-colors">✕</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+              <!-- Progress Bar -->
+              <div>
+                <div class="flex justify-between text-xs text-gray-400 font-mono mb-2">
+                  <span>PROGRES TRIMITERE</span>
+                  <span>{{ currentQueueIndex() + 1 }} din {{ queueAlertsList().length }}</span>
+                </div>
+                <div class="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div class="h-full bg-green-500 transition-all duration-300" 
+                       [style.width.%]="((currentQueueIndex() + 1) / queueAlertsList().length) * 100">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Active Alert Client Snapshot -->
+              <div class="bg-black/50 p-5 rounded-2xl border border-gray-800 space-y-2">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <span class="text-[10px] font-bold text-jurist-orange uppercase tracking-wider block mb-1">Destinatar</span>
+                    <h4 class="text-md font-bold text-white">{{ queueAlertsList()[currentQueueIndex()].clientName }}</h4>
+                    <p class="text-xs font-mono text-gray-400">
+                      {{ juristService.profile().phone || 'Telefon nespecificat' }}
+                    </p>
+                  </div>
+                  <span class="bg-gray-800 text-white text-[10px] uppercase font-mono px-2 py-1 rounded border border-gray-700">
+                    {{ queueAlertsList()[currentQueueIndex()].time }}
+                  </span>
+                </div>
+
+                <div class="border-t border-gray-800/60 pt-2 flex flex-col gap-1 text-xs">
+                  <div class="text-gray-500">Dosar / Cauză:</div>
+                  <div class="text-red-400 font-semibold text-sm">{{ queueAlertsList()[currentQueueIndex()].title }}</div>
+                  <div class="text-gray-400 italic text-xs mt-0.5">{{ queueAlertsList()[currentQueueIndex()].caseObject }}</div>
+                </div>
+              </div>
+
+              <!-- Message Draft Box -->
+              <div class="bg-green-500/5 border border-green-500/10 rounded-2xl p-4 space-y-2">
+                <span class="text-[10px] font-extrabold text-green-400 uppercase tracking-widest block">Conținut Mesaj Programat</span>
+                <p class="text-xs text-gray-300 leading-relaxed font-mono whitespace-pre-wrap select-all bg-black/40 p-3 rounded-lg border border-gray-850">Bună ziua, Av. {{ juristService.profile().full_name || 'Colegu' }} vă informează:
+------------------------------
+Dosar: {{ queueAlertsList()[currentQueueIndex()].title }}
+Client: {{ queueAlertsList()[currentQueueIndex()].clientName }}
+Obiect: {{ queueAlertsList()[currentQueueIndex()].caseObject }}
+Termen: {{ queueAlertsList()[currentQueueIndex()].date }} la {{ queueAlertsList()[currentQueueIndex()].time }}
+Locul: {{ queueAlertsList()[currentQueueIndex()].details || 'Nespecificat' }}
+
+Note: {{ queueAlertsList()[currentQueueIndex()].notes || 'Făra note adiacente' }}
+------------------------------
+Mesaj generat de către JuristPRO AI</p>
+                <p class="text-[10px] text-gray-500 leading-normal">
+                  💡 *Notă:* Butonul va deschide interfața WhatsApp cu textul gata pregătit. După deschidere, următorul mesaj se va încărca automat în această listă.
+                </p>
+              </div>
+            </div>
+
+            <div class="p-4 sm:p-6 border-t border-gray-800 flex flex-col sm:flex-row justify-between gap-3 bg-jurist-dark shrink-0">
+              <button type="button" (click)="skipActiveQueueItem()" class="w-full sm:w-auto px-6 py-3 sm:py-2.5 rounded-xl text-gray-400 hover:text-white font-bold transition-colors bg-gray-800 sm:bg-transparent order-2 sm:order-1">Omite Alerta</button>
+              <button type="button" (click)="fireActiveQueueItem()" class="w-full sm:w-auto bg-green-600 hover:bg-green-500 text-white px-10 py-3 sm:py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2 order-1 sm:order-2">
+                Trimite pe WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -385,6 +464,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
   
   showModal = signal(false);
   saving = signal(false);
+  
+  // WhatsApp alert queue assistant
+  showQueueModal = signal(false);
+  queueAlertsList = signal<CalendarEvent[]>([]);
+  currentQueueIndex = signal(0);
   
   filteredEvents = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
@@ -586,15 +670,67 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   syncWhatsAppAlerts() {
     const alerts = this.juristService.readyAlerts();
-    if (alerts.length === 0) return;
-
-    for (const event of alerts) {
-        this.juristService.sendWhatsAppAlert(event, false);
-        // Mark as sent
-        const updated = { ...event, whatsappAlertSent: true };
-        this.juristService.updateEvent(updated);
+    if (alerts.length === 0) {
+      this.juristService.notificationService.warning('Nu există alerte pregătite în mod activ pentru următoarele 24 de ore.');
+      return;
     }
-    this.juristService.notificationService.success('Alertele au fost generate spre WhatsApp!');
+
+    this.queueAlertsList.set(alerts);
+    this.currentQueueIndex.set(0);
+    this.showQueueModal.set(true);
+    this.juristService.notificationService.info(`S-a deschis asistentul pentru ${alerts.length} alerte pregătite.`);
+  }
+
+  closeQueueModal() {
+    this.showQueueModal.set(false);
+    this.queueAlertsList.set([]);
+    this.currentQueueIndex.set(0);
+  }
+
+  skipActiveQueueItem() {
+    const nextIndex = this.currentQueueIndex() + 1;
+    if (nextIndex >= this.queueAlertsList().length) {
+      this.juristService.notificationService.success('Toate alertele au fost rulate!');
+      this.closeQueueModal();
+    } else {
+      this.currentQueueIndex.set(nextIndex);
+      this.juristService.notificationService.info('S-a trecut peste alerta activă.');
+    }
+  }
+
+  async fireActiveQueueItem() {
+    const list = this.queueAlertsList();
+    const index = this.currentQueueIndex();
+    if (index >= list.length) return;
+
+    const event = list[index];
+
+    try {
+      // Trigger native redirection link
+      this.juristService.sendWhatsAppAlert(event, false);
+
+      // Save state to Firebase
+      const updated = { ...event, whatsappAlertSent: true };
+      await this.juristService.updateEvent(updated);
+
+      this.juristService.notificationService.success(`S-a deschis chatul pentru ${event.clientName}!`);
+
+      // Advance queue with a cozy delay
+      const nextIndex = index + 1;
+      if (nextIndex >= list.length) {
+        setTimeout(() => {
+          this.juristService.notificationService.success('Toate alertele au fost trimise cu succes!');
+          this.closeQueueModal();
+        }, 1200);
+      } else {
+        setTimeout(() => {
+          this.currentQueueIndex.set(nextIndex);
+        }, 1200);
+      }
+    } catch (err) {
+      console.error('[WHATSAPP QUEUE] Error advancement:', err);
+      this.juristService.notificationService.error('A apărut o problemă la actualizarea dosarului.');
+    }
   }
 
   async saveEvent() {

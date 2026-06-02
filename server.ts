@@ -542,12 +542,14 @@ async function runDeadlineAutomation() {
       const eventsSnapshot = await eventsRef
         .where('event_date', '==', tomorrowStr)
         .where('whatsapp_alert', '==', true)
-        .where('whatsapp_alert_sent', '!=', true) // Only send if not already sent
         .get();
         
       if (!eventsSnapshot.empty) {
         for (const eventDoc of eventsSnapshot.docs) {
           const event = eventDoc.data();
+          if (event['email_alert_sent'] === true) {
+            continue; // Skip if already emailed
+          }
           
           console.log(`[ROBOT] ALERTĂ TRIGGER: Dosar ${event.title}`);
           
@@ -578,10 +580,9 @@ async function runDeadlineAutomation() {
           }
           
           // --- PRELIMINAR: MARCĂM CA TRIMIS STRICT ÎN EMAIL ---
-          // Twilio was removed. We only send the email.
-          console.log(`[ROBOT] Funcția de SMS/Twilio a fost scoasă. Alerta s-a trimis pe email.`);
+          console.log(`[ROBOT] Alerta de e-mail s-a trimis pe email.`);
           await eventDoc.ref.update({
-            whatsapp_alert_sent: true
+            email_alert_sent: true
           });
         }
       }
