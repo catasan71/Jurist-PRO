@@ -713,7 +713,18 @@ export class JuristService implements OnDestroy {
     }
   }
 
-  sendWhatsAppAlert(event: CalendarEvent, automated: boolean = false) {
+  getSanitizedPhone(phone: string): string {
+    if (!phone) return '';
+    let cleaned = phone.replace(/\D/g, ''); // keep only digits
+    if (cleaned.startsWith('0') && cleaned.length === 10) {
+      cleaned = '40' + cleaned.substring(1);
+    } else if (cleaned.startsWith('7') && cleaned.length === 9) {
+      cleaned = '40' + cleaned;
+    }
+    return cleaned;
+  }
+
+  sendWhatsAppAlert(event: CalendarEvent, automated = false) {
     // Constructing message with high-visibility markers
     const location = event.details || 'Nespecificat';
     const notes = event.notes || 'Fără note adiționale';
@@ -734,9 +745,23 @@ export class JuristService implements OnDestroy {
     ];
 
     const message = encodeURIComponent(messageLines.join('\n'));
+    const phoneNum = this.profile().phone || '';
+    const cleanPhone = this.getSanitizedPhone(phoneNum);
+
     if (!automated) {
-      const url = `https://api.whatsapp.com/send?text=${message}`;
-      window.open(url, '_blank');
+      const url = cleanPhone 
+        ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${message}`
+        : `https://api.whatsapp.com/send?text=${message}`;
+
+      console.log('[WHATSAPP] Opening Link:', url);
+      const win = window.open(url, '_blank');
+      if (!win) {
+         console.warn('[WHATSAPP] Popup blocked, falling back to window.location.href');
+         this.notificationService.warning('Pop-up blocat de browser. Despachetăm și transferăm pe WhatsApp...');
+         setTimeout(() => {
+            window.location.href = url;
+         }, 1500);
+      }
     }
   }
 
@@ -747,15 +772,22 @@ export class JuristService implements OnDestroy {
     if (!event.date || !event.time || !event.whatsappAlert) return false;
     
     try {
+      const dateParts = event.date.split('-');
+      if (dateParts.length !== 3) return false;
+      
+      const checkDate = new Date(
+        parseInt(dateParts[0], 10),
+        parseInt(dateParts[1], 10) - 1,
+        parseInt(dateParts[2], 10)
+      );
+      checkDate.setHours(0,0,0,0);
+
       const today = new Date();
       today.setHours(0,0,0,0);
       
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(0,0,0,0);
-      
-      const checkDate = new Date(event.date);
-      checkDate.setHours(0,0,0,0);
 
       const isToday = checkDate.getTime() === today.getTime();
       const isTomorrow = checkDate.getTime() === tomorrow.getTime();

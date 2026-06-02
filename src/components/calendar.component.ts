@@ -142,13 +142,13 @@ interface WindowWithSpeechRecognition extends Window {
                          Rest: {{ event.financial.rest }}
                        </span>
                      </div>
-                     @if (event.whatsappAlert && !event.whatsappAlertSent && juristService.isWithinAlertWindow(event)) {
-                        <div class="flex items-center gap-1 text-jurist-orange animate-pulse ml-auto sm:ml-0 bg-orange-400/10 px-2 py-0.5 rounded border border-orange-400/20">
+                     @if (event.whatsappAlert && !event.whatsappAlertSent) {
+                        <div [class]="'flex items-center gap-1 ml-auto sm:ml-0 px-2 py-0.5 rounded border ' + (juristService.isWithinAlertWindow(event) ? 'text-jurist-orange animate-pulse bg-orange-400/10 border-orange-400/20' : 'text-gray-400 bg-gray-800/40 border-gray-850')">
                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-clock-history" viewBox="0 0 16 16">
                             <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022l-.074.997zm2.004.45a7.003 7.003 0 0 0-1.026-.645l.389-.92a8.006 8.006 0 0 1 1.137.712l-.4.853zm2.148 1.144c.376.327.71.697 1.002 1.104l-.84.538a6.002 6.002 0 0 0-.853-.941l.69-.701-.001-.001zm1.205 1.74a7.006 7.006 0 0 0-.645-1.026l.92-.389c.28.618.508 1.272.673 1.954l-.948.311zm.45 2.004c.158.468.257.962.292 1.472l-.997.074a6.012 6.012 0 0 0-.25-1.258l.955-.288zM15 8h-1a6.002 6.002 0 0 0-3.32-5.367l.454-.891A7.002 7.002 0 0 1 15 8zm-7-7v1c-3.313 0-6 2.687-6 6s2.687 6 6 6 6-2.687 6-6h1c0 3.866-3.134 7-7 7s-7-3.134-7-7 3.134-7 7-7h.001A8.995 8.995 0 0 1 15 8h-1a7.994 7.994 0 0 0-.485-2.716l.89-.453A8.993 8.993 0 0 1 15 8h1A9 9 0 0 0 8 0h-.001z"/>
                             <path d="M8.5 4.5a.5.5 0 0 0-1 0v3.793l2.146 2.147a.5.5 0 0 0 .708-.708L8.5 7.793V4.5z"/>
                           </svg>
-                          <span class="text-[10px] font-bold">Alertă Programată</span>
+                          <span class="text-[10px] font-bold">{{ juristService.isWithinAlertWindow(event) ? 'Alertă Pregătită' : 'WhatsApp Activ' }}</span>
                         </div>
                      }
                       @if (event.whatsappAlert && event.whatsappAlertSent) {
@@ -588,8 +588,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const alerts = this.juristService.readyAlerts();
     if (alerts.length === 0) return;
 
-    for (let i = 0; i < alerts.length; i++) {
-        const event = alerts[i];
+    for (const event of alerts) {
         this.juristService.sendWhatsAppAlert(event, false);
         // Mark as sent
         const updated = { ...event, whatsappAlertSent: true };
