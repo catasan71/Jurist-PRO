@@ -539,13 +539,18 @@ app.post('/api/test-whatsapp', async (req, res) => {
     }
 
     const testMsg = `🔔 *TEST JURISTPRO*\n\nConexiunea la robotul tău WhatsApp funcționează perfect! Felicitări, ești integrat de acum cu succes! 🎉`;
-    const success = await sendAutomatedWhatsApp(phone, testMsg);
+    const result = await sendAutomatedWhatsApp(phone, testMsg);
 
-    if (success) {
+    if (result.success) {
       res.json({ success: true, message: 'Mesajul de test a fost trimis cu succes pe WhatsApp!' });
     } else {
+      let details = '';
+      if (result.status) details += ` [Status ${result.status}]`;
+      if (result.responseText) details += ` Răspuns API: ${result.responseText}`;
+      if (result.error) details += ` Eroare: ${result.error}`;
+      
       res.status(500).json({ 
-        error: 'Trimiterea mesajului automată a eșuat. Vă rugăm să verificați dacă Token-ul sau URL-ul instanței sunt corecte și instanța este Autorizată cu succes în GreenAPI.' 
+        error: `Trimiterea a eșuat. Vă rugăm să verificați dacă Token-ul și URL-ul instanței sunt corecte, și dacă instanța este Autorizată (stare scanată / conectat QR) în GreenAPI. Detalii tehnice:${details}` 
       });
     }
   } catch (error: any) {
@@ -556,7 +561,7 @@ app.post('/api/test-whatsapp', async (req, res) => {
 
 // --- AUTOMATED WHATSAPP DISPATCHER ---
 // Can send messages hands-free via Twilio WhatsApp API or custom standard HTTP WhatsApp Gateways
-async function sendAutomatedWhatsApp(phone: string, text: string): Promise<boolean> {
+async function sendAutomatedWhatsApp(phone: string, text: string): Promise<{ success: boolean; status?: number; responseText?: string; error?: string }> {
   // Normalize phone to format like 40722123456
   let cleanPhone = phone.replace(/\D/g, '');
   if (cleanPhone.startsWith('00')) {
@@ -575,11 +580,32 @@ async function sendAutomatedWhatsApp(phone: string, text: string): Promise<boole
   const gatewayToken = process.env.WHATSAPP_GATEWAY_TOKEN;
 
   if (gatewayUrl) {
-    console.log(`[WHATSAPP ROBOT] Încercare trimitere prin Gateway API: ${gatewayUrl}`);
-    try {
-      const isGreenApi = gatewayUrl.includes('green-api.com');
-      const urlWithToken = (!isGreenApi && gatewayToken) ? `${gatewayUrl}?token=${gatewayToken}` : gatewayUrl;
+    let finalUrl = gatewayUrl.trim();
+    const isGreenApi = finalUrl.includes('green-api.com');
+    
+    if (isGreenApi) {
+      const hasSendMessage = finalUrl.includes('/sendMessage/');
+      if (!hasSendMessage && gatewayToken) {
+        // Build correct Green API send message url automatically
+        let cleanBase = finalUrl.replace(/\/+$/, '');
+        const instanceMatch = cleanBase.match(/waInstance(\d+)/i);
+        if (instanceMatch) {
+          const instanceId = instanceMatch[1];
+          const hostMatch = cleanBase.match(/^(https?:\/\/[^\/]+)/i);
+          const host = hostMatch ? hostMatch[1] : 'https://api.green-api.com';
+          finalUrl = `${host}/waInstance${instanceId}/sendMessage/${gatewayToken.trim()}`;
+        } else {
+          finalUrl = `${cleanBase}/sendMessage/${gatewayToken.trim()}`;
+        }
+      }
+    } else {
+      if (gatewayToken && !finalUrl.includes('token=')) {
+        finalUrl = finalUrl.includes('?') ? `${finalUrl}&token=${gatewayToken}` : `${finalUrl}?token=${gatewayToken}`;
+      }
+    }
 
+    console.log(`[WHATSAPP ROBOT] Încercare trimitere prin Gateway API. URL final: ${finalUrl}`);
+    try {
       // Send payload supporting multiple common gateway formats
       let payload: any = {
         to: cleanPhone,
@@ -592,11 +618,11 @@ async function sendAutomatedWhatsApp(phone: string, text: string): Promise<boole
       };
 
       // Special handling for Green API
-      if (gatewayUrl.includes('green-api.com')) {
+      if (finalUrl.includes('green-api.com')) {
         payload = { chatId: `${cleanPhone}@c.us`, message: text };
       }
 
-      const response = await fetch(urlWithToken, {
+      const response = await fetch(finalUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -606,11 +632,15 @@ async function sendAutomatedWhatsApp(phone: string, text: string): Promise<boole
 
       const resText = await response.text();
       console.log(`[WHATSAPP ROBOT] Răspuns Gateway API (Status: ${response.status}):`, resText);
+      
       if (response.ok) {
-        return true;
+        return { success: true, status: response.status, responseText: resText };
+      } else {
+        return { success: false, status: response.status, responseText: resText, error: `Server response code: ${response.status}` };
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[WHATSAPP ROBOT] Eroare la trimiterea prin Gateway API:', err);
+      return { success: false, error: err.message || 'Fetch failed' };
     }
   }
 
@@ -637,14 +667,15 @@ async function sendAutomatedWhatsApp(phone: string, text: string): Promise<boole
       });
 
       console.log('[WHATSAPP ROBOT] Succes Twilio SID:', message.sid);
-      return true;
-    } catch (err) {
+      return { success: true, responseText: `Twilio Message SID: ${message.sid}` };
+    } catch (err: any) {
       console.error('[WHATSAPP ROBOT] Eroare la trimiterea prin Twilio WhatsApp:', err);
+      return { success: false, error: err.message || 'Twilio send failed' };
     }
   }
 
   console.warn('[WHATSAPP ROBOT] Nu s-a configurat nicio metodă automată validă (WHATSAPP_GATEWAY_URL sau TWILIO_ACCOUNT_SID).');
-  return false;
+  return { success: false, error: 'Nu este configurat niciun gateway WhatsApp valid.' };
 }
 
 // --- BACKGROUND AUTOMATION ROBOT ---
@@ -727,15 +758,15 @@ async function runDeadlineAutomation() {
               `_Mesaj automat generat de către JuristPRO AI_`;
 
             console.log(`[ROBOT] Se încearcă trimiterea automată WhatsApp către numărul: ${profile.phone}`);
-            const success = await sendAutomatedWhatsApp(profile.phone, textMessage);
+            const result = await sendAutomatedWhatsApp(profile.phone, textMessage);
             
-            if (success) {
+            if (result.success) {
               await eventDoc.ref.update({
                 whatsapp_alert_sent: true
               });
               console.log(`[ROBOT] Alerta automată WhatsApp a fost expediată pentru "${event.title}"`);
             } else {
-              console.warn(`[ROBOT] Expedierea automată a eșuat. Utilizatorul poate trimite manual via web-app.`);
+              console.warn(`[ROBOT] Expedierea automată a eșuat. Utilizatorul poate trimite manual via web-app. Eroare:`, result.error || result.responseText);
             }
           }
         }
