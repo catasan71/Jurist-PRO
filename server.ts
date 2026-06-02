@@ -524,6 +524,14 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
 // --- AUTOMATED WHATSAPP DISPATCHER ---
 // Can send messages hands-free via Twilio WhatsApp API or custom standard HTTP WhatsApp Gateways
 async function sendAutomatedWhatsApp(phone: string, text: string): Promise<boolean> {
+  // Normalize phone to format like 40722123456
+  let cleanPhone = phone.replace(/\D/g, '');
+  if (cleanPhone.startsWith('0') && cleanPhone.length === 10) {
+    cleanPhone = '40' + cleanPhone.substring(1);
+  } else if (cleanPhone.startsWith('7') && cleanPhone.length === 9) {
+    cleanPhone = '40' + cleanPhone;
+  }
+
   // 1. Try Custom HTTP WhatsApp Gateway if configured (e.g., UltraMsg, GreenAPI, WaTeam, etc.)
   const gatewayUrl = process.env.WHATSAPP_GATEWAY_URL;
   const gatewayToken = process.env.WHATSAPP_GATEWAY_TOKEN;
@@ -531,8 +539,8 @@ async function sendAutomatedWhatsApp(phone: string, text: string): Promise<boole
   if (gatewayUrl) {
     console.log(`[WHATSAPP ROBOT] Încercare trimitere prin Gateway API: ${gatewayUrl}`);
     try {
-      const cleanPhone = phone.replace(/\D/g, '');
-      const urlWithToken = gatewayToken ? `${gatewayUrl}?token=${gatewayToken}` : gatewayUrl;
+      const isGreenApi = gatewayUrl.includes('green-api.com');
+      const urlWithToken = (!isGreenApi && gatewayToken) ? `${gatewayUrl}?token=${gatewayToken}` : gatewayUrl;
 
       // Send payload supporting multiple common gateway formats
       let payload: any = {
@@ -579,13 +587,6 @@ async function sendAutomatedWhatsApp(phone: string, text: string): Promise<boole
       // Lazy-load Twilio client to prevent crash for other users if keys are missing
       const twilioSdk = require('twilio');
       const client = twilioSdk(twilioSid, twilioToken);
-
-      let cleanPhone = phone.replace(/\D/g, '');
-      if (cleanPhone.startsWith('0') && cleanPhone.length === 10) {
-        cleanPhone = '40' + cleanPhone.substring(1);
-      } else if (cleanPhone.startsWith('7') && cleanPhone.length === 9) {
-        cleanPhone = '40' + cleanPhone;
-      }
 
       const formattedTo = cleanPhone.startsWith('whatsapp:') ? cleanPhone : `whatsapp:+${cleanPhone}`;
       const formattedFrom = twilioFrom.startsWith('whatsapp:') ? twilioFrom : `whatsapp:${twilioFrom}`;
