@@ -989,6 +989,33 @@ export class JuristService implements OnDestroy {
     }
   }
 
+  async sendTestWhatsApp(phone: string): Promise<{ success: boolean; message: string; error?: string }> {
+    this._loading.set(true);
+    try {
+      const response = await fetch('/api/test-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        this.notificationService.success(data.message || 'Mesaj de test trimis cu succes!');
+        return { success: true, message: data.message || 'Mesaj de test trimis cu succes!' };
+      } else {
+        const errorMsg = data.error || 'Trimiterea testului a eșuat.';
+        this.notificationService.error(errorMsg);
+        return { success: false, message: errorMsg, error: errorMsg };
+      }
+    } catch (error: any) {
+      const errMsg = error.message || 'Eroare de conexiune la server pentru testul WhatsApp.';
+      console.error('WhatsApp test error:', error);
+      this.notificationService.error(errMsg);
+      return { success: false, message: errMsg, error: errMsg };
+    } finally {
+      this._loading.set(false);
+    }
+  }
+
   async purchaseTopUp(amount: number) {
     const user = this.authService.currentUser();
     if (!user) return;

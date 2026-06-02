@@ -521,16 +521,54 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
   }
 });
 
+// API Endpoint for Testing WhatsApp Gateway
+app.post('/api/test-whatsapp', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ error: 'Numărul de telefon este obligatoriu.' });
+    }
+
+    const gatewayUrl = process.env.WHATSAPP_GATEWAY_URL;
+    const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+    
+    if (!gatewayUrl && !twilioSid) {
+      return res.status(400).json({ 
+        error: 'Nu s-a configurat nicio metodă validă de expediere automată (lipsesc WHATSAPP_GATEWAY_URL sau TWILIO din Secrets).' 
+      });
+    }
+
+    const testMsg = `🔔 *TEST JURISTPRO*\n\nConexiunea la robotul tău WhatsApp funcționează perfect! Felicitări, ești integrat de acum cu succes! 🎉`;
+    const success = await sendAutomatedWhatsApp(phone, testMsg);
+
+    if (success) {
+      res.json({ success: true, message: 'Mesajul de test a fost trimis cu succes pe WhatsApp!' });
+    } else {
+      res.status(500).json({ 
+        error: 'Trimiterea mesajului automată a eșuat. Vă rugăm să verificați dacă Token-ul sau URL-ul instanței sunt corecte și instanța este Autorizată cu succes în GreenAPI.' 
+      });
+    }
+  } catch (error: any) {
+    console.error('Test WhatsApp error:', error);
+    res.status(500).json({ error: error.message || 'Eroare internă în timpul trimiterii testului.' });
+  }
+});
+
 // --- AUTOMATED WHATSAPP DISPATCHER ---
 // Can send messages hands-free via Twilio WhatsApp API or custom standard HTTP WhatsApp Gateways
 async function sendAutomatedWhatsApp(phone: string, text: string): Promise<boolean> {
   // Normalize phone to format like 40722123456
   let cleanPhone = phone.replace(/\D/g, '');
+  if (cleanPhone.startsWith('00')) {
+    cleanPhone = cleanPhone.substring(2);
+  }
   if (cleanPhone.startsWith('0') && cleanPhone.length === 10) {
     cleanPhone = '40' + cleanPhone.substring(1);
   } else if (cleanPhone.startsWith('7') && cleanPhone.length === 9) {
     cleanPhone = '40' + cleanPhone;
   }
+
+  console.log(`[WHATSAPP ROBOT] Număr inițial: "${phone}" -> Număr normalizat: "${cleanPhone}"`);
 
   // 1. Try Custom HTTP WhatsApp Gateway if configured (e.g., UltraMsg, GreenAPI, WaTeam, etc.)
   const gatewayUrl = process.env.WHATSAPP_GATEWAY_URL;
