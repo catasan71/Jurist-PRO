@@ -521,6 +521,93 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
   }
 });
 
+// --- AUTOMATED WHATSAPP DISPATCHER ---
+// Can send messages hands-free via Twilio WhatsApp API or custom standard HTTP WhatsApp Gateways
+async function sendAutomatedWhatsApp(phone: string, text: string): Promise<boolean> {
+  // 1. Try Custom HTTP WhatsApp Gateway if configured (e.g., UltraMsg, GreenAPI, WaTeam, etc.)
+  const gatewayUrl = process.env.WHATSAPP_GATEWAY_URL;
+  const gatewayToken = process.env.WHATSAPP_GATEWAY_TOKEN;
+
+  if (gatewayUrl) {
+    console.log(`[WHATSAPP ROBOT] Încercare trimitere prin Gateway API: ${gatewayUrl}`);
+    try {
+      const cleanPhone = phone.replace(/\D/g, '');
+      const urlWithToken = gatewayToken ? `${gatewayUrl}?token=${gatewayToken}` : gatewayUrl;
+
+      // Send payload supporting multiple common gateway formats
+      let payload: any = {
+        to: cleanPhone,
+        message: text,
+        msg: text,
+        body: text,
+        token: gatewayToken,
+        phone: cleanPhone,
+        number: cleanPhone
+      };
+
+      // Special handling for Green API
+      if (gatewayUrl.includes('green-api.com')) {
+        payload = { chatId: `${cleanPhone}@c.us`, message: text };
+      }
+
+      const response = await fetch(urlWithToken, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const resText = await response.text();
+      console.log(`[WHATSAPP ROBOT] Răspuns Gateway API (Status: ${response.status}):`, resText);
+      if (response.ok) {
+        return true;
+      }
+    } catch (err) {
+      console.error('[WHATSAPP ROBOT] Eroare la trimiterea prin Gateway API:', err);
+    }
+  }
+
+  // 2. Try Twilio WhatsApp API if configured
+  const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+  const twilioToken = process.env.TWILIO_AUTH_TOKEN;
+  const twilioFrom = process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_FROM_NUMBER;
+
+  if (twilioSid && twilioToken && twilioFrom) {
+    console.log('[WHATSAPP ROBOT] Încercare trimitere prin Twilio WhatsApp API...');
+    try {
+      // Lazy-load Twilio client to prevent crash for other users if keys are missing
+      const twilioSdk = require('twilio');
+      const client = twilioSdk(twilioSid, twilioToken);
+
+      let cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone.startsWith('0') && cleanPhone.length === 10) {
+        cleanPhone = '40' + cleanPhone.substring(1);
+      } else if (cleanPhone.startsWith('7') && cleanPhone.length === 9) {
+        cleanPhone = '40' + cleanPhone;
+      }
+
+      const formattedTo = cleanPhone.startsWith('whatsapp:') ? cleanPhone : `whatsapp:+${cleanPhone}`;
+      const formattedFrom = twilioFrom.startsWith('whatsapp:') ? twilioFrom : `whatsapp:${twilioFrom}`;
+
+      console.log(`[WHATSAPP ROBOT] Trimitere Twilio de la ${formattedFrom} către ${formattedTo}`);
+      const message = await client.messages.create({
+        body: text,
+        from: formattedFrom,
+        to: formattedTo
+      });
+
+      console.log('[WHATSAPP ROBOT] Succes Twilio SID:', message.sid);
+      return true;
+    } catch (err) {
+      console.error('[WHATSAPP ROBOT] Eroare la trimiterea prin Twilio WhatsApp:', err);
+    }
+  }
+
+  console.warn('[WHATSAPP ROBOT] Nu s-a configurat nicio metodă automată validă (WHATSAPP_GATEWAY_URL sau TWILIO_ACCOUNT_SID).');
+  return false;
+}
+
 // --- BACKGROUND AUTOMATION ROBOT ---
 // This function scans all events and sends proactive alerts for tomorrow's deadlines
 async function runDeadlineAutomation() {
@@ -547,43 +634,71 @@ async function runDeadlineAutomation() {
       if (!eventsSnapshot.empty) {
         for (const eventDoc of eventsSnapshot.docs) {
           const event = eventDoc.data();
-          if (event['email_alert_sent'] === true) {
-            continue; // Skip if already emailed
+          const whatsappSent = event['whatsapp_alert_sent'] === true;
+          const emailSent = event['email_alert_sent'] === true;
+
+          if (whatsappSent && emailSent) {
+            continue; // Already processed both channels
           }
-          
-          console.log(`[ROBOT] ALERTĂ TRIGGER: Dosar ${event.title}`);
+
+          console.log(`[ROBOT] ALERTĂ TRIGGER: Dosar "${event.title}" pentru utilizatorul ${profile.full_name || 'avocat'}`);
           
           // --- SEND EMAIL NOTIFICATION ---
-          if (profile.email) {
+          if (!emailSent && profile.email) {
             try {
               const resend = getResend();
               await resend.emails.send({
                 from: 'JuristPRO Robot <robot@developly.pro>',
-                to: [profile.email], // Se trimite avocatului o copie pe mail
+                to: [profile.email], // Se trimite o copie pe mail-ul de avocat
                 subject: `⚠️ ALERTĂ TERMEN: Dosar ${event.title}`,
                 html: `
                   <div style="font-family: sans-serif; padding: 40px; background: #050505; color: white; border-radius: 20px;">
-                    <h1 style="color: #ea580c; font-size: 20px; font-weight: 900; text-transform: uppercase;">JuristPRO Automațiune</h1>
+                    <h1 style="color: #ea580c; font-size: 20px; font-weight: 900; text-transform: uppercase;">JuristPRO Automatizare</h1>
                     <p style="color: #71717a;">Bună ziua, Av. ${profile.full_name || 'Colegu'},</p>
                     <div style="background: #111; padding: 30px; border-radius: 20px; border: 1px solid #27272a; margin: 30px 0;">
                       <p><strong>DOSAR:</strong> ${event.title}</p>
                       <p><strong>TERMEN:</strong> ${event.event_date} la ${event.event_time}</p>
-                      <p><strong>INSTANȚĂ:</strong> ${event.details || 'N/A'}</p>
+                      <p><strong>INSTANȚĂ:</strong> ${event.details || 'Nespecificată'}</p>
                     </div>
                     <p style="font-size: 11px; color: #3f3f46;">Sistemul automat JuristPRO a prelucrat acest dosar.</p>
                   </div>
                 `
               });
+              await eventDoc.ref.update({
+                email_alert_sent: true
+              });
+              console.log(`[ROBOT] Email trimis cu succes către ${profile.email}`);
             } catch (err) {
               console.error('[ROBOT] Eroare trimitere email intern:', err);
             }
           }
-          
-          // --- PRELIMINAR: MARCĂM CA TRIMIS STRICT ÎN EMAIL ---
-          console.log(`[ROBOT] Alerta de e-mail s-a trimis pe email.`);
-          await eventDoc.ref.update({
-            email_alert_sent: true
-          });
+
+          // --- SEND WHATSAPP NOTIFICATION ---
+          if (!whatsappSent && profile.phone) {
+            const location = event.details || 'Nespecificat';
+            const notes = event.notes || 'Fără note adiționale';
+            const textMessage = `🔔 *ALERTA JURISTPRO - REAMINTIRE 24H*\n\n` +
+              `⚖️ *DOSAR:* ${event.title || 'Nespecificat'}\n` +
+              `👤 *CLIENT:* ${event.clientName || 'Nespecificat'}\n` +
+              `📅 *DATA:* ${event.event_date || '...'}\n` +
+              `🕒 *ORA:* ${event.event_time || '...'}\n` +
+              `📂 *OBIECT:* ${event.type || 'Nespecificat'}\n` +
+              `📍 *LOCAȚIE:* ${location}\n\n` +
+              `📝 *NOTE:* ${notes}\n\n` +
+              `_Mesaj automat generat de către JuristPRO AI_`;
+
+            console.log(`[ROBOT] Se încearcă trimiterea automată WhatsApp către numărul: ${profile.phone}`);
+            const success = await sendAutomatedWhatsApp(profile.phone, textMessage);
+            
+            if (success) {
+              await eventDoc.ref.update({
+                whatsapp_alert_sent: true
+              });
+              console.log(`[ROBOT] Alerta automată WhatsApp a fost expediată pentru "${event.title}"`);
+            } else {
+              console.warn(`[ROBOT] Expedierea automată a eșuat. Utilizatorul poate trimite manual via web-app.`);
+            }
+          }
         }
       }
     }
