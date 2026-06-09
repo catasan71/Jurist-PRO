@@ -187,12 +187,36 @@ app.get('/api/test-revolut', async (req, res) => {
   try {
     const { apiKey, baseUrl, isSandbox } = getRevolutConfig();
     const configured = apiKey !== 'dummy_revolut_key_for_testing';
+    
+    // Diagnostics check (without exposing full key)
+    const keyPrefix = apiKey === 'dummy_revolut_key_for_testing' ? 'none' : apiKey.substring(0, Math.min(8, apiKey.length));
+    const keySuffix = apiKey === 'dummy_revolut_key_for_testing' ? 'none' : apiKey.substring(Math.max(0, apiKey.length - 4));
+    const isPublicKey = apiKey.startsWith('pk_');
+    const isSecretKey = apiKey.startsWith('sk_') || apiKey.startsWith('oa_');
+    
+    let advice = "";
+    if (!configured) {
+      advice = "Revolut nu este configurat în Secrets. Se folosește modul demo/mock (plata se simulează automat la checkout). Adăugați REVOLUT_API_KEY în Secrets pentru a activa plățile reale.";
+    } else if (isPublicKey) {
+      advice = "CRITICAL: Ați utilizat 'Public Key' (începe cu pk_). Revolut Merchant API are nevoie de 'Secret Key' (începe cu sk_ sau oa_). Generați o cheie nouă tip 'Secret Key' din Revolut Business -> Merchant -> Online Payments -> APIs.";
+    } else if (isSandbox) {
+      advice = "INFO: SANDBOX MODE. Aplicația utilizează sandbox-merchant.revolut.com. Asigurați-vă că acest API key provine din portalul Revolut Sandbox (sandbox-business.revolut.com) și nu cel de producție, altfel veți primi 401 Unauthorized.";
+    } else {
+      advice = "INFO: LIVE MODE. Aplicația face apeluri directe către serverul Live Revolut (merchant.revolut.com). Asigurați-vă că folosiți o cheie SECRETĂ de Live (începe cu sk_ sau oa_). Dacă cheia dvs. este de Sandbox, în mod obligatoriu adăugați REVOLUT_SANDBOX=true în variabilele de mediu.";
+    }
+
     res.json({ 
       success: true, 
-      message: "Revolut controller is active.", 
+      message: "Revolut controller diagnostics ready.", 
       configured,
       isSandbox,
-      baseUrlLive: baseUrl
+      baseUrl,
+      keyLength: apiKey.length,
+      keyPrefix,
+      keySuffix,
+      isPublicKey,
+      isSecretKey,
+      advice
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
