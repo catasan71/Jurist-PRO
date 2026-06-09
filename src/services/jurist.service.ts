@@ -273,7 +273,7 @@ export class JuristService implements OnDestroy {
   private _ticketsUnsub: (() => void) | null = null;
   private _promoUnsub: (() => void) | null = null;
   private _eventsUnsub: (() => void) | null = null;
-  private _automationInterval: any = null;
+  private _automationInterval: ReturnType<typeof setInterval> | null = null;
 
   public stopAllListeners() {
     if (this._announcementUnsub) { this._announcementUnsub(); this._announcementUnsub = null; }
@@ -900,7 +900,7 @@ export class JuristService implements OnDestroy {
     const newWindow = window.open('', '_blank');
 
     try {
-      const response = await fetch('/api/create-checkout-session', {
+      const response = await fetch('/api/create-revolut-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -956,33 +956,15 @@ export class JuristService implements OnDestroy {
     if (!user) return false;
 
     this._loading.set(true);
-    const newWindow = window.open('', '_blank');
-
     try {
-      const response = await fetch('/api/create-portal-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
-      });
-      const data = await response.json();
-      if (data.url) {
-        if (newWindow) {
-           newWindow.location.href = data.url;
-        } else {
-           window.location.href = data.url;
-        }
-        return true;
-      } else {
-        if (newWindow) newWindow.close();
-        // Fallback to local cancellation if no Stripe customer ID exists
-        if (!this.authService.isDemo()) {
-           await updateDoc(doc(db, 'profiles', user.id), { status: 'cancelled' });
-        }
-        return true;
+      if (!this.authService.isDemo()) {
+         await updateDoc(doc(db, 'profiles', user.id), { status: 'cancelled' });
       }
+      this.notificationService.success('Abonamentul a fost anulat cu succes.');
+      return true;
     } catch (error) {
-      if (newWindow) newWindow.close();
-      console.error('Portal error:', error);
+      console.error('Cancellation error:', error);
+      this.notificationService.error('Eroare la anularea abonamentului.');
       return false;
     } finally {
       this._loading.set(false);
@@ -1006,8 +988,9 @@ export class JuristService implements OnDestroy {
         this.notificationService.error(errorMsg);
         return { success: false, message: errorMsg, error: errorMsg };
       }
-    } catch (error: any) {
-      const errMsg = error.message || 'Eroare de conexiune la server pentru testul WhatsApp.';
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      const errMsg = err.message || 'Eroare de conexiune la server pentru testul WhatsApp.';
       console.error('WhatsApp test error:', error);
       this.notificationService.error(errMsg);
       return { success: false, message: errMsg, error: errMsg };
@@ -1028,7 +1011,7 @@ export class JuristService implements OnDestroy {
     const newWindow = window.open('', '_blank');
 
     try {
-      const response = await fetch('/api/create-checkout-session', {
+      const response = await fetch('/api/create-revolut-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -30,9 +30,7 @@
     "marked": "^18.0.2",
     "resend": "^6.10.0",
     "rxjs": "~7.8.0",
-    "stripe": "^20.4.1",
-    "tslib": "^2.3.0",
-    "twilio": "^6.0.2"
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^21.1.0",

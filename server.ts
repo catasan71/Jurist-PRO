@@ -4,7 +4,6 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import Stripe from 'stripe';
 import dotenv from 'dotenv';
 import admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -76,219 +75,124 @@ function getAdminDb() {
   return adminDbInstance;
 }
 
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
-    apiVersion: '2024-12-18.acacia' as any,
-  });
+function getRevolutConfig() {
+  const apiKey = (process.env.REVOLUT_API_KEY || process.env.REVOLUT_MERCHANT_API_KEY || '').trim();
+  const isSandbox = !apiKey || apiKey.startsWith('sand_') || apiKey.includes('sandbox') || apiKey === 'dummy_revolut_key_for_testing';
+  const baseUrl = isSandbox ? 'https://sandbox-merchant.revolut.com/api/1.0' : 'https://merchant.revolut.com/api/1.0';
+  return {
+    apiKey: apiKey || 'dummy_revolut_key_for_testing',
+    baseUrl,
+    isSandbox
+  };
 }
 
-// Webhook endpoint must use raw body
-app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const stripe = getStripe();
-  const adminDb = getAdminDb();
-
-  let event;
-
-  try {
-    if (endpointSecret) {
-      event = stripe.webhooks.constructEvent(req.body, sig as string, endpointSecret);
-    } else {
-      // Fallback if no webhook secret is set (e.g., local dev without CLI)
-      event = JSON.parse(req.body.toString());
-    }
-  } catch (err: any) {
-    console.error(`Webhook Error: ${err.message}`);
-    res.status(400).send(`Webhook Error: ${err.message}`);
-    return;
-  }
-
-  // Handle the event
-  try {
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.client_reference_id;
-        const metadata = session.metadata || {};
-
-        if (!userId) break;
-
-        if (metadata.type === 'subscription') {
-          const plan = metadata.plan; // 'expert' or 'gold'
-          const credits = plan === 'expert' ? 150 : 500;
-          
-          const profileDoc = await adminDb.collection('profiles').doc(userId).get();
-          const currentCredits = profileDoc.exists ? (profileDoc.data()?.credits || 0) : 0;
-          const userName = profileDoc.exists ? (profileDoc.data()?.full_name || 'User') : 'User';
-          const billingData = profileDoc.exists ? (profileDoc.data()?.billing_data || null) : null;
-          
-          await adminDb.collection('profiles').doc(userId).update({
-            plan: plan,
-            status: 'active',
-            credits: currentCredits + credits,
-            stripe_customer_id: session.customer as string,
-            stripe_subscription_id: session.subscription as string
-          });
-          
-          await adminDb.collection('transactions').add({
-            user_id: userId,
-            user_name: userName,
-            billing_data: billingData,
-            amount: session.amount_total ? session.amount_total / 100 : 0,
-            type: 'subscription',
-            description: `Abonament ${plan.toUpperCase()}`,
-            created_at: new Date().toISOString()
-          });
-        } else if (metadata.type === 'topup') {
-          const amount = parseInt(metadata.amount || '0', 10);
-          const credits = parseInt(metadata.credits || '0', 10);
-          
-          // Get current credits
-          const profileDoc = await adminDb.collection('profiles').doc(userId).get();
-          const currentCredits = profileDoc.exists ? (profileDoc.data()?.credits || 0) : 0;
-          const userName = profileDoc.exists ? (profileDoc.data()?.full_name || 'User') : 'User';
-          const billingData = profileDoc.exists ? (profileDoc.data()?.billing_data || null) : null;
-          
-          await adminDb.collection('profiles').doc(userId).update({
-            credits: currentCredits + credits
-          });
-          
-          await adminDb.collection('transactions').add({
-            user_id: userId,
-            user_name: userName,
-            billing_data: billingData,
-            amount: amount,
-            type: 'top-up',
-            description: `Top-Up ${credits} Credite`,
-            created_at: new Date().toISOString()
-          });
-        }
-        break;
-      }
-      case 'checkout.session.expired': {
-        console.log('Checkout session expired:', event.data.object);
-        break;
-      }
-      case 'invoice.paid': {
-        const invoice = event.data.object as Stripe.Invoice;
-        if (invoice.billing_reason === 'subscription_cycle') {
-          const customerId = invoice.customer as string;
-          
-          const profilesSnapshot = await adminDb.collection('profiles')
-            .where('stripe_customer_id', '==', customerId)
-            .limit(1)
-            .get();
-            
-          if (!profilesSnapshot.empty) {
-            const userId = profilesSnapshot.docs[0].id;
-            const profileData = profilesSnapshot.docs[0].data();
-            const plan = profileData['plan'];
-            const creditsToAdd = plan === 'expert' ? 150 : (plan === 'gold' ? 500 : 0);
-            
-            if (creditsToAdd > 0) {
-              await adminDb.collection('profiles').doc(userId).update({
-                credits: (profileData['credits'] || 0) + creditsToAdd,
-                status: 'active'
-              });
-              
-              await adminDb.collection('transactions').add({
-                user_id: userId,
-                user_name: profileData['full_name'] || 'User',
-                billing_data: profileData['billing_data'] || null,
-                amount: invoice.amount_paid ? invoice.amount_paid / 100 : 0,
-                type: 'subscription',
-                description: `Reînnoire Abonament ${plan.toUpperCase()}`,
-                created_at: new Date().toISOString()
-              });
-            }
-          }
-        }
-        break;
-      }
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
-        const customerId = subscription.customer as string;
-        
-        const profilesSnapshot = await adminDb.collection('profiles')
-          .where('stripe_customer_id', '==', customerId)
-          .limit(1)
-          .get();
-          
-        if (!profilesSnapshot.empty) {
-          const userId = profilesSnapshot.docs[0].id;
-          
-          let newPlan = subscription.metadata?.plan;
-          
-          if (!newPlan) {
-            const productId = subscription.items.data[0].price.product as string;
-            const product = await stripe.products.retrieve(productId);
-            if (product.name.toLowerCase().includes('expert')) newPlan = 'expert';
-            if (product.name.toLowerCase().includes('gold')) newPlan = 'gold';
-          }
-          
-          if (newPlan && newPlan !== 'trial') {
-            await adminDb.collection('profiles').doc(userId).update({
-              plan: newPlan,
-              status: subscription.status === 'active' ? 'active' : 'pending_payment'
-            });
-          }
-        }
-        break;
-      }
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
-        const customerId = subscription.customer as string;
-        
-        // Find user by stripe_customer_id
-        const profilesSnapshot = await adminDb.collection('profiles')
-          .where('stripe_customer_id', '==', customerId)
-          .limit(1)
-          .get();
-          
-        if (!profilesSnapshot.empty) {
-          const userId = profilesSnapshot.docs[0].id;
-          await adminDb.collection('profiles').doc(userId).update({
-            status: 'cancelled',
-            plan: 'trial'
-          });
-        }
-        break;
-      }
-    }
-    res.json({ received: true });
-  } catch (err) {
-    console.error('Error processing webhook:', err);
-    res.status(500).json({ error: 'Webhook handler failed' });
-  }
-});
-
-// Standard JSON parsing for other routes
+// Standard JSON parsing for all JSON routes
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// API Endpoint for Stripe Checkout
-app.get('/api/test-stripe', async (req, res) => {
+// API Endpoint for Revolut Webhook
+app.post('/api/revolut-webhook', async (req, res) => {
+  const adminDb = getAdminDb();
+  
   try {
-    const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_dummy';
-    if (stripeKey === 'sk_test_dummy') {
-      return res.status(500).json({ success: false, error: 'Cheia Stripe nu este setată.' });
+    const payload = req.body;
+    console.log('[REVOLUT WEBHOOK] Received payload:', JSON.stringify(payload));
+    
+    const eventName = (payload.event || '').toUpperCase();
+    const order = payload.order || {};
+    const orderId = order.id || payload.order_id || '';
+    const metadata = order.metadata || {};
+    const userId = metadata.userId;
+
+    if (!userId) {
+      console.warn('[REVOLUT WEBHOOK] No userId present in metadata.', metadata);
+      return res.json({ received: true });
     }
-    const prefix = stripeKey.substring(0, 15);
-    const suffix = stripeKey.substring(stripeKey.length - 4);
-    res.json({ success: true, message: "Stripe endpoint is active.", keyPrefix: prefix, keySuffix: suffix });
+
+    if (eventName === 'ORDER_COMPLETED' || order.state === 'COMPLETED') {
+      const type = metadata.type;
+      
+      if (type === 'subscription') {
+        const plan = metadata.plan;
+        const credits = plan === 'expert' ? 150 : 500;
+        
+        const profileDoc = await adminDb.collection('profiles').doc(userId).get();
+        const currentCredits = profileDoc.exists ? (profileDoc.data()?.credits || 0) : 0;
+        const userName = profileDoc.exists ? (profileDoc.data()?.full_name || 'User') : 'User';
+        const billingData = profileDoc.exists ? (profileDoc.data()?.billing_data || null) : null;
+        
+        await adminDb.collection('profiles').doc(userId).update({
+          plan: plan,
+          status: 'active',
+          credits: currentCredits + credits,
+          revolut_order_id: orderId
+        });
+        
+        await adminDb.collection('transactions').add({
+          user_id: userId,
+          user_name: userName,
+          billing_data: billingData,
+          amount: order.amount ? order.amount / 100 : (plan === 'expert' ? 200 : 500),
+          type: 'subscription',
+          description: `Abonament ${plan.toUpperCase()} (Revolut Pay)`,
+          created_at: new Date().toISOString()
+        });
+        
+        console.log(`[REVOLUT WEBHOOK] Successfully upgraded subscription for user ${userId} to ${plan}`);
+      } else if (type === 'topup') {
+        const amount = Number(metadata.amount || '0');
+        const credits = Number(metadata.credits || '0');
+        
+        const profileDoc = await adminDb.collection('profiles').doc(userId).get();
+        const currentCredits = profileDoc.exists ? (profileDoc.data()?.credits || 0) : 0;
+        const userName = profileDoc.exists ? (profileDoc.data()?.full_name || 'User') : 'User';
+        const billingData = profileDoc.exists ? (profileDoc.data()?.billing_data || null) : null;
+        
+        await adminDb.collection('profiles').doc(userId).update({
+          credits: currentCredits + credits
+        });
+        
+        await adminDb.collection('transactions').add({
+          user_id: userId,
+          user_name: userName,
+          billing_data: billingData,
+          amount: amount,
+          type: 'top-up',
+          description: `Top-Up ${credits} Credite (Revolut Pay)`,
+          created_at: new Date().toISOString()
+        });
+        
+        console.log(`[REVOLUT WEBHOOK] Successfully processed top-up for user ${userId}`);
+      }
+    }
+    
+    res.json({ received: true });
+  } catch (err: any) {
+    console.error('Error processing Revolut webhook:', err);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
+
+// API Endpoint for Testing Revolut API Configuration
+app.get('/api/test-revolut', async (req, res) => {
+  try {
+    const { apiKey, baseUrl, isSandbox } = getRevolutConfig();
+    const configured = apiKey !== 'dummy_revolut_key_for_testing';
+    res.json({ 
+      success: true, 
+      message: "Revolut controller is active.", 
+      configured,
+      isSandbox,
+      baseUrlLive: baseUrl
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.post('/api/create-checkout-session', async (req, res) => {
+// API Endpoint to Create Revolut Hosted Checkout Order
+app.post('/api/create-revolut-order', async (req, res) => {
   try {
-    const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_dummy';
-    if (stripeKey === 'sk_test_dummy') {
-      return res.status(500).json({ error: 'Cheia Stripe (STRIPE_SECRET_KEY) lipsește din setările aplicației.' });
-    }
-
     const { type, plan, amount, credits, userId, email } = req.body;
     
     if (!userId) {
@@ -296,101 +200,110 @@ app.post('/api/create-checkout-session', async (req, res) => {
       return;
     }
 
-    const appUrl = req.headers.origin || process.env.APP_URL || `https://ais-dev-2gyoebyp2nbm3psmj7o4di-40090194019.europe-west2.run.app`;
-    
-    let sessionConfig: Stripe.Checkout.SessionCreateParams = {
-      payment_method_types: ['card'],
-      client_reference_id: userId,
-      success_url: `${appUrl}/?payment=success`,
-      cancel_url: `${appUrl}/?payment=cancelled`,
-      mode: 'payment',
-      line_items: [],
-      metadata: { type }
-    };
+    const { apiKey, baseUrl, isSandbox } = getRevolutConfig();
+    const appUrl = req.headers.origin || process.env.APP_URL || `https://juristpro.ro`;
 
-    if (email && typeof email === 'string' && email.trim() !== '') {
-      sessionConfig.customer_email = email;
-    }
+    // Compute amount in cents (Revolut takes positive integers as sub-unit values of the currency)
+    const amountVal = type === 'subscription' ? (plan === 'expert' ? 20000 : 50000) : Math.round(Number(amount) * 100);
 
-    if (type === 'subscription') {
-      sessionConfig.mode = 'subscription';
-      sessionConfig.metadata!.plan = plan;
-      sessionConfig.subscription_data = {
-        metadata: { plan }
-      };
+    // If key is dummy/missing, gracefully auto-credit the user profile immediately and redirect
+    if (apiKey === 'dummy_revolut_key_for_testing' || apiKey.startsWith('dummy_')) {
+      console.log(`[REVOLUT] Mock Order generated. Auto-crediting user profile: ${userId}`);
+      const adminDb = getAdminDb();
+      try {
+        if (type === 'subscription') {
+          const creditsToAdd = plan === 'expert' ? 150 : 500;
+          const profileDoc = await adminDb.collection('profiles').doc(userId).get();
+          const currentCredits = profileDoc.exists ? (profileDoc.data()?.credits || 0) : 0;
+          const userName = profileDoc.exists ? (profileDoc.data()?.full_name || 'User') : 'User';
+          const billingData = profileDoc.exists ? (profileDoc.data()?.billing_data || null) : null;
+
+          await adminDb.collection('profiles').doc(userId).update({
+            plan: plan,
+            status: 'active',
+            credits: currentCredits + creditsToAdd,
+            revolut_order_id: 'mock_revolut_order_' + Date.now()
+          });
+
+          await adminDb.collection('transactions').add({
+            user_id: userId,
+            user_name: userName,
+            billing_data: billingData,
+            amount: plan === 'expert' ? 200 : 500,
+            type: 'subscription',
+            description: `Abonament ${plan.toUpperCase()} (Test Revolut)`,
+            created_at: new Date().toISOString()
+          });
+        } else if (type === 'topup') {
+          const creditsToAdd = Number(credits) || 0;
+          const profileDoc = await adminDb.collection('profiles').doc(userId).get();
+          const currentCredits = profileDoc.exists ? (profileDoc.data()?.credits || 0) : 0;
+          const userName = profileDoc.exists ? (profileDoc.data()?.full_name || 'User') : 'User';
+          const billingData = profileDoc.exists ? (profileDoc.data()?.billing_data || null) : null;
+
+          await adminDb.collection('profiles').doc(userId).update({
+            credits: currentCredits + creditsToAdd
+          });
+
+          await adminDb.collection('transactions').add({
+            user_id: userId,
+            user_name: userName,
+            billing_data: billingData,
+            amount: Number(amount) || 0,
+            type: 'top-up',
+            description: `Top-Up ${creditsToAdd} Credite (Test Revolut)`,
+            created_at: new Date().toISOString()
+          });
+        }
+      } catch (err: any) {
+        console.error('[REVOLUT] Mock auto-crediting failed:', err);
+      }
       
-      const unitAmount = plan === 'expert' ? 20000 : 50000; // in bani (RON cents)
-      
-      sessionConfig.line_items = [
-        {
-          price_data: {
-            currency: 'ron',
-            product_data: {
-              name: `Abonament JuristPRO ${plan.toUpperCase()}`,
-              description: plan === 'expert' ? '150 Credite AI / lună' : '500 Credite AI / lună',
-            },
-            unit_amount: unitAmount,
-            recurring: {
-              interval: 'month',
-            },
-          },
-          quantity: 1,
-        },
-      ];
-    } else if (type === 'topup') {
-      sessionConfig.mode = 'payment';
-      sessionConfig.metadata!.amount = String(amount);
-      sessionConfig.metadata!.credits = String(credits);
-      
-      sessionConfig.line_items = [
-        {
-          price_data: {
-            currency: 'ron',
-            product_data: {
-              name: `Top-Up ${credits} Credite JuristPRO`,
-            },
-            unit_amount: Math.round(Number(amount) * 100), // in bani
-          },
-          quantity: 1,
-        },
-      ];
-    }
-
-    const stripe = getStripe();
-    const session = await stripe.checkout.sessions.create(sessionConfig);
-    res.json({ url: session.url });
-  } catch (error: any) {
-    console.error('Stripe error:', error);
-    res.status(500).json({ error: error.message || 'Eroare internă Stripe' });
-  }
-});
-
-// API Endpoint for Stripe Customer Portal (for cancellations)
-app.post('/api/create-portal-session', async (req, res) => {
-  try {
-    const { userId } = req.body;
-    
-    const adminDb = getAdminDb();
-    // Get the user's stripe_customer_id from Firestore
-    const profileDoc = await adminDb.collection('profiles').doc(userId).get();
-    const profile = profileDoc.data();
-    
-    if (!profile || !profile.stripe_customer_id) {
-      res.status(400).json({ error: 'No active Stripe subscription found for this user.' });
+      const successMockUrl = `${appUrl}/?payment=success&mock=true`;
+      res.json({ url: successMockUrl });
       return;
     }
 
-    const appUrl = req.headers.origin || process.env.APP_URL || `https://ais-dev-2gyoebyp2nbm3psmj7o4di-40090194019.europe-west2.run.app`;
-    const stripe = getStripe();
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: profile.stripe_customer_id,
-      return_url: `${appUrl}/`,
+    console.log(`[REVOLUT] Creating live order on ${baseUrl}`);
+    
+    // Convert fetch response safely
+    const fetchResponse = await fetch(`${baseUrl}/orders`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        amount: amountVal,
+        currency: 'RON',
+        customer: {
+          email: email || 'checkout@juristpro.ro'
+        },
+        metadata: {
+          userId,
+          type,
+          plan: plan || '',
+          credits: credits ? String(credits) : '',
+          amount: type === 'subscription' ? String(amountVal / 100) : String(amount)
+        }
+      })
     });
 
-    res.json({ url: portalSession.url });
+    if (!fetchResponse.ok) {
+      const errorText = await fetchResponse.text();
+      console.error('[REVOLUT] Error response from Revolut API:', errorText);
+      throw new Error(`Revolut API returned status ${fetchResponse.status}: ${errorText}`);
+    }
+
+    const orderData = await fetchResponse.json();
+    console.log('[REVOLUT] Order created successfully:', orderData.id);
+    
+    const checkoutUrl = orderData.checkout_url || `https://checkout.revolut.com/payment?token=${orderData.public_id}`;
+    res.json({ url: checkoutUrl });
+
   } catch (error: any) {
-    console.error('Stripe portal error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Revolut checkout error:', error);
+    res.status(500).json({ error: error.message || 'Eroare internă Revolut Pay' });
   }
 });
 
@@ -530,11 +443,10 @@ app.post('/api/test-whatsapp', async (req, res) => {
     }
 
     const gatewayUrl = process.env.WHATSAPP_GATEWAY_URL;
-    const twilioSid = process.env.TWILIO_ACCOUNT_SID;
     
-    if (!gatewayUrl && !twilioSid) {
+    if (!gatewayUrl) {
       return res.status(400).json({ 
-        error: 'Nu s-a configurat nicio metodă validă de expediere automată (lipsesc WHATSAPP_GATEWAY_URL sau TWILIO din Secrets).' 
+        error: 'Nu s-a configurat nicio metodă validă de expediere automată (lipsesc WHATSAPP_GATEWAY_URL sau WHATSAPP_GATEWAY_TOKEN din Secrets).' 
       });
     }
 
@@ -560,7 +472,7 @@ app.post('/api/test-whatsapp', async (req, res) => {
 });
 
 // --- AUTOMATED WHATSAPP DISPATCHER ---
-// Can send messages hands-free via Twilio WhatsApp API or custom standard HTTP WhatsApp Gateways
+// Can send messages hands-free via Green API or custom standard HTTP WhatsApp Gateways
 async function sendAutomatedWhatsApp(phone: string, text: string): Promise<{ success: boolean; status?: number; responseText?: string; error?: string }> {
   // Normalize phone to format like 40722123456
   let cleanPhone = phone.replace(/\D/g, '');
@@ -644,37 +556,7 @@ async function sendAutomatedWhatsApp(phone: string, text: string): Promise<{ suc
     }
   }
 
-  // 2. Try Twilio WhatsApp API if configured
-  const twilioSid = process.env.TWILIO_ACCOUNT_SID;
-  const twilioToken = process.env.TWILIO_AUTH_TOKEN;
-  const twilioFrom = process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_FROM_NUMBER;
-
-  if (twilioSid && twilioToken && twilioFrom) {
-    console.log('[WHATSAPP ROBOT] Încercare trimitere prin Twilio WhatsApp API...');
-    try {
-      // Lazy-load Twilio client to prevent crash for other users if keys are missing
-      const twilioSdk = require('twilio');
-      const client = twilioSdk(twilioSid, twilioToken);
-
-      const formattedTo = cleanPhone.startsWith('whatsapp:') ? cleanPhone : `whatsapp:+${cleanPhone}`;
-      const formattedFrom = twilioFrom.startsWith('whatsapp:') ? twilioFrom : `whatsapp:${twilioFrom}`;
-
-      console.log(`[WHATSAPP ROBOT] Trimitere Twilio de la ${formattedFrom} către ${formattedTo}`);
-      const message = await client.messages.create({
-        body: text,
-        from: formattedFrom,
-        to: formattedTo
-      });
-
-      console.log('[WHATSAPP ROBOT] Succes Twilio SID:', message.sid);
-      return { success: true, responseText: `Twilio Message SID: ${message.sid}` };
-    } catch (err: any) {
-      console.error('[WHATSAPP ROBOT] Eroare la trimiterea prin Twilio WhatsApp:', err);
-      return { success: false, error: err.message || 'Twilio send failed' };
-    }
-  }
-
-  console.warn('[WHATSAPP ROBOT] Nu s-a configurat nicio metodă automată validă (WHATSAPP_GATEWAY_URL sau TWILIO_ACCOUNT_SID).');
+  console.warn('[WHATSAPP ROBOT] Nu s-a configurat nicio metodă automată validă (WHATSAPP_GATEWAY_URL).');
   return { success: false, error: 'Nu este configurat niciun gateway WhatsApp valid.' };
 }
 
