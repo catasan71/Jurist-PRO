@@ -77,7 +77,16 @@ function getAdminDb() {
 
 function getRevolutConfig() {
   const apiKey = (process.env.REVOLUT_API_KEY || process.env.REVOLUT_MERCHANT_API_KEY || '').trim();
-  const isSandbox = !apiKey || apiKey.startsWith('sand_') || apiKey.includes('sandbox') || apiKey === 'dummy_revolut_key_for_testing';
+  const envSandbox = process.env.REVOLUT_SANDBOX === 'true' || 
+                     process.env.REVOLUT_MODE === 'sandbox' ||
+                     process.env.REVOLUT_ENV === 'sandbox';
+                     
+  const isSandbox = !apiKey || 
+                    apiKey === 'dummy_revolut_key_for_testing' || 
+                    apiKey.startsWith('sand_') || 
+                    apiKey.includes('sandbox') || 
+                    envSandbox;
+                    
   const baseUrl = isSandbox ? 'https://sandbox-merchant.revolut.com/api/1.0' : 'https://merchant.revolut.com/api/1.0';
   return {
     apiKey: apiKey || 'dummy_revolut_key_for_testing',
@@ -264,7 +273,10 @@ app.post('/api/create-revolut-order', async (req, res) => {
       return;
     }
 
-    console.log(`[REVOLUT] Creating live order on ${baseUrl}`);
+    const keyLogStr = apiKey === 'dummy_revolut_key_for_testing' 
+      ? 'DUMMY KEY' 
+      : `${apiKey.substring(0, Math.min(6, apiKey.length))}...${apiKey.substring(Math.max(0, apiKey.length - 4))}`;
+    console.log(`[REVOLUT] Creating order. Endpoint: ${baseUrl}, Sandbox: ${isSandbox}, Key: ${keyLogStr} (Length: ${apiKey.length})`);
     
     // Convert fetch response safely
     const fetchResponse = await fetch(`${baseUrl}/orders`, {
@@ -293,6 +305,9 @@ app.post('/api/create-revolut-order', async (req, res) => {
     if (!fetchResponse.ok) {
       const errorText = await fetchResponse.text();
       console.error('[REVOLUT] Error response from Revolut API:', errorText);
+      if (fetchResponse.status === 401) {
+        throw new Error(`Revolut API returned 401 Unauthorized. Verificați dacă ați configurat cheia corespunzătoare în Secrets: dacă folosiți cheia Sandbox, asigurați-vă că aveți REVOLUT_SANDBOX=true în Secrets (variabile de mediu). De asemenea, asigurați-vă că folosiți Secret Key (sk_* sau oa_*), NU Public Key (pk_*).`);
+      }
       throw new Error(`Revolut API returned status ${fetchResponse.status}: ${errorText}`);
     }
 
