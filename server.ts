@@ -317,6 +317,8 @@ app.post('/api/create-revolut-order', async (req, res) => {
           email: email || 'checkout@juristpro.ro'
         },
         metadata: {
+          app_name: 'JuristPRO',
+          user_id: userId,
           userId,
           type,
           plan: plan || '',
