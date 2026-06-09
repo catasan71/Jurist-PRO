@@ -271,7 +271,8 @@ app.post('/api/create-revolut-order', async (req, res) => {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Revolut-Api-Version': '2023-09-01'
       },
       body: JSON.stringify({
         amount: amountVal,
