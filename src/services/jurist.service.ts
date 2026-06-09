@@ -911,10 +911,6 @@ export class JuristService implements OnDestroy {
         })
       });
       
-      if (!response.ok) {
-        throw new Error(`Server status: ${response.status}`);
-      }
-
       const responseText = await response.text();
       let data;
       try {
@@ -922,16 +918,25 @@ export class JuristService implements OnDestroy {
       } catch {
         if (newWindow) newWindow.close();
         console.error('Server returned non-JSON response:', responseText);
-        this.notificationService.error('Eroare de la server. Vă rugăm contactați suportul.');
+        const parseErrorMsg = `Eroare de la server (${response.status}). Vă rugăm contactați suportul.`;
+        this.notificationService.error(parseErrorMsg);
         this._loading.set(false);
-        return { error: 'Eroare de la server. Vă rugăm contactați suportul.' };
+        return { error: parseErrorMsg };
+      }
+
+      if (!response.ok) {
+        if (newWindow) newWindow.close();
+        const serverErrorMsg = data.error || `Server status: ${response.status}`;
+        this.notificationService.error(serverErrorMsg);
+        this._loading.set(false);
+        return { error: serverErrorMsg };
       }
 
       if (data.url) {
         if (newWindow) {
-           newWindow.location.href = data.url;
+          newWindow.location.href = data.url;
         } else {
-           window.location.href = data.url;
+          window.location.href = data.url;
         }
       } else {
         if (newWindow) newWindow.close();
@@ -944,9 +949,10 @@ export class JuristService implements OnDestroy {
       if (newWindow) newWindow.close();
       const err = error as { message?: string };
       console.error('Payment error:', err);
-      this.notificationService.error('Eroare de conexiune la serverul de plăți.');
+      const errMsg = err.message || 'Eroare de conexiune la serverul de plăți.';
+      this.notificationService.error(errMsg);
       this._loading.set(false);
-      return { error: 'Eroare de conexiune la serverul de plăți' };
+      return { error: errMsg };
     }
     this._loading.set(false);
   }
@@ -1030,27 +1036,37 @@ export class JuristService implements OnDestroy {
       } catch {
         if (newWindow) newWindow.close();
         console.error('Server returned non-JSON response:', responseText);
+        const parseErrorMsg = `Eroare de la server (${response.status}). Vă rugăm contactați suportul.`;
         this._loading.set(false);
-        return { error: 'Eroare de la server. Vă rugăm contactați suportul.' };
+        return { error: parseErrorMsg };
+      }
+
+      if (!response.ok) {
+        if (newWindow) newWindow.close();
+        const serverErrorMsg = data.error || `Server status: ${response.status}`;
+        this._loading.set(false);
+        return { error: serverErrorMsg };
       }
 
       if (data.url) {
         if (newWindow) {
-           newWindow.location.href = data.url;
+          newWindow.location.href = data.url;
         } else {
-           window.location.href = data.url;
+          window.location.href = data.url;
         }
       } else {
         if (newWindow) newWindow.close();
-        console.error('Eroare la inițializarea plății: ' + (data.error || 'Unknown error'));
+        const errorMsg = data.error || 'Eroare la inițializarea plății';
         this._loading.set(false);
-        return { error: data.error || 'Eroare la inițializarea plății' };
+        return { error: errorMsg };
       }
-    } catch (error) {
+    } catch (error: unknown) {
       if (newWindow) newWindow.close();
-      console.error('Payment error:', error);
+      const err = error as { message?: string };
+      console.error('Payment error:', err);
+      const errMsg = err.message || 'Eroare de conexiune la serverul de plăți.';
       this._loading.set(false);
-      return { error: 'Eroare de conexiune la serverul de plăți' };
+      return { error: errMsg };
     }
     this._loading.set(false);
   }

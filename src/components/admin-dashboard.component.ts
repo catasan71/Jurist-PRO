@@ -711,7 +711,7 @@ export class AdminDashboardComponent {
           this.showToast("Export partajat cu succes!");
           return;
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.warn("Share API a fost abandonat sau a eșuat, folosim metoda standard de descărcare.", err);
         // Fallthrough towards traditional download
       }

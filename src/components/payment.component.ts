@@ -195,7 +195,7 @@ export class PaymentComponent {
       this.authService.updateBillingData(user.id, finalBillingData).catch(console.error);
     }
 
-    this.juristService.upgradePlan(this.plan);
+    await this.juristService.upgradePlan(this.plan);
     this.processing.set(false);
   }
 

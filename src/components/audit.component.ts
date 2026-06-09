@@ -280,7 +280,7 @@ export class AuditComponent {
 
   // Comprimarea inteligentă a imaginilor nativ din browser (fără server intermediar)
   compressImage(file: File): Promise<File> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = (event) => {
@@ -358,8 +358,9 @@ export class AuditComponent {
         this.cdr.detectChanges();
       });
       this.auditResult.set(result);
-    } catch (e: any) {
-      this.juristService.notificationService.error(e.message || "A apărut o eroare la generarea auditului.");
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      this.juristService.notificationService.error(err.message || "A apărut o eroare la generarea auditului.");
       console.error("Audit analyze error:", e);
     }
   }
