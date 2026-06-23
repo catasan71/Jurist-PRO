@@ -1131,8 +1131,21 @@ export class JuristService implements OnDestroy {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Eroare necunoscută' }));
-      throw new Error(errorData.error || 'Eroare la apelul AI');
+      if (response.status === 413) {
+        throw new Error('Fișierul este prea mare pentru a fi procesat de serverul AI. Vă rugăm să folosiți un document mai mic.');
+      }
+      if (response.status === 504 || response.status === 408) {
+        throw new Error('Timpul de răspuns al serverului AI a expirat (Timeout). Vă rugăm să încercați cu un document cu mai puține pagini.');
+      }
+      if (response.status === 429) {
+        throw new Error('S-a atins limita de solicitări concomitente. Vă rugăm să așteptați câteva momente și să reîncercați.');
+      }
+      if (response.status === 502 || response.status === 503) {
+        throw new Error('Serviciul AI este temporar indisponibil datorită unei încărcări mari de solicitări. Reîncercați în câteva secunde.');
+      }
+      
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || `Eroare server la procesare (Cod status: ${response.status})`);
     }
 
     if (!response.body) {
@@ -1158,6 +1171,9 @@ export class JuristService implements OnDestroy {
                 try {
                   const parsed = JSON.parse(trimmed);
                   if (parsed && typeof parsed === 'object') {
+                    if (parsed.error) {
+                      throw new Error(parsed.error);
+                    }
                     // Enrich with text property if missing for easy client consumption
                     if (!parsed.text) {
                       const textVal = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -1168,6 +1184,10 @@ export class JuristService implements OnDestroy {
                   }
                   yield parsed;
                 } catch (err) {
+                  // Propagate correct Error if thrown inside try
+                  if (err instanceof Error && (err.message || '').trim() !== '') {
+                    throw err;
+                  }
                   console.warn('Eroare parsing JSON-Line:', err, trimmed);
                 }
               }
@@ -1177,6 +1197,9 @@ export class JuristService implements OnDestroy {
             try {
               const parsed = JSON.parse(buffer.trim());
               if (parsed && typeof parsed === 'object') {
+                if (parsed.error) {
+                  throw new Error(parsed.error);
+                }
                 if (!parsed.text) {
                   const textVal = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
                   if (textVal) {
@@ -1185,8 +1208,11 @@ export class JuristService implements OnDestroy {
                 }
               }
               yield parsed;
-            } catch {
-              // ignore
+            } catch (err) {
+              if (err instanceof Error) {
+                throw err;
+              }
+              // ignore general parse errors during buffer cleanup
             }
           }
         } finally {
@@ -1245,9 +1271,7 @@ export class JuristService implements OnDestroy {
     } catch(e: unknown) { 
       // If we already have a significant response, we return it despite the error (e.g. partial timeout)
       if (fullText.length > 50) return fullText;
-      const errorMsg = (e as Error)?.message || 'Eroare necunoscută';
-      this.notificationService.error(errorMsg);
-      throw e;
+      this._handleAiError(e);
     } finally {
       this._loading.set(false);
     }
@@ -1295,9 +1319,7 @@ export class JuristService implements OnDestroy {
       await this.consumeCredit(3); 
       return { role: 'ai', content: fullText || "...", timestamp: new Date(), sources };
     } catch(e: unknown) { 
-      const errorMsg = (e as Error)?.message || 'Eroare necunoscută';
-      this.notificationService.error(errorMsg);
-      throw e;
+      this._handleAiError(e);
     } finally {
       this._loading.set(false);
     }

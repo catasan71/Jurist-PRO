@@ -417,6 +417,15 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
   }
   
   try {
+    // 1. Instantly set streaming headers to bypass proxy buffering and hold connection alive
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (typeof res.flushHeaders === 'function') {
+        res.flushHeaders();
+    }
+
     const { GoogleGenAI, HarmCategory, HarmBlockThreshold } = await import('@google/genai');
     const ai = new GoogleGenAI({ apiKey });
     
@@ -428,11 +437,10 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
       { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
     ];
 
-    // In a real implementation we would stream back the response, 
-    // but for simplicity for now we send the full text back, 
-    // or set up a streaming response
+    // Request stream from Gemini with custom configs.
+    // Use gemini-3.5-flash for ultra-fast, robust, and stable multimodal PDF analyzing.
     const stream = await ai.models.generateContentStream({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.5-flash',
         contents,
         config: {
             systemInstruction,
@@ -443,10 +451,6 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
             safetySettings
         }
     });
-
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
 
     for await (const chunk of stream) {
         res.write(JSON.stringify(chunk) + '\n');
@@ -472,7 +476,13 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
         errMsg = 'Cheia API Gemini furnizată nu este validă. Vă rugăm să verificați meniul Settings (Secrets) și să introduceți o cheie API validă din Google AI Studio.';
     }
     
-    res.status(500).json({ error: errMsg });
+    // If headers were already sent, propagate the error through the stream, otherwise send status 500
+    if (res.headersSent) {
+        res.write(JSON.stringify({ error: errMsg }) + '\n');
+        res.end();
+    } else {
+        res.status(500).json({ error: errMsg });
+    }
   }
 });
 
