@@ -1332,7 +1332,40 @@ export class JuristService implements OnDestroy {
     }, 5, onChunk);
   }
 
+  private _base64ToUtf8(str: string): string {
+    try {
+      if (typeof window !== 'undefined' && typeof window.atob === 'function') {
+        return decodeURIComponent(escape(window.atob(str)));
+      }
+      return Buffer.from(str, 'base64').toString('utf-8');
+    } catch {
+      try {
+        if (typeof window !== 'undefined' && typeof window.atob === 'function') {
+          return window.atob(str);
+        }
+        return Buffer.from(str, 'base64').toString('binary');
+      } catch {
+        return str;
+      }
+    }
+  }
+
   async analyzeEvidence(fileBase64: string, mimeType: string, prompt: string, onChunk?: (chunk: string) => void): Promise<string> {
+    if (mimeType === 'text/plain') {
+      const decodedText = this._base64ToUtf8(fileBase64);
+      const userPrompt = prompt ? `Audit juridic solicitat: ${prompt}` : 'Efectuează o analiză juridică completă și detaliată a documentului furnizat de mai sus.';
+      return this._streamAiResponse({
+        systemInstruction: LEGAL_GUARDRAILS,
+        contents: [{
+          role: 'user',
+          parts: [
+            { text: `Document text de analizat:\n\n${decodedText}\n\n` },
+            { text: userPrompt }
+          ]
+        }]
+      }, 5, onChunk);
+    }
+
     return this._streamAiResponse({
       systemInstruction: LEGAL_GUARDRAILS,
       contents: [{ role: 'user', parts: [{ inlineData: { mimeType, data: fileBase64 } }, { text: `Audit juridic: ${prompt}` }] }]
