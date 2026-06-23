@@ -22,7 +22,12 @@ export class GlobalErrorHandler implements ErrorHandler {
     console.error('Global Error Handler:', error);
 
     // Filter out some common benign errors if needed
-    if (message.includes('ExpressionChangedAfterItHasBeenCheckedError')) {
+    if (
+      message.includes('ExpressionChangedAfterItHasBeenCheckedError') ||
+      message === 'Script error.' ||
+      message === 'Script error' ||
+      message.toLowerCase().includes('script error')
+    ) {
       return;
     }
 

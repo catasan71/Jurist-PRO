@@ -12,6 +12,18 @@ interface UploadedFile {
   previewUrl?: string;
 }
 
+interface PdfJsPage {
+  getTextContent: () => Promise<{ items: ({ str: string } | unknown)[] }>;
+}
+interface PdfJsDocument {
+  numPages: number;
+  getPage: (pageNumber: number) => Promise<PdfJsPage>;
+}
+interface PdfJsLib {
+  GlobalWorkerOptions: { workerSrc: string };
+  getDocument: (config: { data: ArrayBuffer }) => { promise: Promise<PdfJsDocument> };
+}
+
 @Component({
   selector: 'app-audit',
   standalone: true,
@@ -231,10 +243,67 @@ export class AuditComponent {
   evidencePrompt = '';
   evidenceImage = signal<string>('');
 
+  private loadPdfJs(): Promise<PdfJsLib> {
+    const win = window as unknown as { pdfjsLib?: PdfJsLib };
+    if (win.pdfjsLib) {
+      return Promise.resolve(win.pdfjsLib);
+    }
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.crossOrigin = 'anonymous';
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => {
+        const pdfjsLib = win.pdfjsLib;
+        if (pdfjsLib) {
+          // Setting the workerSrc directly. If web workers are blocked in the iframe sandbox,
+          // PDFJS gracefully falls back to the main thread for parsing.
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          resolve(pdfjsLib);
+        } else {
+          reject(new Error('Biblioteca PDF.js nu a putut fi instanțiată.'));
+        }
+      };
+      script.onerror = (err) => reject(err);
+      document.head.appendChild(script);
+    });
+  }
+
+  async extractTextFromPdf(arrayBuffer: ArrayBuffer): Promise<string> {
+    try {
+      const pdfjsLib = await this.loadPdfJs();
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      let fullText = '';
+      
+      const maxPages = Math.min(pdf.numPages, 100); // safety cap to prevent CPU lock on extreme documents
+      for (let i = 1; i <= maxPages; i++) {
+        try {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item) => (item as { str?: string })?.str || '')
+            .join(' ');
+          fullText += `--- Pagina ${i} ---\n${pageText}\n\n`;
+        } catch (pageErr) {
+          console.error(`Eroare la citirea paginii ${i}:`, pageErr);
+        }
+      }
+      return fullText.trim();
+    } catch (err) {
+      console.error('Eroare generală la procesarea PDF-ului în browser:', err);
+      return '';
+    }
+  }
+
+  utf8ToBase64(str: string): string {
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+
   async handleFileUpload(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       let file = input.files[0];
+      const originalSize = file.size;
       
       if (file.name.endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         this.juristService.notificationService.warning('Formatul .docx nu este suportat direct. Vă rugăm să salvați documentul ca PDF.');
@@ -245,40 +314,76 @@ export class AuditComponent {
       
       // Dacă este imagine, încercăm să o comprimăm (reducem dimensiunea pe loc)
       if (file.type.startsWith('image/')) {
-         this.juristService.notificationService.success('Se optimizează imaginea pentru upload rapid...');
+         this.juristService.notificationService.success('Se optimizează și comprimă imaginea pentru upload rapid...');
          try {
             file = await this.compressImage(file);
+            const savedPct = ((1 - file.size / originalSize) * 100).toFixed(1);
+            this.juristService.notificationService.success(`Optimizare finalizată! Dimensiune redusă cu ${savedPct}% (${(originalSize / 1024).toFixed(1)} KB -> ${(file.size / 1024).toFixed(1)} KB).`);
          } catch (err) {
             console.error('Eroare la comprimarea imaginii:', err);
          }
       }
 
-      // Verificăm dimensiunea (Limită maximă 15MB)
+      // Dacă este PDF, încercăm extracția inteligentă a textului digital client-side
+      let isDigitalPdfOptimized = false;
+      let extractedTextContent = '';
+      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        this.juristService.notificationService.success('Se analizează tipul de document PDF pentru optimizare structurală...');
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const extractedText = await this.extractTextFromPdf(arrayBuffer);
+          
+          if (extractedText && extractedText.trim().length > 150) {
+            extractedTextContent = extractedText;
+            isDigitalPdfOptimized = true;
+            
+            const rawBytesLen = new Blob([extractedText]).size;
+            const savedPct = ((1 - rawBytesLen / originalSize) * 100).toFixed(1);
+            this.juristService.notificationService.success(
+              `Optimizare excelentă! PDF digital transformat în text: dimensiune redusă cu ${savedPct}% (Original: ${(originalSize / 1024 / 1024).toFixed(2)} MB -> Text: ${(rawBytesLen / 1024).toFixed(1)} KB)`
+            );
+          } else {
+            this.juristService.notificationService.warning('PDF-ul pare să fie scanat (nu conține text digital). Se încarcă formatul vizual complet.');
+          }
+        } catch (err) {
+          console.error('Eroare la optimizarea PDF-ului:', err);
+        }
+      }
+
+      // Verificăm dimensiunea (Limită maximă 15MB) după posibila compresie
       const MAX_MB = 15;
       const MAX_BYTES = MAX_MB * 1024 * 1024;
-      if (file.size > MAX_BYTES) {
-         this.juristService.notificationService.error(`Fișierul este prea mare (${(file.size / 1024 / 1024).toFixed(1)} MB). Limita maximă este de ${MAX_MB} MB. Vă rugăm să utilizați platforme precum iLovePDF pentru a comprima PDF-urile.`);
+      if (!isDigitalPdfOptimized && file.size > MAX_BYTES) {
+         this.juristService.notificationService.error(`Fișierul este prea mare (${(file.size / 1024 / 1024).toFixed(1)} MB). Limita maximă este de ${MAX_MB} MB.`);
          input.value = ''; // Reset input
          return;
       }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        const isImage = file.type.startsWith('image/');
-        
+      if (isDigitalPdfOptimized) {
         this.uploadedFile.set({
           name: file.name,
-          type: file.type || 'unknown',
-          base64: result,
-          previewUrl: isImage ? result : undefined
+          type: 'text/plain',
+          base64: 'data:text/plain;base64,' + this.utf8ToBase64(extractedTextContent)
         });
-      };
-      reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          const isImage = file.type.startsWith('image/');
+          
+          this.uploadedFile.set({
+            name: file.name,
+            type: file.type || 'unknown',
+            base64: result,
+            previewUrl: isImage ? result : undefined
+          });
+        };
+        reader.readAsDataURL(file);
+      }
     }
   }
 
-  // Comprimarea inteligentă a imaginilor nativ din browser (fără server intermediar)
+  // Comprimarea inteligentă a imaginilor nativ în browser cu calitate optimă pentru text/OCR
   compressImage(file: File): Promise<File> {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -291,8 +396,8 @@ export class AuditComponent {
           let width = img.width;
           let height = img.height;
           
-          // Max dimensions
-          const MAX_DIM = 2000;
+          // Max dimensions de 1200px pentru detalii ideale de caractere/OCR în timp ce reducem cantitatea masiv
+          const MAX_DIM = 1200;
           if (width > height && width > MAX_DIM) {
             height *= MAX_DIM / width;
             width = MAX_DIM;
@@ -309,10 +414,13 @@ export class AuditComponent {
             return;
           }
           
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          
           ctx.drawImage(img, 0, 0, width, height);
           canvas.toBlob((blob) => {
             if (blob) {
-               const compressedFile = new File([blob], file.name, {
+               const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
                   type: 'image/jpeg',
                   lastModified: Date.now()
                });
@@ -320,7 +428,7 @@ export class AuditComponent {
             } else {
                resolve(file);
             }
-          }, 'image/jpeg', 0.8); // 80% calitate
+          }, 'image/jpeg', 0.55); // calitate de 55% - echilibru excelent pentru contrast text/OCR și dimensiune minimă
         };
         img.onerror = () => resolve(file); // fallback la fișierul original
       };
