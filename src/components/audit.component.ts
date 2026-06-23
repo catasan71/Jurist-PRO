@@ -68,6 +68,21 @@ interface PdfJsLib {
               </div>
             </div>
 
+            <!-- Disclaimer Calitate Documente -->
+            <div class="bg-yellow-900/15 border border-yellow-500/20 rounded-xl p-4 flex items-start gap-4">
+              <div class="bg-yellow-500/10 p-2 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-yellow-500">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h4 class="text-yellow-500 font-bold text-sm mb-1">ATENȚIE: Calitatea Scanării influențează direct Raportul!</h4>
+                <p class="text-xs text-gray-400 leading-relaxed">
+                  Asigurați-vă că fișierul încărcat are o rezoluție optimă și text clar. Dacă documentul este o scanare degradată, mișcată, extrem de întunecată sau ilizibilă, calitatea auditului va fi redusă substanțial sau raportul nu va putea fi generat corespunzător. <span class="text-yellow-500 font-semibold">Evitați irosirea inutilă a creditelor</span> prin trimiterea doar de documente lizibile (PDF digital sau scanări clare).
+                </p>
+              </div>
+            </div>
+
             <!-- Security Info -->
             <div class="bg-green-900/10 border border-green-900/30 rounded-xl p-4 flex items-start gap-4">
               <div class="bg-green-900/30 p-2 rounded-lg">
