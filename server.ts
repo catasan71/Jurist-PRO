@@ -410,10 +410,10 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
       });
   }
   
-  // Remove googleSearch tool to avoid API key errors
-  if (tools && Array.isArray(tools)) {
-      tools = tools.filter(t => !t.googleSearch);
-      if (tools.length === 0) tools = undefined;
+  // Enable googleSearch grounding by default to eliminate hallucinations, with automatic robust fallback if the API key has restrictions
+  let finalTools = tools;
+  if (!finalTools || (Array.isArray(finalTools) && finalTools.length === 0)) {
+      finalTools = [{ googleSearch: {} }];
   }
   
   try {
@@ -439,18 +439,35 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
 
     // Request stream from Gemini with custom configs.
     // Use gemini-3.5-flash for ultra-fast, robust, and stable multimodal PDF analyzing.
-    const stream = await ai.models.generateContentStream({
-        model: 'gemini-3.5-flash',
-        contents,
-        config: {
-            systemInstruction,
-            tools,
-            temperature: 0.3,
-            topP: 0.9,
-            topK: 40,
-            safetySettings
-        }
-    });
+    let stream;
+    try {
+        console.log('[GEMINI] Attempting generation with Google Search grounding enabled...');
+        stream = await ai.models.generateContentStream({
+            model: 'gemini-3.5-flash',
+            contents,
+            config: {
+                systemInstruction,
+                tools: finalTools,
+                temperature: 0.3,
+                topP: 0.9,
+                topK: 40,
+                safetySettings
+            }
+        });
+    } catch (streamError: any) {
+        console.warn('[GEMINI] Failed to initiate stream with tools (likely API key restriction). Falling back to non-search generation...', streamError.message);
+        stream = await ai.models.generateContentStream({
+            model: 'gemini-3.5-flash',
+            contents,
+            config: {
+                systemInstruction,
+                temperature: 0.3,
+                topP: 0.9,
+                topK: 40,
+                safetySettings
+            }
+        });
+    }
 
     for await (const chunk of stream) {
         res.write(JSON.stringify(chunk) + '\n');
