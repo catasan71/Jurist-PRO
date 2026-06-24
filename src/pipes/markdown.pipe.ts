@@ -10,10 +10,96 @@ import DOMPurify from 'dompurify';
 export class MarkdownPipe implements PipeTransform {
   private sanitizer = inject(DomSanitizer);
 
+  private extractTextContent(value: string): string {
+    const text = value.trim();
+    if (!text.startsWith('{')) {
+      return value;
+    }
+
+    // Try full JSON parse first
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object') {
+        const keys = ['analiza_juridica', 'analiza', 'raspuns', 'content', 'text', 'strategie_juridica', 'strategie', 'draft', 'document', 'rezultat'];
+        for (const key of keys) {
+          if (typeof parsed[key] === 'string' && parsed[key].trim().length > 0) {
+            return parsed[key];
+          }
+        }
+        for (const key of Object.keys(parsed)) {
+          if (typeof parsed[key] === 'string' && parsed[key].trim().length > 0) {
+            return parsed[key];
+          }
+        }
+      }
+    } catch {
+      // If it's a partial JSON string being streamed (e.g. starting with { and not closed yet)
+      // We will extract via regex
+      const match = text.match(/"(?:analiza_juridica|analiza|raspuns|content|text|strategie_juridica|strategie|draft|document|rezultat)"\s*:\s*"(.*)/s);
+      if (match && match[1]) {
+        let extracted = match[1];
+        if (extracted.endsWith('"}')) {
+          extracted = extracted.slice(0, -2);
+        } else if (extracted.endsWith('"} ')) {
+          extracted = extracted.slice(0, -3);
+        } else if (extracted.endsWith('"')) {
+          extracted = extracted.slice(0, -1);
+        }
+        
+        try {
+          let jsonString = extracted;
+          if (!jsonString.endsWith('"') || jsonString.endsWith('\\"')) {
+            jsonString += '"';
+          }
+          if (!jsonString.startsWith('"')) {
+            jsonString = '"' + jsonString;
+          }
+          return JSON.parse(jsonString);
+        } catch {
+          // Fallback manual unescape
+          return extracted
+            .replace(/\\n/g, '\n')
+            .replace(/\\"/g, '"')
+            .replace(/\\t/g, '\t')
+            .replace(/\\\\/g, '\\');
+        }
+      } else {
+        // General fallback for any key
+        const generalMatch = text.match(/"[^"]+"\s*:\s*"(.*)/s);
+        if (generalMatch && generalMatch[1]) {
+          let extracted = generalMatch[1];
+          if (extracted.endsWith('"}')) {
+            extracted = extracted.slice(0, -2);
+          } else if (extracted.endsWith('"')) {
+            extracted = extracted.slice(0, -1);
+          }
+          try {
+            let jsonString = extracted;
+            if (!jsonString.endsWith('"') || jsonString.endsWith('\\"')) {
+              jsonString += '"';
+            }
+            if (!jsonString.startsWith('"')) {
+              jsonString = '"' + jsonString;
+            }
+            return JSON.parse(jsonString);
+          } catch {
+            return extracted
+              .replace(/\\n/g, '\n')
+              .replace(/\\"/g, '"')
+              .replace(/\\t/g, '\t')
+              .replace(/\\\\/g, '\\');
+          }
+        }
+      }
+    }
+    return value;
+  }
+
   transform(value: string | undefined, theme: 'dark' | 'light' = 'dark'): SafeHtml | string {
     if (!value) return '';
     try {
-      const parsedHtml = marked.parse(value, {
+      const cleanValue = this.extractTextContent(value);
+      const parsedHtml = marked.parse(cleanValue, {
         async: false,
         breaks: true,
         gfm: true,
@@ -29,12 +115,15 @@ export class MarkdownPipe implements PipeTransform {
           .replace(/<table>/g, '<div class="overflow-x-auto my-4"><table class="w-full text-left border-collapse border border-gray-700">')
           .replace(/<th>/g, '<th class="bg-gray-800 p-3 border border-gray-700 font-bold text-gray-200">')
           .replace(/<td>/g, '<td class="p-3 border border-gray-700 text-gray-300">')
-          .replace(/<h1>/g, '<h1 class="text-2xl font-bold text-white mt-6 mb-4">')
-          .replace(/<h2>/g, '<h2 class="text-xl font-bold text-jurist-orange border-b border-gray-700 mt-6 pb-2 mb-4">')
-          .replace(/<h3>/g, '<h3 class="text-lg font-bold text-white mt-5 mb-3">')
+          .replace(/<h1>/g, '<h1 class="text-2xl font-extrabold text-jurist-orange mt-8 mb-4 border-b-2 border-jurist-orange/30 pb-2 tracking-tight">')
+          .replace(/<h2>/g, '<h2 class="text-xl font-bold text-jurist-orange border-b border-gray-800 mt-6 pb-2 mb-4 tracking-tight">')
+          .replace(/<h3>/g, '<h3 class="text-lg font-bold text-orange-400 mt-5 mb-3 tracking-tight">')
+          .replace(/<h4>/g, '<h4 class="text-base font-semibold text-orange-500 mt-4 mb-2 tracking-tight">')
+          .replace(/<h5>/g, '<h5 class="text-sm font-medium text-orange-300 mt-3 mb-1">')
+          .replace(/<h6>/g, '<h6 class="text-xs font-semibold text-orange-400 uppercase tracking-wider mt-3 mb-1">')
           .replace(/<ul>/g, '<ul class="list-disc pl-5 my-4 space-y-1 text-gray-300">')
           .replace(/<ol>/g, '<ol class="list-decimal pl-5 my-4 space-y-1 text-gray-300">')
-          .replace(/<p>/g, '<p class="mb-4 text-gray-300 leading-relaxed text-justify">')
+          .replace(/<p>/g, '<p class="mb-2.5 text-gray-300 leading-relaxed text-justify">')
           .replace(/<strong>/g, '<strong class="text-white font-bold">')
           .replace(/<em>/g, '<em class="text-gray-400 italic">');
       } else {
@@ -46,12 +135,15 @@ export class MarkdownPipe implements PipeTransform {
           .replace(/<table>/g, '<div class="overflow-x-auto my-4"><table class="w-full text-left border-collapse border border-gray-300">')
           .replace(/<th>/g, '<th class="bg-gray-200 p-3 border border-gray-300 font-bold text-gray-900">')
           .replace(/<td>/g, '<td class="p-3 border border-gray-300 text-gray-800">')
-          .replace(/<h1>/g, '<h1 class="text-2xl font-bold text-black mt-6 mb-4">')
-          .replace(/<h2>/g, '<h2 class="text-xl font-bold text-red-600 border-b border-gray-300 mt-6 pb-2 mb-4">')
-          .replace(/<h3>/g, '<h3 class="text-lg font-bold text-black mt-5 mb-3">')
+          .replace(/<h1>/g, '<h1 class="text-2xl font-extrabold text-jurist-orange mt-8 mb-4 border-b-2 border-jurist-orange/30 pb-2 tracking-tight">')
+          .replace(/<h2>/g, '<h2 class="text-xl font-bold text-jurist-orange border-b border-gray-300 mt-6 pb-2 mb-4 tracking-tight">')
+          .replace(/<h3>/g, '<h3 class="text-lg font-bold text-orange-600 mt-5 mb-3 tracking-tight">')
+          .replace(/<h4>/g, '<h4 class="text-base font-semibold text-orange-700 mt-4 mb-2 tracking-tight">')
+          .replace(/<h5>/g, '<h5 class="text-sm font-medium text-orange-800 mt-3 mb-1">')
+          .replace(/<h6>/g, '<h6 class="text-xs font-semibold text-orange-600 uppercase tracking-wider mt-3 mb-1">')
           .replace(/<ul>/g, '<ul class="list-disc pl-5 my-4 space-y-1 text-gray-800">')
           .replace(/<ol>/g, '<ol class="list-decimal pl-5 my-4 space-y-1 text-gray-800">')
-          .replace(/<p>/g, '<p class="mb-4 text-gray-800 leading-relaxed text-justify">')
+          .replace(/<p>/g, '<p class="mb-2.5 text-gray-800 leading-relaxed text-justify">')
           .replace(/<strong>/g, '<strong class="text-black font-bold">')
           .replace(/<em>/g, '<em class="text-gray-600 italic">');
       }
@@ -62,7 +154,7 @@ export class MarkdownPipe implements PipeTransform {
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtml);
     } catch (e) {
       console.error('Markdown parsing error', e);
-      return value;
+      return value || '';
     }
   }
 }
