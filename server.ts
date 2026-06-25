@@ -483,12 +483,12 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
     ];
 
     // Request stream from Gemini with custom configs.
-    // Use gemini-2.0-flash for ultra-fast, robust, and stable multimodal PDF analyzing.
+    // Use gemini-3-flash-preview for ultra-fast, robust, and stable multimodal PDF analyzing.
     let stream;
     try {
         console.log('[GEMINI] Attempting generation with Google Search grounding enabled...');
         stream = await ai.models.generateContentStream({
-            model: 'gemini-2.0-flash',
+            model: 'gemini-3-flash-preview',
             contents,
             config: {
                 systemInstruction,
@@ -496,19 +496,21 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
                 temperature: 0.3,
                 topP: 0.9,
                 topK: 40,
+                maxOutputTokens: 8192,
                 safetySettings
             }
         });
     } catch (streamError: any) {
         console.warn('[GEMINI] Failed to initiate stream with tools (likely API key restriction). Falling back to non-search generation...', streamError.message);
         stream = await ai.models.generateContentStream({
-            model: 'gemini-2.0-flash',
+            model: 'gemini-3-flash-preview',
             contents,
             config: {
                 systemInstruction,
                 temperature: 0.3,
                 topP: 0.9,
                 topK: 40,
+                maxOutputTokens: 8192,
                 safetySettings
             }
         });

@@ -1368,15 +1368,9 @@ export class JuristService implements OnDestroy {
     const sources: ChatSource[] = [];
     
     try {
-      const safePrompt = `
-      IMPORTANT: VERIFICĂ DACĂ SUNT ARTICOLE ABROGATE.
-      Art. 493 NCPC este ABROGAT.
-      
-      Întrebare: ${prompt}`;
-
       const result = await this._callAi({
         systemInstruction: LEGAL_GUARDRAILS,
-        contents: [{ role: 'user', parts: [{ text: safePrompt }] }],
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
         tools: [{ googleSearch: {} }]
       });
 
