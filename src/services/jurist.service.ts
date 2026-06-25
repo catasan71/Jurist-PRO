@@ -162,9 +162,6 @@ export class JuristService implements OnDestroy {
   private _currentModule = signal<ModuleType>('landing'); 
   private _loading = signal<boolean>(false);
   
-  // Google Search Grounding Control
-  useGoogleSearch = signal<boolean>(false);
-  
   // Data Signals
   private _profileData = signal<CabinetProfile>({
     name: '', lawyerName: '', barId: '', cif: '', address: '', phone: '', email: ''
@@ -1351,7 +1348,7 @@ export class JuristService implements OnDestroy {
   }
 
   async chatWithAssistant(prompt: string, onChunk?: (chunk: string) => void): Promise<ChatMessage> {
-    if (!this.checkCredits(3)) {
+    if (!this.checkCredits(1)) {
       throw new Error("Fonduri insuficiente.");
     }
     
@@ -1360,10 +1357,16 @@ export class JuristService implements OnDestroy {
     const sources: ChatSource[] = [];
     
     try {
+      const safePrompt = `
+      IMPORTANT: VERIFICĂ DACĂ SUNT ARTICOLE ABROGATE.
+      Art. 493 NCPC este ABROGAT.
+      
+      Întrebare: ${prompt}`;
+
       const result = await this._callAi({
         systemInstruction: LEGAL_GUARDRAILS,
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        tools: this.useGoogleSearch() ? [{ googleSearch: {} }] : undefined
+        contents: [{ role: 'user', parts: [{ text: safePrompt }] }],
+        tools: [{ googleSearch: {} }]
       });
 
       interface AiChunk { 
@@ -1404,7 +1407,7 @@ export class JuristService implements OnDestroy {
       }
       
       if (fullText && fullText.trim().length > 100) {
-        await this.consumeCredit(3); 
+        await this.consumeCredit(1); 
       } else {
         console.warn(`[CREDITS] Nu s-au reținut credite deoarece răspunsul asistentului este prea scurt sau gol (${fullText?.length || 0} caractere).`);
       }
