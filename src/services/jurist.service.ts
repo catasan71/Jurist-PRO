@@ -1308,18 +1308,13 @@ export class JuristService implements OnDestroy {
     
     try {
       const result = await this._callAi(parameters);
-      let lastUpdate = 0;
 
       for await (const chunk of result as AsyncIterable<{ text: string; candidates?: unknown[] }>) {
         const text = chunk.text;
         if (text) {
           fullText += text;
           if (onChunk) {
-            const now = Date.now();
-            if (now - lastUpdate > 60) {
-              onChunk(fullText);
-              lastUpdate = now;
-            }
+            onChunk(fullText);
           }
         }
       }
@@ -1374,18 +1369,12 @@ export class JuristService implements OnDestroy {
         candidates?: { groundingMetadata?: { groundingChunks?: unknown[] } }[];
       }
 
-      let lastUpdate = 0;
-
       for await (const chunk of result as AsyncIterable<AiChunk>) {
         const text = chunk.text;
         if (text) {
           fullText += text;
           if (onChunk) {
-            const now = Date.now();
-            if (now - lastUpdate > 60) {
-              onChunk(fullText);
-              lastUpdate = now;
-            }
+            onChunk(fullText);
           }
         }
 
