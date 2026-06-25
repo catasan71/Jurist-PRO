@@ -488,7 +488,7 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
     try {
         console.log('[GEMINI] Attempting generation with Google Search grounding enabled...');
         stream = await ai.models.generateContentStream({
-            model: 'gemini-1.5-pro',
+            model: 'gemini-3-flash-preview',
             contents,
             config: {
                 systemInstruction,
@@ -503,7 +503,7 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
     } catch (streamError: any) {
         console.warn('[GEMINI] Failed to initiate stream with tools (likely API key restriction). Falling back to non-search generation...', streamError.message);
         stream = await ai.models.generateContentStream({
-            model: 'gemini-1.5-pro',
+            model: 'gemini-3-flash-preview',
             contents,
             config: {
                 systemInstruction,
