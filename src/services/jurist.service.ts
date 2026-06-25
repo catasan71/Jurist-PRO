@@ -161,7 +161,6 @@ export class JuristService implements OnDestroy {
   // Global State
   private _currentModule = signal<ModuleType>('landing'); 
   private _loading = signal<boolean>(false);
-  useGoogleSearch = signal<boolean>(false);
   
   // Data Signals
   private _profileData = signal<CabinetProfile>({
@@ -1320,12 +1319,15 @@ export class JuristService implements OnDestroy {
     try {
       const result = await this._callAi(parameters);
 
+      let lastUpdate = 0;
       for await (const chunk of result as AsyncIterable<{ text: string; candidates?: unknown[] }>) {
         const text = chunk.text;
         if (text) {
           fullText += text;
-          if (onChunk) {
+          const now = Date.now();
+          if (onChunk && now - lastUpdate > 80) {
             onChunk(fullText);
+            lastUpdate = now;
           }
         }
       }
@@ -1372,7 +1374,7 @@ export class JuristService implements OnDestroy {
       const result = await this._callAi({
         systemInstruction: LEGAL_GUARDRAILS,
         contents,
-        tools: this.useGoogleSearch() ? [{ googleSearch: {} }] : undefined
+        tools: [{ googleSearch: {} }]
       });
 
       interface AiChunk { 
@@ -1380,12 +1382,15 @@ export class JuristService implements OnDestroy {
         candidates?: { groundingMetadata?: { groundingChunks?: unknown[] } }[];
       }
 
+      let lastUpdate = 0;
       for await (const chunk of result as AsyncIterable<AiChunk>) {
         const text = chunk.text;
         if (text) {
           fullText += text;
-          if (onChunk) {
+          const now = Date.now();
+          if (onChunk && now - lastUpdate > 80) {
             onChunk(fullText);
+            lastUpdate = now;
           }
         }
 
