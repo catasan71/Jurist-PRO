@@ -125,6 +125,27 @@ interface WindowWithSpeechRecognition extends Window {
             ⚠️ <strong>Dictare vocală (restricție iframe):</strong> Browserele blochează microfonul în iframe (AI Studio). Vă rugăm să apăsați butonul <strong>"New Tab"</strong> din colțul dreapta-sus al ecranului pentru a o folosi direct!
           </p>
         }
+        
+        <div class="flex gap-2 items-center mb-3">
+          <!-- Google Search Toggle Control -->
+          <div class="flex items-center gap-3 bg-gray-900/60 border border-gray-800 rounded-xl px-3 py-1.5 w-full sm:w-auto justify-between sm:justify-start">
+            <div class="flex flex-col text-left">
+              <span class="text-[11px] font-bold text-gray-300">Căutare Google Live</span>
+              <span class="text-[9px] text-gray-500">Activare pentru noutăți legislative</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input 
+                #searchToggle
+                type="checkbox" 
+                [checked]="juristService.useGoogleSearch()" 
+                (change)="juristService.useGoogleSearch.set(searchToggle.checked)" 
+                class="sr-only peer"
+              >
+              <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-jurist-orange"></div>
+            </label>
+          </div>
+        </div>
+
         <div class="flex gap-2 items-center">
           <div class="flex-1 relative flex items-center">
             <input 
@@ -313,6 +334,7 @@ export class AssistantComponent implements OnDestroy {
     
     // Calculate precise index of the AI message placeholder
     const aiMessageIndex = this.messages().length + 1;
+    const history = this.messages().map(m => ({ role: m.role, content: m.content }));
     
     // Add user message and the placeholder in a single synchronous signal update!
     this.messages.update(msgs => [
@@ -322,7 +344,7 @@ export class AssistantComponent implements OnDestroy {
     ]);
 
     try {
-      const response = await this.juristService.chatWithAssistant(prompt, (text) => {
+      const response = await this.juristService.chatWithAssistant(prompt, history, (text) => {
         this.messages.update(msgs => {
           const newMsgs = [...msgs];
           if (newMsgs[aiMessageIndex]) {

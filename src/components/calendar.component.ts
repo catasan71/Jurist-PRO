@@ -599,7 +599,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     
     try {
       this.juristService.toggleLoading(true);
-      const res = await this.juristService.chatWithAssistant(context, () => {
+      const res = await this.juristService.chatWithAssistant(context, [], () => {
         // We might want to handle partial updates, but for parsing logic, 
         // it's easier to handle after the full response.
       });

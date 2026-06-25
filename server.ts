@@ -518,6 +518,10 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
 
     for await (const chunk of stream) {
         res.write(JSON.stringify(chunk) + '\n');
+        const finishReason = chunk.candidates?.[0]?.finishReason;
+        if (finishReason) {
+            console.log('[GEMINI] Stream chunk finishReason:', finishReason);
+        }
     }
     res.end();
   } catch (error: any) {

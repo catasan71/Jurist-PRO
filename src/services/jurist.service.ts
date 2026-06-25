@@ -161,6 +161,7 @@ export class JuristService implements OnDestroy {
   // Global State
   private _currentModule = signal<ModuleType>('landing'); 
   private _loading = signal<boolean>(false);
+  useGoogleSearch = signal<boolean>(false);
   
   // Data Signals
   private _profileData = signal<CabinetProfile>({
@@ -1199,10 +1200,7 @@ export class JuristService implements OnDestroy {
                     if (!textVal && parsed.candidates && Array.isArray(parsed.candidates)) {
                       const firstCand = parsed.candidates[0];
                       if (firstCand && firstCand.content && firstCand.content.parts && Array.isArray(firstCand.content.parts)) {
-                        const firstPart = firstCand.content.parts[0];
-                        if (firstPart && typeof firstPart.text === 'string') {
-                          textVal = firstPart.text;
-                        }
+                        textVal = firstCand.content.parts.map((p: any) => p.text || '').join('');
                       }
                     }
                     
@@ -1215,7 +1213,7 @@ export class JuristService implements OnDestroy {
                   if (err instanceof Error && err.message && err.message.startsWith('API_ERROR:')) {
                     throw err;
                   }
-                  console.warn('[STREAM] Skipping line due to parsing error:', err, trimmed);
+                  console.error('[STREAM] Skipping line due to parsing error:', err, 'Line length:', trimmed.length, 'Line preview:', trimmed.substring(0, 100));
                 }
               }
             }
@@ -1244,10 +1242,7 @@ export class JuristService implements OnDestroy {
                 if (!textVal && parsed.candidates && Array.isArray(parsed.candidates)) {
                   const firstCand = parsed.candidates[0];
                   if (firstCand && firstCand.content && firstCand.content.parts && Array.isArray(firstCand.content.parts)) {
-                    const firstPart = firstCand.content.parts[0];
-                    if (firstPart && typeof firstPart.text === 'string') {
-                      textVal = firstPart.text;
-                    }
+                    textVal = firstCand.content.parts.map((p: any) => p.text || '').join('');
                   }
                 }
                 
@@ -1260,7 +1255,7 @@ export class JuristService implements OnDestroy {
               if (err instanceof Error && err.message && err.message.startsWith('API_ERROR:')) {
                 throw err;
               }
-              console.warn('[STREAM] Skipping final buffer due to parsing error:', err, buffer.trim());
+              console.error('[STREAM] Skipping final buffer due to parsing error:', err, 'Buffer length:', buffer.trim().length, 'Buffer preview:', buffer.trim().substring(0, 100));
             }
           }
         } finally {
@@ -1358,7 +1353,7 @@ export class JuristService implements OnDestroy {
     }
   }
 
-  async chatWithAssistant(prompt: string, onChunk?: (chunk: string) => void): Promise<ChatMessage> {
+  async chatWithAssistant(prompt: string, history: {role: string, content: string}[] = [], onChunk?: (chunk: string) => void): Promise<ChatMessage> {
     if (!this.checkCredits(1)) {
       throw new Error("Fonduri insuficiente.");
     }
@@ -1368,10 +1363,16 @@ export class JuristService implements OnDestroy {
     const sources: ChatSource[] = [];
     
     try {
+      const contents: { role: 'user' | 'model', parts: { text: string }[] }[] = history.map(msg => ({
+        role: msg.role === 'ai' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
+      contents.push({ role: 'user', parts: [{ text: prompt }] });
+
       const result = await this._callAi({
         systemInstruction: LEGAL_GUARDRAILS,
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        tools: [{ googleSearch: {} }]
+        contents,
+        tools: this.useGoogleSearch() ? [{ googleSearch: {} }] : undefined
       });
 
       interface AiChunk { 
