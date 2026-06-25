@@ -1191,26 +1191,34 @@ export class JuristService implements OnDestroy {
                   }[];
                 }
 
-                let parsed: GeminiResponseChunk | null = null;
                 try {
-                  parsed = JSON.parse(trimmed) as GeminiResponseChunk;
-                } catch (parseErr) {
-                  console.warn('[STREAM] Skipping partial or malformed line:', trimmed, parseErr);
-                  continue; // Skip this line instead of throwing and aborting the stream!
-                }
-
-                if (parsed && typeof parsed === 'object') {
-                  if (parsed.error) {
-                    throw new Error(parsed.error);
-                  }
-                  // Enrich with text property if missing for easy client consumption
-                  if (!parsed.text) {
-                    const textVal = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                  const parsed = JSON.parse(trimmed) as GeminiResponseChunk;
+                  if (parsed && typeof parsed === 'object') {
+                    if (parsed.error) {
+                      throw new Error(parsed.error);
+                    }
+                    
+                    let textVal = parsed.text;
+                    if (!textVal && parsed.candidates && Array.isArray(parsed.candidates)) {
+                      const firstCand = parsed.candidates[0];
+                      if (firstCand && firstCand.content && firstCand.content.parts && Array.isArray(firstCand.content.parts)) {
+                        const firstPart = firstCand.content.parts[0];
+                        if (firstPart && typeof firstPart.text === 'string') {
+                          textVal = firstPart.text;
+                        }
+                      }
+                    }
+                    
                     if (textVal) {
                       parsed.text = textVal;
                     }
+                    yield parsed;
                   }
-                  yield parsed;
+                } catch (err) {
+                  if (err instanceof Error && err.message && !err.message.includes('JSON')) {
+                    throw err;
+                  }
+                  console.warn('[STREAM] Skipping line due to parsing error:', err, trimmed);
                 }
               }
             }
@@ -1228,24 +1236,34 @@ export class JuristService implements OnDestroy {
               }[];
             }
 
-            let parsed: GeminiResponseChunk | null = null;
             try {
-              parsed = JSON.parse(buffer.trim()) as GeminiResponseChunk;
-            } catch (parseErr) {
-              console.warn('[STREAM] Skipping trailing malformed buffer:', buffer.trim(), parseErr);
-            }
-
-            if (parsed && typeof parsed === 'object') {
-              if (parsed.error) {
-                throw new Error(parsed.error);
-              }
-              if (!parsed.text) {
-                const textVal = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+              const parsed = JSON.parse(buffer.trim()) as GeminiResponseChunk;
+              if (parsed && typeof parsed === 'object') {
+                if (parsed.error) {
+                  throw new Error(parsed.error);
+                }
+                
+                let textVal = parsed.text;
+                if (!textVal && parsed.candidates && Array.isArray(parsed.candidates)) {
+                  const firstCand = parsed.candidates[0];
+                  if (firstCand && firstCand.content && firstCand.content.parts && Array.isArray(firstCand.content.parts)) {
+                    const firstPart = firstCand.content.parts[0];
+                    if (firstPart && typeof firstPart.text === 'string') {
+                      textVal = firstPart.text;
+                    }
+                  }
+                }
+                
                 if (textVal) {
                   parsed.text = textVal;
                 }
+                yield parsed;
               }
-              yield parsed;
+            } catch (err) {
+              if (err instanceof Error && err.message && !err.message.includes('JSON')) {
+                throw err;
+              }
+              console.warn('[STREAM] Skipping final buffer due to parsing error:', err, buffer.trim());
             }
           }
         } finally {
