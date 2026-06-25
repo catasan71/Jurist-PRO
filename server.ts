@@ -443,12 +443,11 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
 
     textToAnalyze = textToAnalyze.toLowerCase().trim();
 
-    // Specific terms indicating a need for live search or legal database citation lookup
+    // Specific terms indicating an explicit request for live search or latest internet news lookup
     const searchKeywords = [
-      'decizia', 'deciziei', 'decizii', 'ril', 'recurs în interes', 'hotărâre prealabilă', 'hotărârii prealabile', 'hp ', ' hp',
-      'ccr', 'curtea constituțional', 'îccj', 'iccj', 'cedo', 'abrogat', 'abrogare', 'vigoare', 'monitorul oficial',
-      'oug ', 'oug-', 'ordonanța', 'ordonanță', 'legea nr', 'legea ', 'noutăți', 'știri', 'caută', 'căutare', 'google', 'net',
-      'recent', 'actualizat', 'noutate', 'noutati', 'modificat', 'modificare', 'modificari', '2024', '2025', '2026'
+      'caută pe net', 'caută pe google', 'caută pe internet', 'căutare google', 'căutare net', 'căutare online', 
+      'google search', 'live search', 'caută online', 'search pe google', 'căutare pe google', 'știri de azi', 
+      'noutăți de ultimă oră', 'stiri de ultima ora'
     ];
 
     isSearchEnabled = searchKeywords.some(keyword => textToAnalyze.includes(keyword));

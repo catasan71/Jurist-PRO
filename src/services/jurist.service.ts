@@ -162,6 +162,9 @@ export class JuristService implements OnDestroy {
   private _currentModule = signal<ModuleType>('landing'); 
   private _loading = signal<boolean>(false);
   
+  // Google Search Grounding Control
+  useGoogleSearch = signal<boolean>(false);
+  
   // Data Signals
   private _profileData = signal<CabinetProfile>({
     name: '', lawyerName: '', barId: '', cif: '', address: '', phone: '', email: ''
@@ -1176,51 +1179,73 @@ export class JuristService implements OnDestroy {
             for (const line of lines) {
               const trimmed = line.trim();
               if (trimmed) {
+                interface GeminiResponseChunk {
+                  text?: string;
+                  error?: string;
+                  candidates?: {
+                    content?: {
+                      parts?: {
+                        text?: string;
+                      }[];
+                    };
+                  }[];
+                }
+
+                let parsed: GeminiResponseChunk | null = null;
                 try {
-                  const parsed = JSON.parse(trimmed);
-                  if (parsed && typeof parsed === 'object') {
-                    if (parsed.error) {
-                      throw new Error(parsed.error);
-                    }
-                    // Enrich with text property if missing for easy client consumption
-                    if (!parsed.text) {
-                      const textVal = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-                      if (textVal) {
-                        parsed.text = textVal;
-                      }
+                  parsed = JSON.parse(trimmed) as GeminiResponseChunk;
+                } catch (parseErr) {
+                  console.warn('[STREAM] Skipping partial or malformed line:', trimmed, parseErr);
+                  continue; // Skip this line instead of throwing and aborting the stream!
+                }
+
+                if (parsed && typeof parsed === 'object') {
+                  if (parsed.error) {
+                    throw new Error(parsed.error);
+                  }
+                  // Enrich with text property if missing for easy client consumption
+                  if (!parsed.text) {
+                    const textVal = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (textVal) {
+                      parsed.text = textVal;
                     }
                   }
                   yield parsed;
-                } catch (err) {
-                  // Propagate correct Error if thrown inside try
-                  if (err instanceof Error && (err.message || '').trim() !== '') {
-                    throw err;
-                  }
-                  console.warn('Eroare parsing JSON-Line:', err, trimmed);
                 }
               }
             }
           }
           if (buffer.trim()) {
+            interface GeminiResponseChunk {
+              text?: string;
+              error?: string;
+              candidates?: {
+                content?: {
+                  parts?: {
+                    text?: string;
+                  }[];
+                };
+              }[];
+            }
+
+            let parsed: GeminiResponseChunk | null = null;
             try {
-              const parsed = JSON.parse(buffer.trim());
-              if (parsed && typeof parsed === 'object') {
-                if (parsed.error) {
-                  throw new Error(parsed.error);
-                }
-                if (!parsed.text) {
-                  const textVal = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-                  if (textVal) {
-                    parsed.text = textVal;
-                  }
+              parsed = JSON.parse(buffer.trim()) as GeminiResponseChunk;
+            } catch (parseErr) {
+              console.warn('[STREAM] Skipping trailing malformed buffer:', buffer.trim(), parseErr);
+            }
+
+            if (parsed && typeof parsed === 'object') {
+              if (parsed.error) {
+                throw new Error(parsed.error);
+              }
+              if (!parsed.text) {
+                const textVal = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (textVal) {
+                  parsed.text = textVal;
                 }
               }
               yield parsed;
-            } catch (err) {
-              if (err instanceof Error) {
-                throw err;
-              }
-              // ignore general parse errors during buffer cleanup
             }
           }
         } finally {
@@ -1302,6 +1327,7 @@ export class JuristService implements OnDestroy {
       const result = await this._callAi({
         systemInstruction: LEGAL_GUARDRAILS,
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        tools: this.useGoogleSearch() ? [{ googleSearch: {} }] : undefined
       });
 
       interface AiChunk { 
