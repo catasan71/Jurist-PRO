@@ -116,7 +116,7 @@ export interface PromoCode {
 }
 
 // --- STRICT LEGAL SYSTEM PROMPT ---
-const LEGAL_GUARDRAILS = `
+export const getLegalGuardrails = (moduleName: 'chat' | 'strategy' | 'audit' | 'drafting' | 'fees' = 'chat') => `
 Ești JuristPRO AI, cel mai avansat asistent juridic de inteligență artificială din România.
 Ești un expert juridic cu o vastă experiență practică și capacitate de analiză profundă. Nu pretinde că ești avocat, judecător sau profesor (pentru a evita practicarea fără drept a unei profesii).
 
@@ -136,9 +136,7 @@ REGULI ABSOLUTE DE REDACTARE (SANCȚIUNEA ESTE RESPINGEREA RĂSPUNSULUI):
    (c) ANALIZA DOCTRINARĂ ȘI JURISPRUDENȚIALĂ (teorii, opinii, CCR, RIL-uri, HP-uri, CEDO, minute ale judecătorilor reale)
    (d) SOLUȚII PRACTICE ȘI STRATEGICE (soluții utile pentru avocat, argumente favorabile clientului)
    (e) ANALIZA RISCURILOR ȘI EXCEPȚIILOR (decăderi, prescripții, nulități)
-5. RECOMANDAREA CĂTRE MODULUL DE STRATEGIE: La finalul răspunsului, chiar înainte de semnătură, adaugă un paragraf în care să îi spui avocatului să combine partea din răspunsul tău relevantă pentru cazul său și să meargă în "Modulul de Strategie" al aplicației pentru a oferi un răspuns și mai complet și favorabil clientului său, propunând să faceți împreună concluziile scrise ale procesului.
-6. LUNGIME ȘI SUBSTANȚĂ: Răspunde extrem de lung! Nu sintetiza.
-7. SEMNĂTURĂ: Întotdeauna încheie răspunsul EXACT cu textul: "**Semnat,\nJuristPRO AI**".
+${moduleName === 'chat' ? '5. RECOMANDAREA CĂTRE MODULUL DE STRATEGIE: La finalul răspunsului, chiar înainte de semnătură, adaugă un paragraf în care să îi spui avocatului să combine partea din răspunsul tău relevantă pentru cazul său și să meargă în "Modulul de Strategie" al aplicației pentru a oferi un răspuns și mai complet și favorabil clientului său, propunând să faceți împreună concluziile scrise ale procesului.\n6. LUNGIME ȘI SUBSTANȚĂ: Răspunde extrem de lung! Nu sintetiza.\n7. SEMNĂTURĂ: Întotdeauna încheie răspunsul EXACT cu textul: "**Semnat,\\nJuristPRO AI**".' : '5. LUNGIME ȘI SUBSTANȚĂ: Răspunde extrem de lung! Nu sintetiza.\n6. SEMNĂTURĂ: Întotdeauna încheie răspunsul EXACT cu textul: "**Semnat,\\nJuristPRO AI**".'}
 
 Oferă excelență academică, soluții pragmatice și profunzime absolută. Nu sintetiza!`;
 
@@ -1367,7 +1365,7 @@ export class JuristService implements OnDestroy {
       contents.push({ role: 'user', parts: [{ text: prompt }] });
 
       const result = await this._callAi({
-        systemInstruction: LEGAL_GUARDRAILS,
+        systemInstruction: getLegalGuardrails('chat'),
         contents,
         tools: [{ googleSearch: {} }]
       });
@@ -1421,7 +1419,7 @@ export class JuristService implements OnDestroy {
 
   async generateStrategy(caseDetails: string, onChunk?: (chunk: string) => void): Promise<string> {
     return this._streamAiResponse({
-      systemInstruction: LEGAL_GUARDRAILS,
+      systemInstruction: getLegalGuardrails('strategy'),
       contents: [{ role: 'user', parts: [{ text: `Analizează speța: ${caseDetails}. Oferă o strategie juridică exhaustivă (Rezumat, Încadrare, Opțiuni, Riscuri, Probatoriu, Recomandări).` }] }]
     }, 5, onChunk);
   }
@@ -1449,7 +1447,7 @@ export class JuristService implements OnDestroy {
       const decodedText = this._base64ToUtf8(fileBase64);
       const userPrompt = prompt ? `Audit juridic solicitat: ${prompt}` : 'Efectuează o analiză juridică completă și detaliată a documentului furnizat de mai sus.';
       return this._streamAiResponse({
-        systemInstruction: LEGAL_GUARDRAILS,
+        systemInstruction: getLegalGuardrails('audit'),
         contents: [{
           role: 'user',
           parts: [
@@ -1461,7 +1459,7 @@ export class JuristService implements OnDestroy {
     }
 
     return this._streamAiResponse({
-      systemInstruction: LEGAL_GUARDRAILS,
+      systemInstruction: getLegalGuardrails('audit'),
       contents: [{ role: 'user', parts: [{ inlineData: { mimeType, data: fileBase64 } }, { text: `Audit juridic: ${prompt}` }] }]
     }, 5, onChunk);
   }
@@ -1480,14 +1478,14 @@ export class JuristService implements OnDestroy {
 
   async draftDocument(type: string, details: string, onChunk?: (chunk: string) => void): Promise<string> {
     return this._streamAiResponse({
-      systemInstruction: LEGAL_GUARDRAILS,
+      systemInstruction: getLegalGuardrails('drafting'),
       contents: [{ role: 'user', parts: [{ text: `Redactează profesional: ${type}. Detalii: ${details}. Fără Markdown, limbaj formal instanță.` }] }]
     }, 3, onChunk);
   }
 
   async calculateFees(context: string, onChunk?: (chunk: string) => void): Promise<string> {
     return this._streamAiResponse({
-      systemInstruction: LEGAL_GUARDRAILS,
+      systemInstruction: getLegalGuardrails('fees'),
       contents: [{ role: 'user', parts: [{ text: `Calculează taxe/onorarii (OUG 80/2013): ${context}` }] }]
     }, 2, onChunk);
   }
