@@ -1274,7 +1274,23 @@ export class JuristService implements OnDestroy {
 
   private _handleAiError(e: unknown): never {
     console.error('Core AI Error:', e);
+    
     let msg = (e as { message?: string })?.message || '';
+
+    // Attempt to parse JSON error message if present
+    if (msg.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(msg);
+        if (parsed.error?.message) {
+          msg = parsed.error.message;
+        } else {
+          msg = JSON.stringify(parsed);
+        }
+      } catch {
+        // Keep original message if parsing fails
+      }
+    }
+
     if (msg.startsWith('API_ERROR: ')) {
       msg = msg.substring(11);
     }
