@@ -790,7 +790,17 @@ setTimeout(runDeadlineAutomation, 15000);
 const distPath = path.join(__dirname, 'dist/juristpro/browser');
 console.log('Serving static files from:', distPath);
 
-app.use(express.static(distPath));
+app.use(express.static(distPath, {
+  maxAge: '1d', // Cache static assets for 1 day to maximize loading speed
+  setHeaders: (res, filePath) => {
+    // Never cache index.html to ensure users instantly get any frontend code updates
+    if (filePath.endsWith('.html') || path.basename(filePath) === 'index.html') {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
+  }
+}));
 
 // Fallback to index.html for SPA routing
 app.use((req, res) => {

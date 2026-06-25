@@ -11,7 +11,16 @@ export class MarkdownPipe implements PipeTransform {
   private sanitizer = inject(DomSanitizer);
 
   private extractTextContent(value: string): string {
-    const text = value.trim();
+    let text = value.trim();
+    if (text.startsWith('```json')) {
+      text = text.substring(7).trim();
+    } else if (text.startsWith('```')) {
+      text = text.substring(3).trim();
+    }
+    if (text.endsWith('```')) {
+      text = text.substring(0, text.length - 3).trim();
+    }
+
     if (!text.startsWith('{')) {
       return value;
     }

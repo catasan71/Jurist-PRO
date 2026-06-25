@@ -1195,7 +1195,7 @@ export class JuristService implements OnDestroy {
                   const parsed = JSON.parse(trimmed) as GeminiResponseChunk;
                   if (parsed && typeof parsed === 'object') {
                     if (parsed.error) {
-                      throw new Error(parsed.error);
+                      throw new Error('API_ERROR: ' + parsed.error);
                     }
                     
                     let textVal = parsed.text;
@@ -1215,7 +1215,7 @@ export class JuristService implements OnDestroy {
                     yield parsed;
                   }
                 } catch (err) {
-                  if (err instanceof Error && err.message && !err.message.includes('JSON')) {
+                  if (err instanceof Error && err.message && err.message.startsWith('API_ERROR:')) {
                     throw err;
                   }
                   console.warn('[STREAM] Skipping line due to parsing error:', err, trimmed);
@@ -1240,7 +1240,7 @@ export class JuristService implements OnDestroy {
               const parsed = JSON.parse(buffer.trim()) as GeminiResponseChunk;
               if (parsed && typeof parsed === 'object') {
                 if (parsed.error) {
-                  throw new Error(parsed.error);
+                  throw new Error('API_ERROR: ' + parsed.error);
                 }
                 
                 let textVal = parsed.text;
@@ -1260,7 +1260,7 @@ export class JuristService implements OnDestroy {
                 yield parsed;
               }
             } catch (err) {
-              if (err instanceof Error && err.message && !err.message.includes('JSON')) {
+              if (err instanceof Error && err.message && err.message.startsWith('API_ERROR:')) {
                 throw err;
               }
               console.warn('[STREAM] Skipping final buffer due to parsing error:', err, buffer.trim());
@@ -1277,7 +1277,10 @@ export class JuristService implements OnDestroy {
 
   private _handleAiError(e: unknown): never {
     console.error('Core AI Error:', e);
-    const msg = (e as { message?: string })?.message || '';
+    let msg = (e as { message?: string })?.message || '';
+    if (msg.startsWith('API_ERROR: ')) {
+      msg = msg.substring(11);
+    }
     
     if (msg.includes('AI_TIMEOUT')) {
       throw new Error('Serverul AI răspunde greu momentan. Vă rugăm să reîncercați în câteva secunde.', { cause: e });
@@ -1308,13 +1311,25 @@ export class JuristService implements OnDestroy {
     
     try {
       const result = await this._callAi(parameters);
+      let lastUpdate = 0;
 
       for await (const chunk of result as AsyncIterable<{ text: string; candidates?: unknown[] }>) {
         const text = chunk.text;
         if (text) {
           fullText += text;
-          if (onChunk) onChunk(fullText);
+          if (onChunk) {
+            const now = Date.now();
+            if (now - lastUpdate > 60) {
+              onChunk(fullText);
+              lastUpdate = now;
+            }
+          }
         }
+      }
+
+      // Always perform a final update to ensure 100% of the text is delivered to the UI
+      if (onChunk && fullText) {
+        onChunk(fullText);
       }
       
       if (fullText && fullText.trim().length > 100) {
@@ -1325,7 +1340,10 @@ export class JuristService implements OnDestroy {
       return fullText || "";
     } catch(e: unknown) { 
       // If we already have a significant response, we return it despite the error (e.g. partial timeout)
-      if (fullText.length > 50) return fullText;
+      if (fullText.length > 50) {
+        if (onChunk) onChunk(fullText);
+        return fullText;
+      }
       this._handleAiError(e);
     } finally {
       this._loading.set(false);
@@ -1353,11 +1371,19 @@ export class JuristService implements OnDestroy {
         candidates?: { groundingMetadata?: { groundingChunks?: unknown[] } }[];
       }
 
+      let lastUpdate = 0;
+
       for await (const chunk of result as AsyncIterable<AiChunk>) {
         const text = chunk.text;
         if (text) {
           fullText += text;
-          if (onChunk) onChunk(fullText);
+          if (onChunk) {
+            const now = Date.now();
+            if (now - lastUpdate > 60) {
+              onChunk(fullText);
+              lastUpdate = now;
+            }
+          }
         }
 
         const metadata = chunk.candidates?.[0]?.groundingMetadata;
@@ -1370,6 +1396,11 @@ export class JuristService implements OnDestroy {
             }
           });
         }
+      }
+
+      // Always perform a final update to ensure 100% of the text is delivered to the UI
+      if (onChunk && fullText) {
+        onChunk(fullText);
       }
       
       if (fullText && fullText.trim().length > 100) {

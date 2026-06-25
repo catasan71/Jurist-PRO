@@ -329,14 +329,15 @@ export class AssistantComponent implements OnDestroy {
     const prompt = this.userInput;
     this.userInput = '';
     
-    // Add user message and get new list synchronously
-    this.messages.update(msgs => [...msgs, { role: 'user', content: prompt, timestamp: new Date() }]);
-
-    // Calculate index for the next AI message
-    const aiMessageIndex = this.messages().length;
+    // Calculate precise index of the AI message placeholder
+    const aiMessageIndex = this.messages().length + 1;
     
-    // Add placeholder string
-    this.messages.update(msgs => [...msgs, { role: 'ai', content: '...', timestamp: new Date() }]);
+    // Add user message and the placeholder in a single synchronous signal update!
+    this.messages.update(msgs => [
+      ...msgs, 
+      { role: 'user', content: prompt, timestamp: new Date() },
+      { role: 'ai', content: '...', timestamp: new Date() }
+    ]);
 
     try {
       const response = await this.juristService.chatWithAssistant(prompt, (text) => {
