@@ -152,7 +152,7 @@ interface WindowWithSpeechRecognition extends Window {
                     </div>
 
                     <!-- Output Area -->
-                    <div class="text-sm text-justify leading-relaxed space-y-2" [innerHTML]="strategyResult() | markdown"></div>
+                    <div class="text-sm text-justify leading-relaxed markdown-body" [innerHTML]="strategyResult() | markdown"></div>
                     
                     <div class="mt-10 pt-6 border-t border-gray-700 flex justify-between items-center">
                       <span class="text-xs text-gray-500 italic">Document confidențial generat automat.</span>

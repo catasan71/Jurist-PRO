@@ -137,7 +137,7 @@ interface DocCategory {
               <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-jurist-orange via-red-500 to-purple-600 rounded-t-lg"></div>
               
               <!-- Content -->
-              <div class="whitespace-pre-wrap leading-relaxed text-[11pt] text-justify font-serif text-gray-200" [innerHTML]="generatedDoc() | markdown"></div>
+              <div class="whitespace-normal leading-relaxed text-[11pt] text-justify font-serif text-gray-200 markdown-body" [innerHTML]="generatedDoc() | markdown"></div>
             </div>
           } @else {
             <div class="h-full flex flex-col items-center justify-center text-gray-500 opacity-60 select-none border-2 border-dashed border-gray-800 rounded-xl m-4 bg-gray-900/20">

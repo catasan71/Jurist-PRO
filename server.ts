@@ -410,11 +410,57 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
       });
   }
   
-  // Enable googleSearch grounding by default to eliminate hallucinations, with automatic robust fallback if the API key has restrictions
+  // Smart Search Grounding Detection:
+  // Google Search grounding eliminates hallucinations for specific legal citations, updates, or court decisions.
+  // However, for creative writing, drafting, formatting, or generic replies, search adds a massive latency penalty (>30s)
+  // and risks token constraints cutting the response short. We dynamically enable grounding ONLY when query keywords warrant it.
   let finalTools = tools;
-  if (!finalTools || (Array.isArray(finalTools) && finalTools.length === 0)) {
+  let isSearchEnabled = false;
+
+  if (finalTools && Array.isArray(finalTools) && finalTools.length > 0) {
+    // If tools are explicitly passed by the client, respect that and enable search grounding
+    isSearchEnabled = true;
+  } else {
+    // Convert all user prompt contents into a single string to search for legal/news keywords
+    let textToAnalyze = '';
+    try {
+      if (contents && Array.isArray(contents)) {
+        for (const msg of contents) {
+          if (msg.parts && Array.isArray(msg.parts)) {
+            for (const part of msg.parts) {
+              if (part.text) {
+                textToAnalyze += ' ' + part.text;
+              }
+            }
+          }
+        }
+      } else if (contents && typeof contents === 'string') {
+        textToAnalyze = contents;
+      }
+    } catch (e) {
+      console.warn('[GEMINI] Failed to parse content text for smart search:', e);
+    }
+
+    textToAnalyze = textToAnalyze.toLowerCase().trim();
+
+    // Specific terms indicating a need for live search or legal database citation lookup
+    const searchKeywords = [
+      'decizia', 'deciziei', 'decizii', 'ril', 'recurs în interes', 'hotărâre prealabilă', 'hotărârii prealabile', 'hp ', ' hp',
+      'ccr', 'curtea constituțional', 'îccj', 'iccj', 'cedo', 'abrogat', 'abrogare', 'vigoare', 'monitorul oficial',
+      'oug ', 'oug-', 'ordonanța', 'ordonanță', 'legea nr', 'legea ', 'noutăți', 'știri', 'caută', 'căutare', 'google', 'net',
+      'recent', 'actualizat', 'noutate', 'noutati', 'modificat', 'modificare', 'modificari', '2024', '2025', '2026'
+    ];
+
+    isSearchEnabled = searchKeywords.some(keyword => textToAnalyze.includes(keyword));
+    
+    if (isSearchEnabled) {
       finalTools = [{ googleSearch: {} }];
+    } else {
+      finalTools = undefined;
+    }
   }
+
+  console.log(`[GEMINI] Smart Search Grounding detection. Enabled: ${isSearchEnabled}. Reasons: ${isSearchEnabled ? 'Matches legal reference / update keywords.' : 'No search-heavy references found (achieving ultra-low latency & full output)'}`);
   
   try {
     // 1. Instantly set streaming headers to bypass proxy buffering and hold connection alive

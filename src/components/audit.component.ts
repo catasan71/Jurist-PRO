@@ -175,7 +175,7 @@ interface PdfJsLib {
                    </div>
 
                    <!-- Report Content with fixed formatting -->
-                   <div class="text-sm text-justify leading-relaxed space-y-2" [innerHTML]="auditResult() | markdown"></div>
+                   <div class="text-sm text-justify leading-relaxed markdown-body" [innerHTML]="auditResult() | markdown"></div>
                    
                    <div class="mt-12 pt-6 border-t border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
                      <p class="text-xs text-gray-600 italic">Prezentul raport reprezintă o opinie juridică bazată pe documentele furnizate și legislația în vigoare.</p>

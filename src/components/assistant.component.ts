@@ -64,7 +64,7 @@ interface WindowWithSpeechRecognition extends Window {
             <!-- Message Bubble -->
             <div [class]="'max-w-[85%] rounded-2xl p-4 ' + (msg.role === 'user' ? 'bg-jurist-orange text-white rounded-tr-sm' : 'bg-gray-800 text-gray-200 rounded-tl-sm border border-gray-700')">
               @if (msg.role === 'ai') {
-                 <div class="whitespace-pre-wrap text-sm leading-relaxed text-left" [innerHTML]="msg.content | markdown"></div>
+                 <div class="whitespace-normal text-sm leading-relaxed text-left markdown-body" [innerHTML]="msg.content | markdown"></div>
               } @else {
                  <div class="whitespace-pre-wrap text-sm leading-relaxed text-left">{{ msg.content }}</div>
               }

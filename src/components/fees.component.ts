@@ -105,7 +105,7 @@ import { MarkdownPipe } from '../pipes/markdown.pipe';
             }
 
             <h3 class="text-xl font-bold mb-4 uppercase text-center border-b-2 border-black pb-2 pt-2">Deviz Estimativ Costuri</h3>
-            <div class="whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none text-black" [innerHTML]="resultText() | markdown:'light'"></div>
+            <div class="whitespace-normal leading-relaxed prose prose-sm max-w-none text-black markdown-body-light" [innerHTML]="resultText() | markdown:'light'"></div>
             
             <div class="mt-8 pt-4 border-t border-gray-300 text-center text-xs text-gray-500">
               Generat de JuristPRO AI. Valorile sunt estimative conform legislației la zi.

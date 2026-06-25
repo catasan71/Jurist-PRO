@@ -1274,7 +1274,11 @@ export class JuristService implements OnDestroy {
         }
       }
       
-      await this.consumeCredit(requiredCredits);
+      if (fullText && fullText.trim().length > 100) {
+        await this.consumeCredit(requiredCredits);
+      } else {
+        console.warn(`[CREDITS] Nu s-au reținut credite deoarece răspunsul este prea scurt sau gol (${fullText?.length || 0} caractere).`);
+      }
       return fullText || "";
     } catch(e: unknown) { 
       // If we already have a significant response, we return it despite the error (e.g. partial timeout)
@@ -1324,7 +1328,11 @@ export class JuristService implements OnDestroy {
         }
       }
       
-      await this.consumeCredit(3); 
+      if (fullText && fullText.trim().length > 100) {
+        await this.consumeCredit(3); 
+      } else {
+        console.warn(`[CREDITS] Nu s-au reținut credite deoarece răspunsul asistentului este prea scurt sau gol (${fullText?.length || 0} caractere).`);
+      }
       return { role: 'ai', content: fullText || "...", timestamp: new Date(), sources };
     } catch(e: unknown) { 
       this._handleAiError(e);
