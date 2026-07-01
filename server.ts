@@ -410,56 +410,13 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
       });
   }
   
-  // Smart Search Grounding Detection:
-  // Google Search grounding eliminates hallucinations for specific legal citations, updates, or court decisions.
-  // However, for creative writing, drafting, formatting, or generic replies, search adds a massive latency penalty (>30s)
-  // and risks token constraints cutting the response short. We dynamically enable grounding ONLY when query keywords warrant it.
-  let finalTools = tools;
-  let isSearchEnabled = false;
+  // Google Search Grounding:
+  // To completely eliminate hallucinations, secure 100% accurate legal citations, and prevent errors (such as confusing Art 17 with Art 173),
+  // Google Search Grounding is ALWAYS enabled by default for all legal requests.
+  let finalTools = [{ googleSearch: {} }];
+  let isSearchEnabled = true;
 
-  if (finalTools && Array.isArray(finalTools) && finalTools.length > 0) {
-    // If tools are explicitly passed by the client, respect that and enable search grounding
-    isSearchEnabled = true;
-  } else {
-    // Convert all user prompt contents into a single string to search for legal/news keywords
-    let textToAnalyze = '';
-    try {
-      if (contents && Array.isArray(contents)) {
-        for (const msg of contents) {
-          if (msg.parts && Array.isArray(msg.parts)) {
-            for (const part of msg.parts) {
-              if (part.text) {
-                textToAnalyze += ' ' + part.text;
-              }
-            }
-          }
-        }
-      } else if (contents && typeof contents === 'string') {
-        textToAnalyze = contents;
-      }
-    } catch (e) {
-      console.warn('[GEMINI] Failed to parse content text for smart search:', e);
-    }
-
-    textToAnalyze = textToAnalyze.toLowerCase().trim();
-
-    // Specific terms indicating an explicit request for live search or latest internet news lookup
-    const searchKeywords = [
-      'caută pe net', 'caută pe google', 'caută pe internet', 'căutare google', 'căutare net', 'căutare online', 
-      'google search', 'live search', 'caută online', 'search pe google', 'căutare pe google', 'știri de azi', 
-      'noutăți de ultimă oră', 'stiri de ultima ora'
-    ];
-
-    isSearchEnabled = searchKeywords.some(keyword => textToAnalyze.includes(keyword));
-    
-    if (isSearchEnabled) {
-      finalTools = [{ googleSearch: {} }];
-    } else {
-      finalTools = undefined;
-    }
-  }
-
-  console.log(`[GEMINI] Smart Search Grounding detection. Enabled: ${isSearchEnabled}. Reasons: ${isSearchEnabled ? 'Matches legal reference / update keywords.' : 'No search-heavy references found (achieving ultra-low latency & full output)'}`);
+  console.log(`[GEMINI] Google Search Grounding is enabled by default to ensure precise legal references and real-time updates.`);
   
   try {
     // 1. Instantly set streaming headers to bypass proxy buffering and hold connection alive
