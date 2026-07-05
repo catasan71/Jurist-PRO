@@ -115,72 +115,102 @@ import { NotificationService } from './services/notification.service';
        </div>
     }
 
-    @switch (juristService.currentModule()) {
-      @case ('landing') { <app-landing></app-landing> }
-      @case ('auth') { <app-auth></app-auth> }
-      @case ('payment') { <app-payment></app-payment> }
-      @case ('admin-dashboard') { <app-admin-dashboard></app-admin-dashboard> }
-      
-      @default {
-        <!-- LAWYER APP LAYOUT -->
-        <div class="fixed inset-0 flex h-full w-full overflow-hidden bg-black font-sans selection:bg-jurist-orange selection:text-white">
+    @if (authService.currentUser()?.status === 'suspended') {
+      <!-- BLOCAT / SUSPENDAT SCREEN -->
+      <div class="fixed inset-0 z-[110] bg-[#0c0d0e] text-white flex flex-col items-center justify-center p-6 text-center font-sans">
+        <div class="max-w-md bg-[#16171a] border border-red-500/30 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+          <div class="absolute -top-10 -left-10 w-40 h-40 bg-red-500/10 rounded-full blur-3xl"></div>
+          <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-red-500/10 rounded-full blur-3xl"></div>
           
-          <div [class]="'fixed lg:static inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 lg:transform-none bg-jurist-dark border-r border-gray-800 shadow-2xl ' + (mobileMenuOpen ? 'translate-x-0' : '-translate-x-full')">
-            <app-sidebar (linkClick)="mobileMenuOpen = false"></app-sidebar>
+          <div class="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-center text-red-500 mx-auto mb-6 shadow-lg shadow-red-500/5 animate-pulse">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286zm0 13.036h.008v.008H12v-.008z" />
+            </svg>
           </div>
-
-          <!-- Backdrop -->
-          @if (mobileMenuOpen) {
-            <button (click)="toggleMobileMenu()" (keydown.escape)="toggleMobileMenu()" class="fixed inset-0 bg-black/80 z-40 lg:hidden backdrop-blur-sm w-full h-full cursor-pointer transition-opacity duration-300" aria-label="Close menu"></button>
-          }
-
-          <!-- Main Layout (Right Side) -->
-          <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+          
+          <h1 class="text-2xl font-bold tracking-tight text-white mb-2">Contul dvs. este suspendat</h1>
+          <p class="text-gray-400 text-sm mb-6 leading-relaxed">
+            Accesul la platforma JuristPRO AI a fost suspendat temporar de către un administrator. Dacă credeți că este o eroare sau doriți deblocarea contului, vă rugăm să contactați serviciul de asistență tehnică.
+          </p>
+          
+          <div class="space-y-3">
+            <a href="mailto:suport@juristpro.ai" class="block w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-red-600/10">
+              Contactează Suport
+            </a>
+            <button (click)="logout()" class="block w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 px-4 rounded-xl transition-all border border-gray-700">
+              Deconectare
+            </button>
+          </div>
+        </div>
+      </div>
+    } @else {
+      @switch (juristService.currentModule()) {
+        @case ('landing') { <app-landing></app-landing> }
+        @case ('auth') { <app-auth></app-auth> }
+        @case ('payment') { <app-payment></app-payment> }
+        @case ('admin-dashboard') { <app-admin-dashboard></app-admin-dashboard> }
+        
+        @default {
+          <!-- LAWYER APP LAYOUT -->
+          <div class="fixed inset-0 flex h-full w-full overflow-hidden bg-black font-sans selection:bg-jurist-orange selection:text-white">
             
-            <!-- Mobile Header -->
-            <header class="lg:hidden h-16 bg-jurist-dark border-b border-gray-800 flex items-center justify-between px-4 flex-shrink-0 shadow-md z-30 relative">
-              <div class="flex items-center gap-3">
-                <button (click)="toggleMobileMenu()" class="p-2 bg-gray-800 rounded-lg text-white border border-gray-700 active:scale-95 transition-transform" [attr.aria-expanded]="mobileMenuOpen" aria-label="Toggle menu">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            <div [class]="'fixed lg:static inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 lg:transform-none bg-jurist-dark border-r border-gray-800 shadow-2xl ' + (mobileMenuOpen ? 'translate-x-0' : '-translate-x-full')">
+              <app-sidebar (linkClick)="mobileMenuOpen = false"></app-sidebar>
+            </div>
+
+            <!-- Backdrop -->
+            @if (mobileMenuOpen) {
+              <button (click)="toggleMobileMenu()" (keydown.escape)="toggleMobileMenu()" class="fixed inset-0 bg-black/80 z-40 lg:hidden backdrop-blur-sm w-full h-full cursor-pointer transition-opacity duration-300" aria-label="Close menu"></button>
+            }
+
+            <!-- Main Layout (Right Side) -->
+            <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+              
+              <!-- Mobile Header -->
+              <header class="lg:hidden h-16 bg-jurist-dark border-b border-gray-800 flex items-center justify-between px-4 flex-shrink-0 shadow-md z-30 relative">
+                <div class="flex items-center gap-3">
+                  <button (click)="toggleMobileMenu()" class="p-2 bg-gray-800 rounded-lg text-white border border-gray-700 active:scale-95 transition-transform" [attr.aria-expanded]="mobileMenuOpen" aria-label="Toggle menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    </svg>
+                  </button>
+                  <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 bg-jurist-orange rounded flex items-center justify-center text-black font-bold text-xs shadow-neon">J</div>
+                    <span class="font-bold text-white text-lg tracking-wide">Jurist<span class="text-jurist-orange">PRO</span></span>
+                  </div>
+                </div>
+
+                <!-- Mobile Logout Button -->
+                <button (click)="logout()" class="p-2 text-red-500 hover:text-red-400 active:scale-90 transition-all" title="Ieșire din Dashboard">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                   </svg>
                 </button>
-                <div class="flex items-center gap-2">
-                  <div class="w-6 h-6 bg-jurist-orange rounded flex items-center justify-center text-black font-bold text-xs shadow-neon">J</div>
-                  <span class="font-bold text-white text-lg tracking-wide">Jurist<span class="text-jurist-orange">PRO</span></span>
+              </header>
+
+              <!-- Main Content Area -->
+              <main class="flex-1 overflow-hidden p-4 lg:p-6 relative">
+                
+                <!-- Content Scroll Area -->
+                <div class="h-full w-full max-w-7xl mx-auto overflow-hidden relative z-10">
+                  @switch (juristService.currentModule()) {
+                    @case ('dashboard') { <app-dashboard></app-dashboard> }
+                    @case ('assistant') { <app-assistant></app-assistant> }
+                    @case ('strategy') { <app-strategy></app-strategy> }
+                    @case ('audit') { <app-audit></app-audit> }
+                    @case ('drafting') { <app-drafting></app-drafting> }
+                    @case ('fees') { <app-fees></app-fees> }
+                    @case ('calendar') { <app-calendar></app-calendar> }
+                    @case ('profile') { <app-profile></app-profile> }
+                    @case ('pricing') { <app-pricing></app-pricing> }
+                    @case ('guide') { <app-guide></app-guide> }
+                  }
                 </div>
-              </div>
+              </main>
+            </div>
 
-              <!-- Mobile Logout Button -->
-              <button (click)="logout()" class="p-2 text-red-500 hover:text-red-400 active:scale-90 transition-all" title="Ieșire din Dashboard">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                </svg>
-              </button>
-            </header>
-
-            <!-- Main Content Area -->
-            <main class="flex-1 overflow-hidden p-4 lg:p-6 relative">
-              
-              <!-- Content Scroll Area -->
-              <div class="h-full w-full max-w-7xl mx-auto overflow-hidden relative z-10">
-                @switch (juristService.currentModule()) {
-                  @case ('dashboard') { <app-dashboard></app-dashboard> }
-                  @case ('assistant') { <app-assistant></app-assistant> }
-                  @case ('strategy') { <app-strategy></app-strategy> }
-                  @case ('audit') { <app-audit></app-audit> }
-                  @case ('drafting') { <app-drafting></app-drafting> }
-                  @case ('fees') { <app-fees></app-fees> }
-                  @case ('calendar') { <app-calendar></app-calendar> }
-                  @case ('profile') { <app-profile></app-profile> }
-                  @case ('pricing') { <app-pricing></app-pricing> }
-                  @case ('guide') { <app-guide></app-guide> }
-                }
-              </div>
-            </main>
           </div>
-
-        </div>
+        }
       }
     }
   `

@@ -54,7 +54,7 @@ service cloud.firestore {
              data.full_name is string &&
              data.role in ['admin', 'lawyer'] &&
              data.plan in ['trial', 'expert', 'gold'] &&
-             data.status in ['active', 'pending_payment', 'expired', 'trial', 'cancelled'] &&
+             data.status in ['active', 'pending_payment', 'expired', 'trial', 'cancelled', 'suspended'] &&
              data.credits is number;
     }
 

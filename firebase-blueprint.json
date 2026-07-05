@@ -31,7 +31,7 @@
         "full_name": { "type": "string" },
         "role": { "type": "string", "enum": ["admin", "lawyer"] },
         "plan": { "type": "string", "enum": ["trial", "expert", "gold"] },
-        "status": { "type": "string", "enum": ["active", "pending_payment", "expired", "trial", "cancelled"] },
+        "status": { "type": "string", "enum": ["active", "pending_payment", "expired", "trial", "cancelled", "suspended"] },
         "credits": { "type": "number" },
         "cabinet_data": { "type": "object" },
         "consents": { "type": "object" },

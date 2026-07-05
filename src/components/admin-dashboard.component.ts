@@ -178,13 +178,25 @@ type AdminTab = 'overview' | 'users' | 'tickets' | 'finance' | 'packages' | 'mar
                                  <span [class]="'px-2 py-1 rounded text-xs font-bold uppercase ' + (user.plan === 'gold' ? 'bg-yellow-900 text-yellow-500' : 'bg-blue-900 text-blue-400')">{{ user.plan }}</span>
                               </td>
                               <td class="px-6 py-4">
-                                 <span [class]="'px-2 py-1 rounded text-xs ' + (user.status === 'active' ? 'text-green-400' : 'text-red-400')">{{ user.status }}</span>
+                                 <span [class]="'px-2 py-1 rounded text-xs font-bold uppercase border ' + 
+                                    (user.status === 'active' ? 'bg-green-950/40 text-green-400 border-green-800/30' : 
+                                     user.status === 'suspended' ? 'bg-red-950/40 text-red-400 border-red-800/30' : 
+                                     'bg-gray-800/40 text-gray-400 border-gray-700/30')">
+                                    {{ user.status }}
+                                 </span>
                               </td>
                               <td class="px-6 py-4 text-right">
                                  <div class="flex items-center justify-end gap-2">
                                    <input type="number" #creditInput placeholder="Credite" class="w-20 bg-black border border-gray-600 rounded p-1 text-white text-xs text-center" value="15">
-                                   <button (click)="addCredits(user.id, creditInput.value)" class="text-green-500 hover:text-green-400 hover:underline mr-4 text-xs font-bold">+ Adaugă</button>
-                                   <button (click)="deleteUser(user.id)" class="text-red-500 hover:text-red-400 hover:underline text-xs">Șterge</button>
+                                   <button (click)="addCredits(user.id, creditInput.value)" class="bg-green-600/10 hover:bg-green-600/20 text-green-400 px-2 py-1 rounded text-xs font-bold border border-green-600/20 transition-all">+ Adaugă</button>
+                                   
+                                   @if (user.status === 'suspended') {
+                                     <button (click)="toggleSuspension(user.id, user.status)" class="bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 px-2 py-1 rounded text-xs font-bold border border-emerald-600/20 transition-all">Deblochează</button>
+                                   } @else {
+                                     <button (click)="toggleSuspension(user.id, user.status)" class="bg-red-600/10 hover:bg-red-600/20 text-red-400 px-2 py-1 rounded text-xs font-bold border border-red-600/20 transition-all">Blochează</button>
+                                   }
+
+                                   <button (click)="deleteUser(user.id)" class="bg-gray-800 hover:bg-red-900/40 text-gray-400 hover:text-red-400 px-2 py-1 rounded text-xs font-bold border border-gray-700 hover:border-red-900/50 transition-all">Șterge</button>
                                  </div>
                               </td>
                            </tr>
@@ -672,6 +684,14 @@ export class AdminDashboardComponent {
     if (confirm('Sunteți sigur că doriți să ștergeți acest utilizator?')) {
       await this.authService.deleteUser(userId);
       this.showToast("Utilizatorul a fost șters.");
+    }
+  }
+
+  async toggleSuspension(userId: string, currentStatus: string) {
+    const actionText = currentStatus === 'suspended' ? 'deblocați' : 'suspendați';
+    if (confirm(`Sunteți sigur că doriți să ${actionText} acest utilizator?`)) {
+      await this.authService.toggleUserSuspension(userId, currentStatus);
+      this.showToast(currentStatus === 'suspended' ? "Utilizatorul a fost activat." : "Utilizatorul a fost suspendat.");
     }
   }
 

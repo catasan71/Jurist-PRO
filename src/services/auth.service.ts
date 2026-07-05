@@ -27,7 +27,7 @@ export enum FirestoreOp {
 }
 
 export type UserRole = 'admin' | 'lawyer';
-export type SubscriptionStatus = 'active' | 'pending_payment' | 'expired' | 'trial' | 'cancelled';
+export type SubscriptionStatus = 'active' | 'pending_payment' | 'expired' | 'trial' | 'cancelled' | 'suspended';
 
 export interface UserConsents {
   terms: boolean;
@@ -619,6 +619,26 @@ export class AuthService {
         await updateDoc(userRef, { credits: currentCredits + amount });
         this.notificationService.success(`S-au adăugat ${amount} credite.`);
       }
+    } catch (error) {
+      this.handleFirestoreError(error, FirestoreOp.UPDATE, `profiles/${id}`);
+    }
+  }
+
+  async toggleUserSuspension(id: string, currentStatus: string) {
+    const newStatus: SubscriptionStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+
+    // Check if demo/bypass
+    if (id.startsWith('demo-') || id.startsWith('bypass-') || id.startsWith('admin-demo')) {
+      this._allUsers.update(users => users.map(u => u.id === id ? { ...u, status: newStatus } : u));
+      this.notificationService.success(newStatus === 'suspended' ? 'Utilizator suspendat.' : 'Utilizator activat.');
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'profiles', id);
+      await updateDoc(userRef, { status: newStatus });
+      this._allUsers.update(users => users.map(u => u.id === id ? { ...u, status: newStatus } : u));
+      this.notificationService.success(newStatus === 'suspended' ? 'Utilizator suspendat (blocat).' : 'Utilizator activat (deblocat).');
     } catch (error) {
       this.handleFirestoreError(error, FirestoreOp.UPDATE, `profiles/${id}`);
     }
