@@ -750,6 +750,25 @@ setTimeout(runDeadlineAutomation, 15000);
 
 // --- END AUTOMATION ---
 
+// SEO Endpoints: robots.txt and sitemap.xml
+app.get('/robots.txt', (req, res) => {
+  const robotsPath = path.join(__dirname, 'robots.txt');
+  if (fs.existsSync(robotsPath)) {
+    res.type('text/plain').sendFile(robotsPath);
+  } else {
+    res.type('text/plain').send("User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin-dashboard\n\nSitemap: https://www.juridicpro.ro/sitemap.xml\n");
+  }
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  const sitemapPath = path.join(__dirname, 'sitemap.xml');
+  if (fs.existsSync(sitemapPath)) {
+    res.type('application/xml').sendFile(sitemapPath);
+  } else {
+    res.status(404).send('Sitemap not found');
+  }
+});
+
 // Serve static files
 const distPath = path.join(__dirname, 'dist/juristpro/browser');
 console.log('Serving static files from:', distPath);
