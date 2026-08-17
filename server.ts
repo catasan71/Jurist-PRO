@@ -774,13 +774,14 @@ const distPath = path.join(__dirname, 'dist/juristpro/browser');
 console.log('Serving static files from:', distPath);
 
 app.use(express.static(distPath, {
-  maxAge: '1d', // Cache static assets for 1 day to maximize loading speed
   setHeaders: (res, filePath) => {
-    // Never cache index.html to ensure users instantly get any frontend code updates
-    if (filePath.endsWith('.html') || path.basename(filePath) === 'index.html') {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    // Disable caching for HTML and JS to ensure users always receive the latest builds
+    if (filePath.endsWith('.html') || path.basename(filePath) === 'index.html' || filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
     } else {
-      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
     }
   }
 }));
@@ -790,6 +791,9 @@ app.use((req, res) => {
   if (req.accepts('html')) {
     const indexPath = path.join(distPath, 'index.html');
     if (fs.existsSync(indexPath)) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(indexPath);
     } else {
       res.status(503).send(`

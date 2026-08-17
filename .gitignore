@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Production & Build outputs
+dist/
+.angular/
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

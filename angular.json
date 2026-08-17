@@ -27,7 +27,8 @@
             "production": {
               "optimization": true,
               "extractLicenses": true,
-              "sourceMap": false
+              "sourceMap": false,
+              "outputHashing": "all"
             },
             "development": {
               "optimization": false,

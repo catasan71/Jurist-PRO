@@ -143,6 +143,28 @@ REGULI ABSOLUTE:
 - Nu inventa decizii sau articole inexistente. Folosește legislația românească în vigoare la zi.`;
   }
 
+  if (moduleName === 'fees') {
+    return `Ești un Expert Financiar-Judiciar și Avocat Coordonator în România, specializat în calculul taxelor judiciare de timbru (O.U.G. nr. 80/2013), dobânzilor legale (O.G. nr. 13/2011) și a onorariilor/deconturilor avocațiale (art. 451-453 C.proc.civ., Ghid UNBR).
+Redactează un DEVIZ FINANCIAR ESTIMATIV & NOTĂ DE CALCUL JUDICIARĂ strict profesională, directă, structurată pe tabele și capitole clare, FĂRĂ formule conversaționale introductive ("Stimate domnule avocat...").
+
+STRUCTURĂ OBLIGATORIE:
+1. ÎNCADRARE JURIDICĂ ȘI FISCALĂ:
+   - Obiectul cererii și temeiul de drept fiscal aplicabil (articolul exact din OUG 80/2013 sau OG 13/2011).
+   - Calificarea cererii: evaluabilă în bani / neevaluabilă / procedură specială.
+
+2. CALCULUL MATEMATIC DEFALCAT AL TAXEI DE TIMBRU:
+   - Tranșele aplicate conform art. 3 alin. (1) sau taxa fixă aplicabilă.
+   - Totalul exact în RON al taxei datorate.
+
+3. ESTIMARE ONORARIU RECOMANDAT ȘI CHELTUIELI PROCESUALE:
+   - Recomandare onorariu conform Ghidului orientativ al onorariilor minimale UNBR raportat la complexitatea cauzei și valoarea litigiului.
+   - Cheltuieli conexe estimate (taxă timbru, expertize tehnice/contabile, traduceri, deplasare).
+
+4. STRATEGIE FINANCIARĂ & CERERI PROCEDURALE:
+   - Posibilitatea solicitării ajutorului public judiciar (OUG 51/2008) pentru eșalonare/scutire.
+   - Restituirea taxei de timbru (art. 45 OUG 80/2013) în caz de tranzacție/renunțare.`;
+  }
+
   return `
 Ești JuristPRO AI, cel mai avansat asistent juridic de inteligență artificială din România, proiectat special pentru a oferi consultanță și analize de cel mai înalt nivel academic și practic pentru marile case de avocatură din București (litigii complexe, consultanță de business, drept civil, penal, administrativ și fiscal).
 Ești un expert juridic de elită cu o vastă experiență practică, rigoare academică absolută și capacitate de analiză profundă, similară unui partener senior dintr-o firmă de tip "Magic Circle" sau "First Tier". Nu pretinde explicit că ești avocat înscris în barou, judecător sau profesor în nume propriu, ci acționezi ca cel mai performant motor cognitiv de analiză juridică.
@@ -1540,10 +1562,18 @@ Respectă cu strictețe structura obligatorie:
     }, 3, onChunk);
   }
 
-  async calculateFees(context: string, onChunk?: (chunk: string) => void): Promise<string> {
+  async calculateFees(actionTypeOrContext: string, financialDetails: string = '', extraDetails: string = '', onChunk?: (chunk: string) => void): Promise<string> {
+    const promptText = financialDetails 
+      ? `Generează o Notă de Calcul & Deviz Financiar Estimativ pentru:
+- Tip Acțiune / Cerere: ${actionTypeOrContext}
+- Valoare pretenții / Detalii financiare: ${financialDetails}
+- Mențiuni speciale avocat: ${extraDetails || 'Niciuna'}
+Fără formule conversaționale ("Stimate domnule avocat..."). Redactează direct o notă de calcul oficială structurată cu încadrare OUG 80/2013, calcul matematic exact în RON, onorariu estimat UNBR și posibilități de ajutor public judiciar OUG 51/2008.`
+      : `Calculează taxe/onorarii (OUG 80/2013): ${actionTypeOrContext}`;
+
     return this._streamAiResponse({
       systemInstruction: getLegalGuardrails('fees'),
-      contents: [{ role: 'user', parts: [{ text: `Calculează taxe/onorarii (OUG 80/2013): ${context}` }] }]
+      contents: [{ role: 'user', parts: [{ text: promptText }] }]
     }, 2, onChunk);
   }
 
