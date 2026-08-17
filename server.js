@@ -95,6 +95,14 @@ function getRevolutConfig() {
 }
 app.use(import_express.default.json({ limit: "50mb" }));
 app.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
+app.get("/api/download-zip", (req, res) => {
+  const zipPath = import_path.default.join(__dirname, "dist/juristpro/browser/juristpro-backup.zip");
+  if (import_fs.default.existsSync(zipPath)) {
+    res.download(zipPath, "juristpro-source-code.zip");
+  } else {
+    res.status(404).send("Arhiva ZIP se genereaz\u0103. V\u0103 rug\u0103m re\xEEnc\u0103rca\u021Bi pagina.");
+  }
+});
 app.post("/api/revolut-webhook", async (req, res) => {
   const adminDb = getAdminDb();
   try {

@@ -99,6 +99,16 @@ function getRevolutConfig() {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Direct source code download endpoint
+app.get('/api/download-zip', (req, res) => {
+  const zipPath = path.join(__dirname, 'dist/juristpro/browser/juristpro-backup.zip');
+  if (fs.existsSync(zipPath)) {
+    res.download(zipPath, 'juristpro-source-code.zip');
+  } else {
+    res.status(404).send('Arhiva ZIP se generează. Vă rugăm reîncărcați pagina.');
+  }
+});
+
 // API Endpoint for Revolut Webhook
 app.post('/api/revolut-webhook', async (req, res) => {
   const adminDb = getAdminDb();

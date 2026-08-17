@@ -179,50 +179,313 @@ interface WindowWithSpeechRecognition extends Window {
           </div>
         </div>
 
-        <!-- AI Sidebar (Calcul Termene) -->
-        <div [class]="'w-full lg:w-1/3 bg-gray-900/50 lg:border-l border-gray-800 lg:p-6 p-1 rounded-xl lg:rounded-none ' + (mobileTab() === 'calculator' ? 'block' : 'hidden lg:block')">
-          <h3 class="text-jurist-orange font-bold mb-4 flex items-center gap-2">
-             <span>🤖</span> Calculator Termene AI
-          </h3>
-          <p class="text-sm text-gray-400 mb-4">Introduceți data comunicării și durata termenului. AI-ul va calcula data scadentă conform CPC (sistemul "pe zile libere", weekend-uri, sărbători).</p>
+        <!-- Modern Procedural Deadline Calculator Panel -->
+        <div [class]="'w-full lg:w-[420px] xl:w-[460px] bg-gray-900/70 lg:border-l border-gray-800 lg:p-6 p-4 rounded-xl lg:rounded-none flex flex-col shrink-0 ' + (mobileTab() === 'calculator' ? 'block' : 'hidden lg:flex')">
           
-          <div class="relative group">
-            <textarea 
-                [(ngModel)]="aiPrompt"
-                rows="5" 
-                class="w-full bg-black border border-gray-700 rounded-lg p-4 text-sm text-white mb-3 focus:border-jurist-orange leading-relaxed"
-                placeholder="Ex: Hotărârea mi-a fost comunicată Vineri, 1 Octombrie 2024. Când se împlinește termenul de apel de 30 de zile?"
-            ></textarea>
-            <div class="absolute bottom-5 right-3 text-[10px] text-gray-500 bg-black/80 px-1 rounded">
-                Referință: Art. 181 NCPC
+          <!-- Header & Mode Tabs -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-jurist-orange font-bold flex items-center gap-2 text-base">
+                <span>⚖️</span> Calculator Termene Procedurale
+              </h3>
+              <span class="text-[10px] bg-jurist-orange/10 text-jurist-orange px-2 py-0.5 rounded font-mono font-bold border border-jurist-orange/20">Art. 181 CPC</span>
             </div>
+            <p class="text-xs text-gray-400">Calcul automat pe zile libere, prorogare weekend și sărbători legale RO.</p>
           </div>
 
-          <button 
-             (click)="askAI()"
-             [disabled]="!aiPrompt || juristService.isLoading()"
-             class="w-full bg-white text-black font-bold py-3 rounded-lg hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
-          >
-            @if(juristService.isLoading()) {
-                <div class="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-            }
-            Calculează Termene Exacte
-          </button>
-          
-          @if (dateResult()) {
-            <div class="mt-6 p-5 bg-gray-800 rounded-xl border border-gray-600 shadow-lg relative animate-fadeIn">
-                <div class="absolute -top-3 left-4 bg-jurist-orange text-black text-[10px] font-bold px-2 py-0.5 rounded">REZULTAT CALCUL</div>
-                <div class="text-xl font-bold text-white mb-4">{{ dateResult() }}</div>
+          <!-- Calculator Sub-mode Switcher -->
+          <div class="flex bg-black/60 p-1 rounded-xl border border-gray-800 mb-4">
+            <button 
+              (click)="calcMode.set('cpc')" 
+              [class]="'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ' + (calcMode() === 'cpc' ? 'bg-jurist-orange text-black shadow-md' : 'text-gray-400 hover:text-white')"
+            >
+              <span>⚡</span> Standard CPC
+            </button>
+            <button 
+              (click)="calcMode.set('ai')" 
+              [class]="'flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ' + (calcMode() === 'ai' ? 'bg-jurist-orange text-black shadow-md' : 'text-gray-400 hover:text-white')"
+            >
+              <span>🤖</span> Asistent AI Spețe
+            </button>
+          </div>
+
+          @if (calcMode() === 'cpc') {
+            <!-- STANDARD CPC CALCULATOR -->
+            <div class="space-y-4">
+              
+              <!-- Quick Presets -->
+              <div>
+                <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Preseturi Termene Legale</label>
+                <div class="grid grid-cols-2 gap-1.5">
+                  <button 
+                    type="button"
+                    (click)="applyPreset('apel')" 
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'apel' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                  >
+                    <div class="font-bold flex items-center justify-between">
+                      <span>Apel / Recurs</span>
+                      <span class="text-[10px] font-mono">30 zile</span>
+                    </div>
+                    <span class="text-[10px] text-gray-500 block">Art. 468 / 485 CPC</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    (click)="applyPreset('intampinare')" 
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'intampinare' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                  >
+                    <div class="font-bold flex items-center justify-between">
+                      <span>Întâmpinare</span>
+                      <span class="text-[10px] font-mono">25 zile</span>
+                    </div>
+                    <span class="text-[10px] text-gray-500 block">Art. 201 CPC</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    (click)="applyPreset('contestatie')" 
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'contestatie' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                  >
+                    <div class="font-bold flex items-center justify-between">
+                      <span>Contestație Executare</span>
+                      <span class="text-[10px] font-mono">15 zile</span>
+                    </div>
+                    <span class="text-[10px] text-gray-500 block">Art. 715 CPC</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    (click)="applyPreset('plangere_contraventionala')" 
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'plangere_contraventionala' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                  >
+                    <div class="font-bold flex items-center justify-between">
+                      <span>Plângere PV</span>
+                      <span class="text-[10px] font-mono">15 zile</span>
+                    </div>
+                    <span class="text-[10px] text-gray-500 block">O.G. nr. 2/2001</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    (click)="applyPreset('ordonanta_presedintiala')" 
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'ordonanta_presedintiala' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                  >
+                    <div class="font-bold flex items-center justify-between">
+                      <span>Ordonanță Președințială</span>
+                      <span class="text-[10px] font-mono">5 zile</span>
+                    </div>
+                    <span class="text-[10px] text-gray-500 block">Art. 999 CPC</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    (click)="applyPreset('custom')" 
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'custom' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                  >
+                    <div class="font-bold flex items-center justify-between">
+                      <span>Personalizat</span>
+                      <span class="text-[10px] font-mono">Manual</span>
+                    </div>
+                    <span class="text-[10px] text-gray-500 block">Zile / Luni la alegere</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Input Parameters -->
+              <div class="bg-black/40 p-3.5 rounded-xl border border-gray-800 space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label for="commDate" class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Data Comunicării</label>
+                    <input 
+                      id="commDate" 
+                      type="date" 
+                      [(ngModel)]="calcStartDate" 
+                      class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white focus:border-jurist-orange outline-none [color-scheme:dark]"
+                    >
+                  </div>
+                  <div>
+                    <label for="termDuration" class="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                      {{ calcUnitsType === 'months' ? 'Durată (Luni)' : 'Durată (Zile)' }}
+                    </label>
+                    <input 
+                      id="termDuration" 
+                      type="number" 
+                      min="1" 
+                      [(ngModel)]="calcDuration" 
+                      (input)="onDurationChange()"
+                      class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white focus:border-jurist-orange outline-none font-mono"
+                    >
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label for="calcUnits" class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Sistem de calcul</label>
+                    <select 
+                      id="calcUnits" 
+                      [(ngModel)]="calcUnitsType" 
+                      (change)="onDurationChange()"
+                      class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white focus:border-jurist-orange outline-none cursor-pointer"
+                    >
+                      <option value="free_days">Zile libere (Art. 181 alin. 1 pct. 2)</option>
+                      <option value="calendar_days">Zile pline (Calendaristice)</option>
+                      <option value="months">Pe luni (Art. 181 alin. 1 pct. 3)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="limitHour" class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Ora limită depunere</label>
+                    <select 
+                      id="limitHour" 
+                      [(ngModel)]="calcSubmissionChannel" 
+                      class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white focus:border-jurist-orange outline-none cursor-pointer"
+                    >
+                      <option value="postal">24:00 (Poștă / E-mail Art. 183)</option>
+                      <option value="registry">16:00 (Registratura Instanței)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- LIVE RESULTS CARD -->
+              <div class="bg-gradient-to-br from-gray-900 via-black to-gray-900 border-2 border-jurist-orange/40 rounded-xl p-4 shadow-xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-jurist-orange/10 rounded-full blur-2xl pointer-events-none"></div>
                 
-                <button (click)="showMethodology.set(!showMethodology())" class="text-xs text-jurist-orange hover:underline">
-                  {{ showMethodology() ? 'Ascunde metodologia' : 'Vezi metodologia de calcul' }}
-                </button>
-                
-                @if (showMethodology() && methodologyResult()) {
-                  <div class="mt-3 pt-3 border-t border-gray-700 text-sm text-gray-400 whitespace-pre-wrap leading-relaxed font-mono">
-                    {{ methodologyResult() }}
+                <div class="flex items-center justify-between text-xs text-gray-400 mb-2">
+                  <span class="font-bold text-jurist-orange uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <span class="inline-block w-2 h-2 rounded-full bg-jurist-orange animate-pulse"></span>
+                    Data Limită a Termenului
+                  </span>
+                  <span class="text-[10px] font-mono text-gray-400 bg-gray-800 px-2 py-0.5 rounded">
+                    {{ computedDeadline().daysRemainingText }}
+                  </span>
+                </div>
+
+                <!-- Main Date Display -->
+                <div class="mb-3">
+                  <div class="text-xl sm:text-2xl font-black text-white capitalize leading-tight">
+                    {{ computedDeadline().formattedDate }}
+                  </div>
+                  <div class="text-xs text-gray-400 font-mono mt-0.5 flex items-center gap-2">
+                    <span>🕒 Până la ora <b>{{ calcSubmissionChannel === 'postal' ? '24:00' : '16:00' }}</b></span>
+                    <span>•</span>
+                    <span class="text-gray-500">{{ calcSubmissionChannel === 'postal' ? 'Art. 183 CPC' : 'Grefa instanței' }}</span>
+                  </div>
+                </div>
+
+                <!-- Prorogation Notice Badge -->
+                @if (computedDeadline().isProrogued) {
+                  <div class="mb-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] flex items-start gap-2">
+                    <span class="text-base shrink-0">ℹ️</span>
+                    <div>
+                      <b class="font-bold">Termen prorogat conform Art. 181 alin. (2) CPC!</b>
+                      <p class="text-amber-200/80 text-[10px] mt-0.5">{{ computedDeadline().prorogationReason }}</p>
+                    </div>
                   </div>
                 }
+
+                <!-- Timeline Accordion / Details -->
+                <div class="border-t border-gray-800 pt-3 space-y-2 text-xs">
+                  <div class="flex justify-between items-center text-gray-400">
+                    <span>Comunicare (dies a quo):</span>
+                    <span class="font-mono text-white font-semibold">{{ computedDeadline().startDateFormatted }}</span>
+                  </div>
+                  <div class="flex justify-between items-center text-gray-400">
+                    <span>Durată aplicată:</span>
+                    <span class="font-mono text-white font-semibold">{{ computedDeadline().durationLabel }}</span>
+                  </div>
+                  <div class="flex justify-between items-center text-gray-400">
+                    <span>Data teoretică împlinire:</span>
+                    <span class="font-mono text-gray-300">{{ computedDeadline().theoreticalDateFormatted }}</span>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-4 pt-3 border-t border-gray-800/80 grid grid-cols-2 gap-2">
+                  <button 
+                    type="button" 
+                    (click)="addCalculatedDeadlineToAgenda()" 
+                    class="bg-jurist-orange hover:bg-orange-600 text-black text-xs font-black py-2.5 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95"
+                  >
+                    <span>➕</span> Adaugă în Agendă
+                  </button>
+                  <button 
+                    type="button" 
+                    (click)="copyDeadlineSummary()" 
+                    class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold py-2.5 px-3 rounded-lg border border-gray-700 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                  >
+                    <span>📋</span> Copiază Notă
+                  </button>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <!-- AI ASSISTANT SPEȚE & SITUAȚII COMPLEXE -->
+            <div class="space-y-3 flex-1 flex flex-col">
+              <p class="text-xs text-gray-400 leading-relaxed">
+                Adresați AI-ului spețe atipice (afișare pe ușă, repunere în termen art. 186, vacanță judecătorească, calcul pe ore).
+              </p>
+
+              <!-- Prompt Quick Chips -->
+              <div class="flex flex-wrap gap-1.5">
+                <button 
+                  type="button"
+                  (click)="aiPrompt = 'Hotărârea a fost comunicată prin afișare la ușă pe 10 martie 2026. Când curge termenul de apel?'"
+                  class="text-[10px] bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1 rounded border border-gray-700"
+                >
+                  📌 Comunicare prin afișare
+                </button>
+                <button 
+                  type="button"
+                  (click)="aiPrompt = 'Cum se calculează termenul de 15 zile dacă cererea de repunere în termen este formulată conform art. 186 CPC?'"
+                  class="text-[10px] bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1 rounded border border-gray-700"
+                >
+                  📌 Repunere în termen (art. 186)
+                </button>
+                <button 
+                  type="button"
+                  (click)="aiPrompt = 'Termenul de apel s-a împlinit în timpul vacanței judecătorești. Se suspendă sau curge normal?'"
+                  class="text-[10px] bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1 rounded border border-gray-700"
+                >
+                  📌 Vacanță Judecătorească
+                </button>
+              </div>
+
+              <div class="relative flex-1">
+                <textarea 
+                  [(ngModel)]="aiPrompt"
+                  rows="4" 
+                  class="w-full bg-black border border-gray-700 rounded-xl p-3 text-xs text-white focus:border-jurist-orange outline-none leading-relaxed"
+                  placeholder="Ex: Am primit sentința prin poștă cu confirmare de primire vineri 15 mai. Când expiră termenul de apel?"
+                ></textarea>
+              </div>
+
+              <button 
+                (click)="askAI()"
+                [disabled]="!aiPrompt || juristService.isLoading()"
+                class="w-full bg-jurist-orange hover:bg-orange-600 text-black font-black py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 text-xs shadow-md disabled:opacity-40"
+              >
+                @if(juristService.isLoading()) {
+                  <div class="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                }
+                Calculează cu JuristPRO AI
+              </button>
+
+              @if (dateResult()) {
+                <div class="mt-3 p-3.5 bg-gray-800/90 rounded-xl border border-jurist-orange/30 shadow-lg relative animate-fadeIn">
+                  <div class="text-[10px] font-bold text-jurist-orange mb-1">REZULTAT ANALIZĂ AI</div>
+                  <div class="text-sm font-bold text-white mb-2">{{ dateResult() }}</div>
+                  
+                  <button (click)="showMethodology.set(!showMethodology())" class="text-[11px] text-jurist-orange hover:underline font-semibold">
+                    {{ showMethodology() ? 'Ascunde argumentația' : 'Vezi temeiurile legale și detaliile' }}
+                  </button>
+                  
+                  @if (showMethodology() && methodologyResult()) {
+                    <div class="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-300 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+                      {{ methodologyResult() }}
+                    </div>
+                  }
+                </div>
+              }
             </div>
           }
         </div>
@@ -453,6 +716,15 @@ export class CalendarComponent implements OnInit, OnDestroy {
   juristService = inject(JuristService);
   private cdr = inject(ChangeDetectorRef);
   private ngZone = inject(NgZone);
+  
+  // --- PROCEDURAL DEADLINE CALCULATOR STATE ---
+  calcMode = signal<'cpc' | 'ai'>('cpc');
+  calcStartDate = new Date().toISOString().split('T')[0];
+  calcDuration = 30;
+  calcUnitsType: 'free_days' | 'calendar_days' | 'months' = 'free_days';
+  calcSubmissionChannel: 'postal' | 'registry' = 'postal';
+  activePreset: 'apel' | 'intampinare' | 'contestatie' | 'plangere_contraventionala' | 'ordonanta_presedintiala' | 'custom' = 'apel';
+
   aiPrompt = '';
   searchQuery = signal('');
   dateResult = signal<string>('');
@@ -469,6 +741,273 @@ export class CalendarComponent implements OnInit, OnDestroy {
   showQueueModal = signal(false);
   queueAlertsList = signal<CalendarEvent[]>([]);
   currentQueueIndex = signal(0);
+
+  // Romanian Legal Holidays Dictionary (2024 - 2027)
+  private readonly RO_HOLIDAYS: Record<string, string> = {
+    // 2024
+    '2024-01-01': 'Anul Nou',
+    '2024-01-02': 'A doua zi de Anul Nou',
+    '2024-01-06': 'Boboteaza',
+    '2024-01-07': 'Sfântul Ioan Botezătorul',
+    '2024-01-24': 'Ziua Unirii Principatelor Române',
+    '2024-05-01': 'Ziua Muncii',
+    '2024-05-03': 'Vinerea Mare',
+    '2024-05-05': 'Paștele Ortodox',
+    '2024-05-06': 'A doua zi de Paște',
+    '2024-06-01': 'Ziua Copilului',
+    '2024-06-23': 'Rusaliile',
+    '2024-06-24': 'A doua zi de Rusalii',
+    '2024-08-15': 'Adormirea Maicii Domnului',
+    '2024-11-30': 'Sfântul Andrei',
+    '2024-12-01': 'Ziua Națională a României',
+    '2024-12-25': 'Crăciunul',
+    '2024-12-26': 'A doua zi de Crăciun',
+    // 2025
+    '2025-01-01': 'Anul Nou',
+    '2025-01-02': 'A doua zi de Anul Nou',
+    '2025-01-06': 'Boboteaza',
+    '2025-01-07': 'Sfântul Ioan Botezătorul',
+    '2025-01-24': 'Ziua Unirii Principatelor Române',
+    '2025-04-18': 'Vinerea Mare',
+    '2025-04-20': 'Paștele Ortodox',
+    '2025-04-21': 'A doua zi de Paște',
+    '2025-05-01': 'Ziua Muncii',
+    '2025-06-01': 'Ziua Copilului',
+    '2025-06-08': 'Rusaliile',
+    '2025-06-09': 'A doua zi de Rusalii',
+    '2025-08-15': 'Adormirea Maicii Domnului',
+    '2025-11-30': 'Sfântul Andrei',
+    '2025-12-01': 'Ziua Națională a României',
+    '2025-12-25': 'Crăciunul',
+    '2025-12-26': 'A doua zi de Crăciun',
+    // 2026
+    '2026-01-01': 'Anul Nou',
+    '2026-01-02': 'A doua zi de Anul Nou',
+    '2026-01-06': 'Boboteaza',
+    '2026-01-07': 'Sfântul Ioan Botezătorul',
+    '2026-01-24': 'Ziua Unirii Principatelor Române',
+    '2026-04-10': 'Vinerea Mare',
+    '2026-04-12': 'Paștele Ortodox',
+    '2026-04-13': 'A doua zi de Paște',
+    '2026-05-01': 'Ziua Muncii',
+    '2026-05-31': 'Rusaliile',
+    '2026-06-01': 'Ziua Copilului & A doua zi de Rusalii',
+    '2026-08-15': 'Adormirea Maicii Domnului',
+    '2026-11-30': 'Sfântul Andrei',
+    '2026-12-01': 'Ziua Națională a României',
+    '2026-12-25': 'Crăciunul',
+    '2026-12-26': 'A doua zi de Crăciun',
+    // 2027
+    '2027-01-01': 'Anul Nou',
+    '2027-01-02': 'A doua zi de Anul Nou',
+    '2027-01-06': 'Boboteaza',
+    '2027-01-07': 'Sfântul Ioan Botezătorul',
+    '2027-01-24': 'Ziua Unirii Principatelor Române',
+    '2027-04-30': 'Vinerea Mare',
+    '2027-05-01': 'Ziua Muncii',
+    '2027-05-02': 'Paștele Ortodox',
+    '2027-05-03': 'A doua zi de Paște',
+    '2027-06-01': 'Ziua Copilului',
+    '2027-06-20': 'Rusaliile',
+    '2027-06-21': 'A doua zi de Rusalii',
+    '2027-08-15': 'Adormirea Maicii Domnului',
+    '2027-11-30': 'Sfântul Andrei',
+    '2027-12-01': 'Ziua Națională a României',
+    '2027-12-25': 'Crăciunul',
+    '2027-12-26': 'A doua zi de Crăciun'
+  };
+
+  private isNonWorkingDay(date: Date): { isNonWorking: boolean; reason?: string } {
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+    if (dayOfWeek === 0) return { isNonWorking: true, reason: 'Duminică (zi de repaus săptămânal)' };
+    if (dayOfWeek === 6) return { isNonWorking: true, reason: 'Sâmbătă (zi de repaus săptămânal)' };
+
+    const isoDate = date.toISOString().split('T')[0];
+    if (this.RO_HOLIDAYS[isoDate]) {
+      return { isNonWorking: true, reason: `Sărbătoare Legală: ${this.RO_HOLIDAYS[isoDate]}` };
+    }
+    return { isNonWorking: false };
+  }
+
+  // Live computed deadline calculation adhering strictly to Romanian CPC Art. 181
+  computedDeadline = computed(() => {
+    const startStr = this.calcStartDate;
+    const duration = Math.max(1, this.calcDuration || 1);
+    const units = this.calcUnitsType;
+
+    if (!startStr) {
+      return {
+        formattedDate: 'Selectați data comunicării',
+        rawDate: '',
+        startDateFormatted: '',
+        durationLabel: '',
+        theoreticalDateFormatted: '',
+        isProrogued: false,
+        prorogationReason: '',
+        daysRemainingText: ''
+      };
+    }
+
+    const startDate = new Date(startStr + 'T00:00:00');
+    let theoreticalDate = new Date(startDate.getTime());
+
+    if (units === 'free_days') {
+      // Art. 181 alin. (1) pct. 2 CPC: Sistemul pe zile libere.
+      // Nu se iau în calcul ziua de pornire (dies a quo) și ziua de împlinire (dies ad quem).
+      // Adică adăugăm durata + 1 zi calendaristică.
+      theoreticalDate.setDate(theoreticalDate.getDate() + duration + 1);
+    } else if (units === 'calendar_days') {
+      // Zile calendaristice standard
+      theoreticalDate.setDate(theoreticalDate.getDate() + duration);
+    } else if (units === 'months') {
+      // Art. 181 alin. (1) pct. 3 CPC: Termenele pe luni se sfârșesc în ziua corespunzătoare din ultima lună
+      const targetMonth = theoreticalDate.getMonth() + duration;
+      const targetDay = theoreticalDate.getDate();
+      theoreticalDate.setMonth(targetMonth);
+      if (theoreticalDate.getDate() !== targetDay) {
+        // Dacă luna următoare are mai puține zile, se împlinește în ultima zi a lunii
+        theoreticalDate.setDate(0);
+      }
+    }
+
+    const theoreticalDateFormatted = theoreticalDate.toLocaleDateString('ro-RO', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+
+    // Prorogation check according to Art. 181 alin. (2) CPC:
+    // Când ultima zi cade într-o zi nelucrătoare, termenul se prelungește până la sfârșitul primei zile lucrătoare următoare.
+    let finalDate = new Date(theoreticalDate.getTime());
+    let isProrogued = false;
+    const prorogationReasons: string[] = [];
+
+    let check = this.isNonWorkingDay(finalDate);
+    while (check.isNonWorking) {
+      isProrogued = true;
+      if (check.reason && !prorogationReasons.includes(check.reason)) {
+        prorogationReasons.push(check.reason);
+      }
+      finalDate.setDate(finalDate.getDate() + 1);
+      check = this.isNonWorkingDay(finalDate);
+    }
+
+    const finalIso = finalDate.toISOString().split('T')[0];
+    const formattedDate = finalDate.toLocaleDateString('ro-RO', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const startDateFormatted = startDate.toLocaleDateString('ro-RO', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+
+    // Days remaining relative to today
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const diffTime = finalDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    let daysRemainingText = '';
+    if (diffDays > 0) {
+      daysRemainingText = `⏳ ${diffDays} zile rămase`;
+    } else if (diffDays === 0) {
+      daysRemainingText = `🚨 Expiră ASTĂZI`;
+    } else {
+      daysRemainingText = `⚠️ Expirat de ${Math.abs(diffDays)} zile`;
+    }
+
+    let durationLabel = `${duration} zile libere (Art. 181 alin. 1 pct. 2 CPC)`;
+    if (units === 'calendar_days') durationLabel = `${duration} zile calendaristice`;
+    if (units === 'months') durationLabel = `${duration} ${duration === 1 ? 'lună' : 'luni'} (Art. 181 alin. 1 pct. 3 CPC)`;
+
+    return {
+      formattedDate,
+      rawDate: finalIso,
+      startDateFormatted,
+      durationLabel,
+      theoreticalDateFormatted,
+      isProrogued,
+      prorogationReason: prorogationReasons.join(' • '),
+      daysRemainingText
+    };
+  });
+
+  applyPreset(preset: 'apel' | 'intampinare' | 'contestatie' | 'plangere_contraventionala' | 'ordonanta_presedintiala' | 'custom') {
+    this.activePreset = preset;
+    if (preset === 'apel') {
+      this.calcDuration = 30;
+      this.calcUnitsType = 'free_days';
+    } else if (preset === 'intampinare') {
+      this.calcDuration = 25;
+      this.calcUnitsType = 'free_days';
+    } else if (preset === 'contestatie') {
+      this.calcDuration = 15;
+      this.calcUnitsType = 'free_days';
+    } else if (preset === 'plangere_contraventionala') {
+      this.calcDuration = 15;
+      this.calcUnitsType = 'free_days';
+    } else if (preset === 'ordonanta_presedintiala') {
+      this.calcDuration = 5;
+      this.calcUnitsType = 'free_days';
+    }
+  }
+
+  onDurationChange() {
+    this.activePreset = 'custom';
+  }
+
+  addCalculatedDeadlineToAgenda() {
+    const calc = this.computedDeadline();
+    if (!calc.rawDate) return;
+
+    this.editingEvent = JSON.parse(JSON.stringify(this.defaultEvent));
+    this.editingEvent.id = '';
+    this.editingEvent.date = calc.rawDate;
+    this.editingEvent.time = this.calcSubmissionChannel === 'postal' ? '23:59' : '16:00';
+    this.editingEvent.type = 'deadline';
+    
+    let titlePreset = 'Termen Procedural';
+    if (this.activePreset === 'apel') titlePreset = 'Termen Apel / Recurs (30 zile)';
+    else if (this.activePreset === 'intampinare') titlePreset = 'Termen Depunere Întâmpinare (25 zile)';
+    else if (this.activePreset === 'contestatie') titlePreset = 'Termen Contestație Executare (15 zile)';
+    else if (this.activePreset === 'plangere_contraventionala') titlePreset = 'Termen Plângere Contravențională (15 zile)';
+    else if (this.activePreset === 'ordonanta_presedintiala') titlePreset = 'Termen Ordonanță Președințială (5 zile)';
+
+    this.editingEvent.title = titlePreset;
+    this.editingEvent.notes = `Data comunicării: ${calc.startDateFormatted}\nDurată calcul: ${calc.durationLabel}\nScadență: ${calc.formattedDate}\n${calc.isProrogued ? 'Prorogare aplicată: ' + calc.prorogationReason : ''}`;
+
+    if (this.juristService.profile().phone) {
+      this.editingEvent.whatsappAlert = true;
+    }
+
+    this.showModal.set(true);
+    this.juristService.notificationService.info('Parametrii termenului au fost transferați în formularul de dosar!');
+  }
+
+  copyDeadlineSummary() {
+    const calc = this.computedDeadline();
+    const text = `NOTĂ CALCUL TERMEN PROCEDURAL (Art. 181 CPC)\n` +
+      `----------------------------------------\n` +
+      `Data Comunicării: ${calc.startDateFormatted}\n` +
+      `Durată & Sistem: ${calc.durationLabel}\n` +
+      `Data Teoretică: ${calc.theoreticalDateFormatted}\n` +
+      `DATA LIMITĂ SCADENȚĂ: ${calc.formattedDate} (ora ${this.calcSubmissionChannel === 'postal' ? '24:00' : '16:00'})\n` +
+      (calc.isProrogued ? `Mențiune Prorogare: ${calc.prorogationReason}\n` : '') +
+      `----------------------------------------\n` +
+      `Generat prin JuristPRO AI`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      this.juristService.notificationService.success('Nota de calcul a fost copiată în clipboard!');
+    }).catch(() => {
+      this.juristService.notificationService.error('Eroare la copiere.');
+    });
+  }
   
   filteredEvents = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
@@ -569,53 +1108,42 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   async askAI() {
-    // 1. Get Today's Date in Romanian Format
-    const today = new Date().toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-    // 2. Construct a stronger context for the AI
-    const context = `
-      Ești un Expert Calculator de Termene Procedurale (Codul de Procedură Civilă/Penală din România).
-      DATA DE REFERINȚĂ (ASTĂZI) ESTE: ${today}.
-      
-      Reguli obligatorii de calcul (Art. 181 NCPC):
-      1. Nu lua în calcul prima zi (ziua de pornire/comunicare), cu excepția termenelor pe ore.
-      2. Termenul se împlinește la ora 24:00 a ultimei zile.
-      3. Dacă ultima zi e nelucrătoare (sâmbătă, duminică, sărbătoare legală), termenul se prelungește automat până la sfârșitul primei zile lucrătoare următoare.
-      4. Sistemul este "pe zile libere" (nu intră în calcul nici ziua de start, nici ziua de final) DOAR dacă utilizatorul specifică explicit acest lucru (de regulă pentru termenele de depunere a concluziilor scrise). Altfel, folosește regula standard.
-
-      Sarcina ta:
-      Calculează exact data împlinirii termenului pe baza input-ului utilizatorului.
-      Specifică clar dacă data cade în weekend și se prorogă.
-      RĂSPUNSUL TĂU TREBUIE SĂ FIE ÎN FORMATUL URMĂTOR:
-      DATA: [Data calculată, de ex. 01.10.2024]
-      METODOLOGIE: [Detalierea metodologiei conform Art. 181 NCPC]
-
-      Input utilizator: ${this.aiPrompt}
-    `;
+    if (!this.aiPrompt.trim()) return;
 
     this.dateResult.set("");
     this.methodologyResult.set("");
-    this.showMethodology.set(false);
+    this.showMethodology.set(true);
     
     try {
       this.juristService.toggleLoading(true);
-      const res = await this.juristService.chatWithAssistant(context, [], () => {
-        // We might want to handle partial updates, but for parsing logic, 
-        // it's easier to handle after the full response.
-      });
+      const res = await this.juristService.calculateDeadline(this.aiPrompt);
       
-      const content = res.content;
-      const parts = content.split('METODOLOGIE:');
-      const datePart = parts[0].replace('DATA:', '').trim();
-      const methodologyPart = parts[1]?.trim() || '';
+      let datePart = '';
+      let methodologyPart = '';
+
+      if (res.includes('METODOLOGIE:')) {
+        const parts = res.split('METODOLOGIE:');
+        datePart = parts[0].replace(/DATA:\s*/i, '').trim();
+        methodologyPart = parts[1]?.trim() || '';
+      } else if (res.toUpperCase().includes('DATA:')) {
+        const lines = res.split('\n');
+        const dataLine = lines.find(l => l.toUpperCase().includes('DATA:'));
+        datePart = dataLine ? dataLine.replace(/DATA:\s*/i, '').trim() : '';
+        methodologyPart = res.replace(dataLine || '', '').trim();
+      } else {
+        const lines = res.trim().split('\n').filter(l => l.trim().length > 0);
+        datePart = lines[0] || 'Termen calculat';
+        methodologyPart = lines.slice(1).join('\n');
+      }
+
+      this.dateResult.set(datePart || 'Rezultat Calcul');
+      this.methodologyResult.set(methodologyPart || res);
       
-      this.dateResult.set(datePart);
-      this.methodologyResult.set(methodologyPart);
-      
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(e);
-      this.dateResult.set("Eroare calcul");
-      this.methodologyResult.set("A apărut o eroare la calcularea termenelor.");
+      const msg = e instanceof Error ? e.message : String(e);
+      this.dateResult.set("Notă de calcul");
+      this.methodologyResult.set(`Nu s-a putut procesa automat: ${msg}. Vă rugăm să includeți data comunicării și numărul de zile (ex: 'Hotărâre comunicată pe 01.08.2026, termen apel 30 zile').`);
     } finally {
       this.juristService.toggleLoading(false);
     }

@@ -1577,6 +1577,36 @@ Fără formule conversaționale ("Stimate domnule avocat..."). Redactează direc
     }, 2, onChunk);
   }
 
+  async calculateDeadline(userPrompt: string, onChunk?: (chunk: string) => void): Promise<string> {
+    const today = new Date().toLocaleDateString('ro-RO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const promptText = `
+Ești modulul JuristPRO de calcul termene procedurale conform Codului de Procedură Civilă din România (Art. 181-185 CPC).
+Data de referință (azi): ${today}.
+
+Cerere / Speță: ${userPrompt}
+
+Instrucțiuni de calcul:
+1. Identifică data de comunicare/pornire și durata termenului menționat (dacă utilizatorul a scris doar o dată, consideră termenul standard de apel de 30 de zile de la acea dată).
+2. Aplică sistemul pe zile libere (Art. 181 alin. 1 pct. 2 CPC: nu intră ziua de plecare și ziua de împlinire).
+3. Dacă ultima zi cade sâmbătă, duminică sau sărbătoare legală, aplică prorogarea la prima zi lucrătoare (Art. 181 alin. 2 CPC).
+4. Ora limită: 24:00 (Poștă/E-mail conform Art. 183 CPC) sau 16:00 (grefă).
+
+Răspunde DIRECT fără formule de politețe în următorul format:
+DATA: [Data exactă a scadenței, ex: 15 Octombrie 2026]
+METODOLOGIE:
+- Data comunicării (dies a quo): [data]
+- Număr zile aplicate: [durată]
+- Prorogare aplicată (dacă e cazul): [detalii weekend/sărbătoare legală]
+- Termen limită procedural: [data și ora 24:00 conform Art. 183 CPC]
+- Temei legal: Art. 181-185 C.proc.civ.
+`;
+
+    return this._streamAiResponse({
+      systemInstruction: "Ești un calculator juridic de mare precizie pentru termene procedurale în România. Nu folosi formule conversaționale ('Stimate domnule avocat'). Răspunde strict la obiect.",
+      contents: [{ role: 'user', parts: [{ text: promptText }] }]
+    }, 1, onChunk);
+  }
+
   async deleteTransaction(txId: string) {
     try {
       await deleteDoc(doc(db, 'transactions', txId));
