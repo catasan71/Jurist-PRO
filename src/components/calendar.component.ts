@@ -215,7 +215,7 @@ interface WindowWithSpeechRecognition extends Window {
               
               <!-- Quick Presets -->
               <div>
-                <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Preseturi Termene Legale</label>
+                <div class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Preseturi Termene Legale</div>
                 <div class="grid grid-cols-2 gap-1.5">
                   <button 
                     type="button"
@@ -849,7 +849,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
 
     const startDate = new Date(startStr + 'T00:00:00');
-    let theoreticalDate = new Date(startDate.getTime());
+    const theoreticalDate = new Date(startDate.getTime());
 
     if (units === 'free_days') {
       // Art. 181 alin. (1) pct. 2 CPC: Sistemul pe zile libere.
@@ -879,7 +879,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     // Prorogation check according to Art. 181 alin. (2) CPC:
     // Când ultima zi cade într-o zi nelucrătoare, termenul se prelungește până la sfârșitul primei zile lucrătoare următoare.
-    let finalDate = new Date(theoreticalDate.getTime());
+    const finalDate = new Date(theoreticalDate.getTime());
     let isProrogued = false;
     const prorogationReasons: string[] = [];
 
@@ -913,7 +913,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     now.setHours(0, 0, 0, 0);
     const diffTime = finalDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    let daysRemainingText = '';
+    let daysRemainingText: string;
     if (diffDays > 0) {
       daysRemainingText = `⏳ ${diffDays} zile rămase`;
     } else if (diffDays === 0) {

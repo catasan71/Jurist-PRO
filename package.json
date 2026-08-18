@@ -2,8 +2,9 @@
   "name": "juristpro",
   "version": "1.0.0",
   "scripts": {
-    "ng": "ng",
+    "dev": "node server.js",
     "start": "node server.js",
+    "ng": "ng",
     "prebuild": "node scripts/setenv.js",
     "build": "rm -rf .angular && ng build && npm run build-server",
     "build-server": "esbuild server.ts --platform=node --outfile=server.js --bundle --packages=external",

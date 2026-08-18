@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef, ViewChild, ElementRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JuristService } from '../services/jurist.service';
@@ -434,13 +434,28 @@ import { NotificationService } from '../services/notification.service';
 
           <!-- Antet Cabinet Editabil -->
           <div class="bg-gray-900/60 p-3.5 rounded-xl border border-gray-800 space-y-1.5">
-            <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider block">Antet Cabinet Avocat (Apare pe foaia A4)</span>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider block">Antet Cabinet (Sincronizat cu Profilul)</span>
+              <button 
+                (click)="juristService.setModule('profile')"
+                class="text-[10px] text-jurist-orange hover:underline cursor-pointer flex items-center gap-1"
+              >
+                Editează în Profil
+              </button>
+            </div>
             <input 
               type="text" 
               [(ngModel)]="cabinetTitle" 
               placeholder="CABINET DE AVOCAT POPESCU IOAN / SCA POPESCU & ASOCIAȚII" 
               class="w-full bg-black border border-gray-700 rounded-lg px-2.5 py-2 text-xs text-amber-300 placeholder-gray-600 focus:border-jurist-orange font-mono"
             />
+            @if (juristService.profile().address || juristService.profile().cif || juristService.profile().phone) {
+              <div class="text-[10px] text-gray-500 flex flex-wrap gap-2 pt-0.5">
+                @if (juristService.profile().barId) { <span>🏛️ {{ juristService.profile().barId }}</span> }
+                @if (juristService.profile().cif) { <span>📋 CIF: {{ juristService.profile().cif }}</span> }
+                @if (juristService.profile().address) { <span>📍 {{ juristService.profile().address }}</span> }
+              </div>
+            }
           </div>
 
         </div>
@@ -461,7 +476,7 @@ import { NotificationService } from '../services/notification.service';
             <div class="flex items-center gap-2">
               <button 
                 (click)="copyDocument()"
-                class="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs rounded-lg border border-gray-700 flex items-center gap-1.5 transition-all shadow-sm active:scale-95 font-medium"
+                class="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs rounded-lg border border-gray-700 flex items-center gap-1.5 transition-all shadow-sm active:scale-95 font-medium cursor-pointer"
                 title="Copiază conținutul în clipboard"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
@@ -472,8 +487,8 @@ import { NotificationService } from '../services/notification.service';
 
               <button 
                 (click)="exportWordDoc()"
-                class="px-2.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-xs rounded-lg border border-blue-500/30 flex items-center gap-1.5 transition-all active:scale-95 font-medium"
-                title="Descarcă în format Word (.doc)"
+                class="px-2.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-xs rounded-lg border border-blue-500/30 flex items-center gap-1.5 transition-all active:scale-95 font-medium cursor-pointer"
+                title="Descarcă în format Word (.doc) complet stilizat cu datele cabinetului"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -483,7 +498,7 @@ import { NotificationService } from '../services/notification.service';
 
               <button 
                 (click)="printOrPdf()"
-                class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+                class="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
                 title="Listare sau Salvare ca PDF pentru Instanță / Client"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
@@ -508,11 +523,21 @@ import { NotificationService } from '../services/notification.service';
                 <div class="border-b-2 border-gray-900 pb-4 mb-6 flex items-start justify-between gap-4">
                   <div>
                     <div class="text-[13px] font-bold tracking-widest text-black uppercase">
-                      {{ cabinetTitle || 'CABINET DE AVOCAT / SOCIETATE CIVILĂ PROFESIONALĂ' }}
+                      {{ cabinetTitle || juristService.profile().name || 'CABINET DE AVOCAT / SOCIETATE CIVILĂ PROFESIONALĂ' }}
                     </div>
-                    <div class="text-[11px] text-gray-600 tracking-wide mt-0.5">
-                      Baroul București • Asistență & Reprezentare Juridică
+                    <div class="text-[11px] text-gray-700 tracking-wide mt-0.5 font-medium">
+                      {{ (juristService.profile().lawyerName ? juristService.profile().lawyerName + ' • ' : '') + (juristService.profile().barId || 'Baroul României') }}
                     </div>
+                    @if (juristService.profile().address || juristService.profile().cif) {
+                      <div class="text-[10px] text-gray-500 mt-0.5">
+                        {{ [juristService.profile().address, juristService.profile().cif ? 'CIF: ' + juristService.profile().cif : ''].filter(Boolean).join(' | ') }}
+                      </div>
+                    }
+                    @if (juristService.profile().phone || juristService.profile().email) {
+                      <div class="text-[10px] text-gray-500">
+                        {{ [juristService.profile().phone ? 'Tel: ' + juristService.profile().phone : '', juristService.profile().email ? 'Email: ' + juristService.profile().email : ''].filter(Boolean).join(' | ') }}
+                      </div>
+                    }
                   </div>
                   <div class="text-right text-[11px] text-gray-600 font-mono">
                     <div>Data: <span class="text-gray-900 font-bold">{{ currentDate }}</span></div>
@@ -827,10 +852,13 @@ export class FeesComponent {
   aiDevizResult = signal<string>('');
 
   constructor() {
-    const user = this.authService.currentUser();
-    if (user?.fullName) {
-      this.cabinetTitle = `CABINET DE AVOCAT ${user.fullName.toUpperCase()}`;
-    }
+    effect(() => {
+      const prof = this.juristService.profile();
+      if (prof.name && !this.cabinetTitle) {
+        this.cabinetTitle = prof.name;
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   setMode(mode: 'timbre' | 'interest' | 'fee' | 'ai_deviz') {
@@ -1084,73 +1112,8 @@ export class FeesComponent {
   exportWordDoc() {
     if (!this.a4Document) return;
     const rawText = this.a4Document.nativeElement.innerText;
-    const cabinet = this.cabinetTitle || 'CABINET DE AVOCAT';
     const title = 'Nota_de_Calcul_Judiciara';
-
-    const wordHtml = `
-      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head>
-        <meta charset='utf-8'>
-        <title>${title}</title>
-        <style>
-          @page {
-            size: 21cm 29.7cm;
-            margin: 2.5cm 2.2cm 2.5cm 2.2cm;
-            mso-page-orientation: portrait;
-          }
-          body {
-            font-family: 'Times New Roman', 'Arial', serif;
-            font-size: 11pt;
-            line-height: 1.5;
-            color: #000000;
-          }
-          .header-table {
-            width: 100%;
-            border-bottom: 1.5pt solid #000;
-            margin-bottom: 20pt;
-            padding-bottom: 6pt;
-          }
-          .cabinet-name {
-            font-size: 12pt;
-            font-weight: bold;
-            text-transform: uppercase;
-          }
-          .doc-body {
-            text-align: justify;
-            white-space: pre-wrap;
-          }
-        </style>
-      </head>
-      <body>
-        <table class="header-table">
-          <tr>
-            <td align="left">
-              <div class="cabinet-name">${cabinet}</div>
-              <div style="font-size: 9pt; color: #444;">Baroul București • Asistență & Reprezentare Juridică</div>
-            </td>
-            <td align="right" style="font-size: 9pt;">
-              Data: ${this.currentDate}<br/>
-              <b>EXEMPLAR OFICIAL</b>
-            </td>
-          </tr>
-        </table>
-
-        <div class="doc-body">${rawText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob(['\ufeff', wordHtml], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `nota_calcul_${new Date().toISOString().slice(0,10)}.doc`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    this.notificationService.success('Documentul Word a fost descărcat!');
+    this.juristService.downloadDocx(rawText, title);
   }
 
   printOrPdf() {

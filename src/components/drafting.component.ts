@@ -1,10 +1,9 @@
-import { Component, inject, signal, computed, ChangeDetectorRef, ChangeDetectionStrategy, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectorRef, ChangeDetectionStrategy, ViewChild, ElementRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JuristService } from '../services/jurist.service';
 import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../services/notification.service';
-import { MarkdownPipe } from '../pipes/markdown.pipe';
 
 interface DocCategory {
   id: string;
@@ -101,9 +100,20 @@ interface DocCategory {
 
             <!-- Antet Cabinet Avocat -->
             <div>
-              <label for="cabinet" class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">
-                Antet Cabinet / SCA (Apare pe foaia A4)
-              </label>
+              <div class="flex items-center justify-between mb-1">
+                <label for="cabinet" class="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                  Antet Cabinet / SCA (Sincronizat cu Profilul)
+                </label>
+                <button 
+                  (click)="juristService.setModule('profile')"
+                  class="text-[10px] text-jurist-orange hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                  </svg>
+                  Editează în Profil
+                </button>
+              </div>
               <input 
                 id="cabinet"
                 type="text" 
@@ -111,6 +121,13 @@ interface DocCategory {
                 placeholder="Ex: CABINET DE AVOCAT POPESCU IOAN"
                 class="w-full bg-black border border-gray-700 rounded-lg px-2.5 py-2 text-xs text-amber-300 placeholder-gray-600 focus:border-jurist-orange font-mono"
               />
+              @if (juristService.profile().address || juristService.profile().cif || juristService.profile().phone) {
+                <div class="mt-1 text-[10px] text-gray-500 flex flex-wrap gap-2">
+                  @if (juristService.profile().barId) { <span>🏛️ {{ juristService.profile().barId }}</span> }
+                  @if (juristService.profile().cif) { <span>📋 CIF: {{ juristService.profile().cif }}</span> }
+                  @if (juristService.profile().address) { <span>📍 {{ juristService.profile().address }}</span> }
+                </div>
+              }
             </div>
 
             <!-- Date Parti & Fapte -->
@@ -236,8 +253,8 @@ interface DocCategory {
               <button 
                 (click)="exportDocx()"
                 [disabled]="!hasContent()"
-                class="px-2.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 disabled:opacity-30 text-blue-300 text-xs rounded-lg border border-blue-500/30 flex items-center gap-1.5 transition-all active:scale-95 font-medium"
-                title="Descarcă în format Microsoft Word (.doc) complet stilizat"
+                class="px-2.5 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 disabled:opacity-30 text-blue-300 text-xs rounded-lg border border-blue-500/30 flex items-center gap-1.5 transition-all active:scale-95 font-medium cursor-pointer"
+                title="Descarcă în format Microsoft Word (.doc) complet stilizat cu datele cabinetului"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -249,7 +266,7 @@ interface DocCategory {
               <button 
                 (click)="printOrPdf()"
                 [disabled]="!hasContent()"
-                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-30 text-black text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all active:scale-95 shadow-md"
+                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-30 text-black text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all active:scale-95 shadow-md cursor-pointer"
                 title="Listare sau Salvare ca PDF gata de instanță"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
@@ -288,14 +305,24 @@ interface DocCategory {
                   
                   <!-- Antet Cabinet Avocat -->
                   <div>
-                    <div class="border-b border-gray-900/30 pb-4 mb-8 flex items-start justify-between gap-4 font-sans">
+                    <div class="border-b-2 border-gray-900 pb-4 mb-8 flex items-start justify-between gap-4 font-sans">
                       <div>
                         <div class="text-[13px] font-bold tracking-widest text-black uppercase">
-                          {{ lawyerCabinetName || 'CABINET DE AVOCAT / SOCIETATE CIVILĂ PROFESIONALĂ' }}
+                          {{ lawyerCabinetName || juristService.profile().name || 'CABINET DE AVOCAT / SOCIETATE CIVILĂ PROFESIONALĂ' }}
                         </div>
-                        <div class="text-[11px] text-gray-600 tracking-wide mt-0.5">
-                          Baroul București • Asistență și Reprezentare Judiciară
+                        <div class="text-[11px] text-gray-700 tracking-wide mt-0.5 font-medium">
+                          {{ (juristService.profile().lawyerName ? juristService.profile().lawyerName + ' • ' : '') + (juristService.profile().barId || 'Baroul României') }}
                         </div>
+                        @if (juristService.profile().address || juristService.profile().cif) {
+                          <div class="text-[10px] text-gray-500 mt-0.5">
+                            {{ [juristService.profile().address, juristService.profile().cif ? 'CIF: ' + juristService.profile().cif : ''].filter(Boolean).join(' | ') }}
+                          </div>
+                        }
+                        @if (juristService.profile().phone || juristService.profile().email) {
+                          <div class="text-[10px] text-gray-500">
+                            {{ [juristService.profile().phone ? 'Tel: ' + juristService.profile().phone : '', juristService.profile().email ? 'Email: ' + juristService.profile().email : ''].filter(Boolean).join(' | ') }}
+                          </div>
+                        }
                       </div>
                       <div class="text-right text-[11px] text-gray-600 font-mono">
                         <div>Data: <span class="text-gray-900 font-bold">{{ currentDate }}</span></div>
@@ -320,7 +347,7 @@ interface DocCategory {
                       <span>Redactat conform Codului de Procedură Civilă & Codului Civil</span>
                     </div>
                     <div class="font-mono text-gray-600">
-                      JuristPRO LegalTech • Pagină 1
+                      {{ lawyerCabinetName || juristService.profile().name }} • Pagina 1
                     </div>
                   </div>
 
@@ -354,7 +381,7 @@ interface DocCategory {
                     <span>Vrei să aprofundezi strategia probatorie?</span>
                     <button 
                       (click)="goToStrategy()"
-                      class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all"
+                      class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all cursor-pointer"
                     >
                       Deschide Modulul de Strategie →
                     </button>
@@ -379,7 +406,7 @@ interface DocCategory {
                       </div>
                     </div>
                     <div class="border-t border-gray-300 pt-2 mt-6 text-[10px] text-gray-500">
-                      Format A4 de Instanță
+                      {{ lawyerCabinetName || juristService.profile().name }} • Format A4
                     </div>
                   </div>
 
@@ -531,6 +558,16 @@ export class DraftingComponent {
 
   selectedCategory = signal<DocCategory>(this.categories[0]);
 
+  constructor() {
+    effect(() => {
+      const prof = this.juristService.profile();
+      if (prof.name && !this.lawyerCabinetName) {
+        this.lawyerCabinetName = prof.name;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   selectCategory(cat: DocCategory) {
     this.selectedCategory.set(cat);
     this.customDocType = '';
@@ -615,7 +652,14 @@ export class DraftingComponent {
     if (!this.proceduralDoc()) return;
     
     const content = this.editableDoc?.nativeElement.innerHTML || this.proceduralDoc();
-    const cabinet = this.lawyerCabinetName || 'CABINET DE AVOCAT';
+    const prof = this.juristService.profile();
+    const cabinet = this.lawyerCabinetName || prof.name || 'CABINET DE AVOCAT';
+    const lawyerName = prof.lawyerName ? `<strong>${prof.lawyerName}</strong> • ` : '';
+    const barId = prof.barId || 'Baroul României';
+    const address = prof.address ? `Sediu: ${prof.address}` : '';
+    const cif = prof.cif ? `CIF: ${prof.cif}` : '';
+    const contact = [prof.phone ? `Tel: ${prof.phone}` : '', prof.email ? `Email: ${prof.email}` : ''].filter(Boolean).join(' • ');
+
     const printWindow = window.open('', '_blank', 'width=900,height=1000');
     if (!printWindow) {
       this.notificationService.error('Nu s-a putut deschide fereastra de print. Permiteți pop-up-urile din browser.');
@@ -632,7 +676,7 @@ export class DraftingComponent {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>${this.customDocType || 'Act Juridic'} - JuristPRO AI</title>
+        <title>${this.customDocType || 'Act Juridic'} - ${cabinet}</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,600&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -651,7 +695,7 @@ export class DraftingComponent {
             padding: 0;
           }
           .header {
-            border-bottom: 1.5pt solid #222;
+            border-bottom: 2pt solid #000;
             padding-bottom: 12px;
             margin-bottom: 24px;
             display: flex;
@@ -659,19 +703,27 @@ export class DraftingComponent {
             font-family: 'Plus Jakarta Sans', sans-serif;
           }
           .header .cabinet {
-            font-size: 11pt;
+            font-size: 12pt;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            color: #000;
           }
           .header .sub {
-            font-size: 9pt;
+            font-size: 9.5pt;
+            color: #333;
+            margin-top: 2px;
+          }
+          .header .contact-row {
+            font-size: 8.5pt;
             color: #555;
+            margin-top: 2px;
           }
           .header .date {
             font-size: 9pt;
             text-align: right;
             color: #333;
+            font-family: monospace;
           }
           .content {
             white-space: pre-wrap;
@@ -680,11 +732,11 @@ export class DraftingComponent {
             word-break: break-word;
           }
           .footer {
-            border-top: 1pt solid #ccc;
+            border-top: 1pt solid #aaa;
             margin-top: 35px;
             padding-top: 8px;
-            font-size: 8pt;
-            color: #777;
+            font-size: 8.5pt;
+            color: #666;
             display: flex;
             justify-content: space-between;
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -698,19 +750,21 @@ export class DraftingComponent {
         <div class="header">
           <div>
             <div class="cabinet">${cabinet}</div>
-            <div class="sub">Baroul București • Asistență & Reprezentare Juridică</div>
+            <div class="sub">${lawyerName}${barId}</div>
+            ${address || cif ? `<div class="contact-row">${[address, cif].filter(Boolean).join(' | ')}</div>` : ''}
+            ${contact ? `<div class="contact-row">${contact}</div>` : ''}
           </div>
           <div class="date">
             <div>Data: <strong>${this.currentDate}</strong></div>
-            <div>Exemplar Depunere Instanță</div>
+            <div style="color: #92400e; font-weight: bold; margin-top: 3px;">EXEMPLAR OFICIAL INSTANȚĂ</div>
           </div>
         </div>
         
         <div class="content">${content}</div>
 
         <div class="footer">
-          <div>Redactat conform Codului de Procedură Civilă & Codului Civil</div>
-          <div>JuristPRO AI LegalTech • Pagina 1</div>
+          <div>${cabinet} • ${barId}</div>
+          <div>Redactat conform C.proc.civ. & C.civ. • Pagina 1</div>
         </div>
         <script>
           window.onload = function() {
@@ -728,93 +782,11 @@ export class DraftingComponent {
     
     const rawText = this.editableDoc?.nativeElement.innerText || this.proceduralDoc();
     const title = this.customDocType || 'Act_Juridic';
-    const cabinet = this.lawyerCabinetName || 'CABINET DE AVOCAT';
-
-    const wordHtml = `
-      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head>
-        <meta charset='utf-8'>
-        <title>${title}</title>
-        <style>
-          @page {
-            size: 21cm 29.7cm;
-            margin: 2.5cm 2.5cm 2.5cm 2.5cm;
-            mso-page-orientation: portrait;
-          }
-          body {
-            font-family: 'Times New Roman', 'Garamond', serif;
-            font-size: 12pt;
-            line-height: 1.5;
-            color: #000000;
-          }
-          .header-table {
-            width: 100%;
-            border-bottom: 1.5pt solid #000;
-            margin-bottom: 20pt;
-            padding-bottom: 6pt;
-            font-family: Arial, sans-serif;
-          }
-          .cabinet-name {
-            font-size: 11pt;
-            font-weight: bold;
-            text-transform: uppercase;
-          }
-          .doc-body {
-            text-align: justify;
-            white-space: pre-wrap;
-            line-height: 1.5;
-          }
-          .footer-table {
-            width: 100%;
-            border-top: 0.5pt solid #888;
-            margin-top: 30pt;
-            padding-top: 5pt;
-            font-size: 9pt;
-            color: #555;
-            font-family: Arial, sans-serif;
-          }
-        </style>
-      </head>
-      <body>
-        <table class="header-table">
-          <tr>
-            <td align="left">
-              <div class="cabinet-name">${cabinet}</div>
-              <div style="font-size: 9pt; color: #444;">Asistență și Reprezentare Juridică</div>
-            </td>
-            <td align="right" style="font-size: 9pt;">
-              Data: ${this.currentDate}<br/>
-              <b>UZ INSTANȚĂ / OFICIAL</b>
-            </td>
-          </tr>
-        </table>
-
-        <div class="doc-body">${rawText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-
-        <table class="footer-table">
-          <tr>
-            <td align="left">Redactat conform Codului de Procedură Civilă & Codului Civil</td>
-            <td align="right">JuristPRO AI LegalTech</td>
-          </tr>
-        </table>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob(['\ufeff', wordHtml], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().slice(0,10)}.doc`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    this.notificationService.success('Documentul Word a fost descărcat cu succes!');
+    this.juristService.downloadDocx(rawText, title);
   }
 
   goToStrategy() {
     this.juristService.setModule('strategy');
   }
 }
+

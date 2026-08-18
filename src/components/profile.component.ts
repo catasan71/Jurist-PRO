@@ -93,9 +93,26 @@ import { AuthService, UserConsents } from '../services/auth.service';
                 </div>
               </div>
               
-              <button (click)="save()" class="w-full mt-4 bg-jurist-orange hover:bg-jurist-orangeHover text-white px-8 py-3 rounded-lg font-bold shadow-neon transition-all flex items-center justify-center gap-2">
-                 Salvează Profilul
+              <button (click)="save()" [disabled]="saving()" class="w-full mt-4 bg-jurist-orange hover:bg-jurist-orangeHover active:scale-[0.98] text-white px-8 py-3 rounded-lg font-bold shadow-neon transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
+                 @if (saving()) {
+                   <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                   Se salvează...
+                 } @else {
+                   <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                   </svg>
+                   Salvează Profilul
+                 }
               </button>
+
+              @if (saveSuccess()) {
+                <div class="mt-3 p-3 bg-green-950/60 border border-green-500/50 rounded-lg text-green-300 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  <span>Profilul și datele cabinetului au fost salvate cu succes!</span>
+                </div>
+              }
             </div>
 
             <!-- COLUMN 2: Subscriptions & Privacy -->
@@ -201,10 +218,12 @@ export class ProfileComponent {
   juristService = inject(JuristService);
   authService = inject(AuthService);
   saving = signal(false);
+  saveSuccess = signal(false);
   testingWhatsApp = signal(false);
   
   // Clone current profile to form data
   formData: CabinetProfile = { ...this.juristService.profile() };
+  private userHasEdited = false;
   
   // Consents State
   consents: UserConsents = {
@@ -215,6 +234,14 @@ export class ProfileComponent {
   };
 
   constructor() {
+      // Sync incoming profile data from Cloud if user hasn't typed over it yet
+      effect(() => {
+          const profile = this.juristService.profile();
+          if (!this.userHasEdited && (profile.name || profile.lawyerName || profile.phone || profile.cif || profile.address || profile.email || profile.barId)) {
+              this.formData = { ...profile };
+          }
+      });
+
       // Initialize consents from Auth Service or Local Storage
       effect(() => {
           const user = this.authService.currentUser();
@@ -235,10 +262,19 @@ export class ProfileComponent {
 
   async save() {
     this.saving.set(true);
+    this.saveSuccess.set(false);
+    this.userHasEdited = true;
+    
     // Save both Profile and Consents
-    await this.juristService.updateProfile(this.formData, this.consents);
+    const success = await this.juristService.updateProfile(this.formData, this.consents);
     this.saving.set(false);
-    console.log('Datele cabinetului au fost salvate cu succes!');
+    
+    if (success) {
+      this.saveSuccess.set(true);
+      setTimeout(() => {
+        this.saveSuccess.set(false);
+      }, 5000);
+    }
   }
   
   async saveConsents() {

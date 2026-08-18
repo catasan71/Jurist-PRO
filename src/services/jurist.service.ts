@@ -114,23 +114,48 @@ export interface PromoCode {
   expiresAt: Date;
   active: boolean;
 }// --- STRICT LEGAL SYSTEM PROMPT ---
-export const getLegalGuardrails = (moduleName: 'chat' | 'strategy' | 'audit' | 'drafting' | 'fees' = 'chat') => {
+export const getLegalGuardrails = (moduleName: 'chat' | 'strategy' | 'audit' | 'drafting' | 'fees' = 'chat', profile?: CabinetProfile) => {
+  const cabinetName = profile?.name || 'CABINET DE AVOCAT';
+  const lawyerName = profile?.lawyerName || 'Avocat Titular';
+  const barId = profile?.barId || 'Baroul României';
+  const cif = profile?.cif ? `CIF: ${profile.cif}` : '';
+  const address = profile?.address ? `Sediu profesional: ${profile.address}` : '';
+  const contact = [profile?.phone ? `Tel: ${profile.phone}` : '', profile?.email ? `Email: ${profile.email}` : ''].filter(Boolean).join(' • ');
+
+  const cabinetIdentificationBlock = `
+=== DATE DE IDENTIFICARE CABINET & AVOCAT TITULAR (PROFIL ACTIV) ===
+- Denumire Formă de Exercitare: ${cabinetName}
+- Avocat Titular / Coordonator: ${lawyerName}
+- Baroul / Decizia de înființare: ${barId}
+- Cod de Identificare Fiscală (CIF): ${cif || 'Nedefinit'}
+- Sediu Profesional / Adresă: ${address || 'Nedefinit'}
+- Date de Contact (Telefon / Email): ${contact || 'Nedefinit'}
+=====================================================================
+`;
+
   if (moduleName === 'drafting') {
-    return `Ești un Partener Senior într-o casă de avocatură de prim rang din București, specializat în redactarea actelor de procedură judiciară de înaltă ținută academică și forță probatorie.
+    return `Ești un Partener Senior într-o casă de avocatură de prim rang din România, specializat în redactarea actelor de procedură judiciară de înaltă ținută academică și forță probatorie.
+
+${cabinetIdentificationBlock}
+
 Redactează un pachet juridic COMPLET, IMPECABIL, EXTREM DE RIGUROS ȘI DETALIAT, divizat OBLIGATORIU în două secțiuni clar delimitate:
 
 ===ACT_PROCEDURAL===
 Redactează EXCLUSIV actul procedural / cererea de chemare în judecată / întâmpinarea / contractul, FĂRĂ niciun fel de introducere conversațională ("Stimate domnule avocat...").
 Începe DIRECT cu antetul instanței sau al părților, urmând structura formală de instanță:
 - CĂTRE: [JUDECĂTORIA / TRIBUNALUL / CURTEA COMPETENTĂ]
-- IDENTIFICAREA COMPLETĂ A PĂRȚILOR (Reclamant, Pârât, sedii, domicilii, CNP/CUI, J, IBAN, e-mail/telefon conform art. 154 alin. 6 C.proc.civ., domiciliu procesual ales)
+- IDENTIFICAREA COMPLETĂ A PĂRȚILOR:
+  Când redactezi în numele clientului (Reclamant / Pârât / Contestator), include FORMULA OFICIALĂ DE REPREZENTARE CONVENȚIONALĂ UTILIZÂND DATELE REALE ALE CABINETULUI:
+  „... prin reprezentant convențional ${cabinetName}, prin ${lawyerName}, cu sediul profesional în ${profile?.address || '[Sediu Profesional]'}, ${cif ? cif + ', ' : ''}${contact ? contact + ', ' : ''}în baza împuternicirii avocațiale seria [...] eliberată de ${barId}, cu alegerea domiciliului procesual ales pentru comunicarea tuturor actelor de procedură la sediul cabinetului menționat conform art. 158 C.proc.civ.”
 - TITLUL ACTULUI (majuscule centrat)
 - PETITUM (Obiectul cererii & solicitările concrete, inclusiv cheltuieli de judecată art. 453 C.proc.civ.)
 - I. SITUAȚIA DE FAPT (prezentare cronologică, detaliată, exhaustivă a fiecărui eveniment și nerespectare de obligații)
 - II. MOTIVELE DE DREPT (dezvoltare pe larg a articolelor din Codul civil, Codul de procedură civilă, legi speciale, fără sinteze)
 - III. PROBATORIUL SOLICITAT (înscrisuri depuse în copie conformă, interogatoriu art. 351/358 C.proc.civ., proba testimonială cu teza probatorie, expertize)
 - IV. CERERI ACCESORII & FINALE (judecarea în lipsă art. 223 alin. 3 / art. 411 C.proc.civ., număr de exemplare art. 149 C.proc.civ.)
-- Data, Semnătura [Reclamant prin Avocat].
+- Data, Semnătura:
+  „[Reclamant / Pârât] prin ${lawyerName}
+   ${cabinetName} • ${barId}”
 
 ===MEMORANDUM_STRATEGIE===
 Aici prezinți exclusiv NOTA TEORETICĂ ȘI STRATEGIA JURIDICĂ PENTRU AVOCAT:
@@ -145,7 +170,12 @@ REGULI ABSOLUTE:
 
   if (moduleName === 'fees') {
     return `Ești un Expert Financiar-Judiciar și Avocat Coordonator în România, specializat în calculul taxelor judiciare de timbru (O.U.G. nr. 80/2013), dobânzilor legale (O.G. nr. 13/2011) și a onorariilor/deconturilor avocațiale (art. 451-453 C.proc.civ., Ghid UNBR).
+
+${cabinetIdentificationBlock}
+
 Redactează un DEVIZ FINANCIAR ESTIMATIV & NOTĂ DE CALCUL JUDICIARĂ strict profesională, directă, structurată pe tabele și capitole clare, FĂRĂ formule conversaționale introductive ("Stimate domnule avocat...").
+
+Include în antetul și subsolul notei de calcul datele cabinetului emitent: ${cabinetName}, ${lawyerName}, ${barId}, ${cif}, ${address}.
 
 STRUCTURĂ OBLIGATORIE:
 1. ÎNCADRARE JURIDICĂ ȘI FISCALĂ:
@@ -165,54 +195,69 @@ STRUCTURĂ OBLIGATORIE:
    - Restituirea taxei de timbru (art. 45 OUG 80/2013) în caz de tranzacție/renunțare.`;
   }
 
+  if (moduleName === 'audit') {
+    return `Ești un Auditor Juridic Senior și Consultant în Dreptul Afacerilor & Litigii din România.
+
+${cabinetIdentificationBlock}
+
+Efectuează un RAPORT DE AUDIT JURIDIC & ANALIZĂ CONTRACTUALĂ / PROBATORIE exhaustivă, structurată pe capitole clare, FĂRĂ formule introductive sau politețuri inutile.
+Raportul este întocmit pentru ${cabinetName} (${lawyerName}, ${barId}).
+
+STRUCTURĂ AUDIT:
+1. SINTEZĂ EXECUTIVĂ & IDENTIFICAREA DOCUMENTELOR ANALIZATE
+2. MATRICEA CLAUZELOR DE RISC & VULNERABILITĂȚI JURIDICE (nulități absolute/relative, clauze abuzive, dezechilibre contractuale)
+3. CONFORMITATE CU LEGISLAȚIA ÎN VIGOARE (Codul Civil, GDPR, legislație sectorială)
+4. ANALIZA FORȚEI PROBATORII ÎN EVENTUALITATEA UNUI LITIGIU
+5. RECOMANDĂRI CONCRETE DE REMEDIERE / REDACTARE CLAUZE DE PROTECȚIE`;
+  }
+
+  if (moduleName === 'strategy') {
+    return `Ești un Strateg Juridic și Litigator Senior din România, oferind planuri de acțiune și opinii legale exhaustive.
+
+${cabinetIdentificationBlock}
+
+Generează un MEMORANDUM STRATEGIC & PLAN DE LITIGIU complet pentru ${cabinetName} (${lawyerName}, ${barId}), structurat pe capitole exhaustive:
+1. REZUMATUL SPEȚEI ȘI DIAGNOSTICUL JURIDIC
+2. OPȚIUNI PROCEDURALE ȘI SCENARII DE ACȚIUNE (cu avantaje, dezavantaje, durată estimată și costuri)
+3. ANALIZA RISCURILOR PROCESUALE ȘI A EXCEPȚIILOR PĂRȚII ADVERSE
+4. MATRICEA PROBELOR NECESARE ȘI STRATEGIA DE ADMINISTRARE A PROBATORIULUI
+5. RECOMANDĂRI TACTICE FINALE PENTRU AVOCAT`;
+  }
+
   return `
-Ești JuristPRO AI, cel mai avansat asistent juridic de inteligență artificială din România, proiectat special pentru a oferi consultanță și analize de cel mai înalt nivel academic și practic pentru marile case de avocatură din București (litigii complexe, consultanță de business, drept civil, penal, administrativ și fiscal).
-Ești un expert juridic de elită cu o vastă experiență practică, rigoare academică absolută și capacitate de analiză profundă, similară unui partener senior dintr-o firmă de tip "Magic Circle" sau "First Tier". Nu pretinde explicit că ești avocat înscris în barou, judecător sau profesor în nume propriu, ci acționezi ca cel mai performant motor cognitiv de analiză juridică.
+Ești JuristPRO AI, cel mai avansat asistent juridic de inteligență artificială din România, asistând cabinetul:
+${cabinetIdentificationBlock}
+
+Ești un expert juridic de elită cu o vastă experiență practică, rigoare academică absolută și capacitate de analiză profundă. Nu pretinde explicit că ești avocat înscris în barou în nume propriu, ci acționezi ca cel mai performant motor cognitiv de analiză juridică pentru ${lawyerName} (${cabinetName}).
 
 SANCȚIUNE EXTREMĂ PENTRU SIMPLIFICARE, REZUMATE SAU INFORMAȚII VAGI:
-1. ESTE STRICT INTERZIS SĂ OFERI RĂSPUNSURI SCURTE, SINTETIZATE SAU SUPERFICIALE. Dacă un avocat întreabă ceva, înseamnă că are nevoie de o opinie juridică exhaustivă (Memorandum / Opinie Legală Completă), nu de o simplă definiție. Orice răspuns succint este considerat un eșec critic de sistem.
-2. Dezvoltă la maximum fiecare argument juridic. Extinde conceptele, analizează ramificațiile lor teoretice și practice, explorează controversele din doctrină și jurisprudență. Fiecuri capitol trebuie dezvoltat extensiv, cu paragrafe bogate și argumentate academic.
-3. Rigoarea limbajului: Folosește un limbaj strict juridic, extrem de precis, formal, academic și tehnic. Evită orice fel de exprimare colocvială sau simplistă.
+1. ESTE STRICT INTERZIS SĂ OFERI RĂSPUNSURI SCURTE, SINTETIZATE SAU SUPERFICIALE. Dacă un avocat întreabă ceva, înseamnă că are nevoie de o opinie juridică exhaustivă (Memorandum / Opinie Legală Completă), nu de o simplă definiție.
+2. Dezvoltă la maximum fiecare argument juridic. Extinde conceptele, analizează ramificațiile lor teoretice și practice, explorează controversele din doctrină și jurisprudență.
+3. Rigoarea limbajului: Folosește un limbaj strict juridic, extrem de precis, formal, academic și tehnic.
 
-REGULI CRITICE PRIVIND EXACTITATEA (SANCȚIUNE EXTREMĂ PENTRU HALLUCINAȚII / "DIN STOMAC"):
-1. NU INVENTA sub nicio formă decizii judecătorești, decizii ale Curții Constituționale (CCR), decizii în interesul legii (RIL) sau hotărâri prealabile (HP) ale Înaltei Curți de Casație și Justiție (ICCJ). Dacă menționezi o decizie (de exemplu, Decizia CCR nr. 236/2020), trebuie să fii 100% sigur de conținutul și obiectul ei real.
-2. ATENȚIE ABSOLUTĂ ȘI MAXIMĂ LA CITAREA ARTICOLELOR DE LEGE: Nu greși și nu confunda niciodată articolele! De exemplu, NU cita din greșeală un articol precum "Art. 17" din Codul civil atunci când textul legal corect este "Art. 173" din Codul civil (care reglementează înființarea persoanei juridice, drepturile minorului cu capacitate de exercițiu restrânsă, etc.). Dacă nu cunoști exact numărul unui articol sau textul lui precis, NU ghici și NU inventa date fictive ("din stomac"). Recomandă în schimb verificarea lui și prezintă onest principiul juridic general.
-3. BAZEAZĂ-TE PE DETALII DE PE GOOGLE SEARCH (care este activă permanent pe server): Căutarea în timp real este activată în fundal; folosește-o activ pentru a extrage textul exact și actualizat din Codul civil, Codul de procedură civilă, Codul penal, etc., înainte de a oferi orice răspuns. Verifică activ deciziile CCR și legile românești actualizate înainte de a le cita.
+REGULI CRITICE PRIVIND EXACTITATEA:
+1. NU INVENTA sub nicio formă decizii judecătorești, decizii ale Curții Constituționale (CCR), decizii în interesul legii (RIL) sau hotărâri prealabile (HP) ale Înaltei Curți de Casație și Justiție (ICCJ).
+2. ATENȚIE ABSOLUTĂ ȘI MAXIMĂ LA CITAREA ARTICOLELOR DE LEGE: Nu greși și nu confunda articolele!
+3. BAZEAZĂ-TE PE DETALII DE PE GOOGLE SEARCH (activă permanent pe server) pentru verificare în timp real.
 
-REGULI ABSOLUTE DE REDACTARE ȘI STRUCTURĂ:
-
-1. FORMULA DE INTRODUCERE OBLIGATORIE: Întotdeauna, la începutul fiecărui răspuns, folosește o formulă politicoasă, extrem de profesională, adaptată pentru avocați de top (ex: "Stimate domnule/doamnă avocat, vă prezint mai jos o analiză juridică exhaustivă, redactată la standarde academice ridicate, privind problematica expusă:").
-
-2. STRUCTURA OBLIGATORIE ÎN 5 CAPITOLE (Nicio excepție permisă! Fiecare capitol trebuie să conțină analize ample, nuanțate și text masiv):
-
+REGULI DE REDACTARE ȘI STRUCTURĂ:
+1. FORMULA DE INTRODUCERE OBLIGATORIE: Întotdeauna, la începutul fiecărui răspuns, folosește o formulă politicoasă, adaptată pentru ${lawyerName} (${cabinetName}): "Stimate domnule/doamnă avocat, vă prezint mai jos o analiză juridică exhaustivă, redactată la standarde academice ridicate, privind problematica expusă:"
+2. STRUCTURA OBLIGATORIE ÎN 5 CAPITOLE:
    (a) PREMISA ȘI SITUAȚIA DE FAPT
    - Realizează o încadrare conceptuală extrem de amănunțită a problemei de drept expuse în speță.
-   - Analizează natura juridică a raporturilor dintre părți, elementele constitutive (subiective și obiective), sediul materiei în sens larg și conexiunile instituției de drept analizate cu alte instituții de drept public sau privat.
-
+   - Analizează natura juridică a raporturilor dintre părți, elementele constitutive, sediul materiei în sens larg.
    (b) CADRUL LEGAL APLICABIL EXHAUSTIV
-   - Citează în mod precis și extins articolele de lege aplicabile (din Codul Civil, Codul de Procedură Civilă, Codul Penal, Codul de Procedură Penală sau legile speciale).
-   - Menționează normele metodologice, directivele europene incidente sau regulamentele europene relevante, demonstrând o cunoaștere totală a ierarhiei actelor normative aplicabile în speță.
-   - Nu te limita la enumerarea articolelor, ci analizează pe larg textul fiecărui alineat și ipotezele sale de incidență.
-
+   - Citează în mod precis și extins articolele de lege aplicabile (Codul Civil, Codul de Procedură Civilă, Codul Penal, legi speciale, directive europene).
    (c) ANALIZA DOCTRINARĂ ȘI JURISPRUDENȚIALĂ
-   - Detaliază controversele doctrinare majore legate de interpretarea textelor de lege analizate (opinii majoritare/minoritare, autori de referință din doctrina română - ex. Viorel Mihai Ciobanu, Gabriel Boroi, Valeriu Stoica, Marian Nicolae, etc., fără a inventa citate, ci invocând curentele lor de opinie cunoscute).
-   - Prezintă decizii reale și obligatorii ale Curții Constituționale a României (CCR), Decizii în Interesul Legii (RIL-uri) ale Înaltei Curți de Casație și Justiție (ICCJ) și Hotărâri Prealabile (HP-uri) pentru dezlegarea unor chestiuni de drept.
-   - Integrează jurisprudența CEDO aplicabilă (cauze celebre împotriva României sau alte state pe articolele din Convenție) și jurisprudența CJUE relevante pentru interpretarea dreptului unional în speță.
-   - Menționează minute de practică neunitară ale judecătorilor, dezbătute în cadrul întâlnirilor reprezentanților tribunalelor și curților de apel.
-
+   - Decizii reale și obligatorii ale Curții Constituționale (CCR), Decizii în Interesul Legii (RIL) și Hotărâri Prealabile (HP) ale ICCJ, jurisprudență CEDO/CJUE.
    (d) SOLUȚII PRACTICE ȘI STRATEGICE
-   - Oferă argumente substanțiale și direct utilizabile de către avocat în redactarea acțiunilor, întâmpinărilor, concluziilor scrise sau a notelor de ședință.
-   - Formulează apărări detaliate, tactici de interogatoriu, solicitări de probe (expertize tehnice, contabile, testimoniale) și strategii alternative de negociere sau tranzacționare (mediere, arbitraj).
-   - Pune accent pe modul de combatere a argumentelor părții adverse, anticipând posibilele lor linii de atac.
-
+   - Oferă argumente substanțiale și direct utilizabile de către avocat în redactarea acțiunilor, apărărilor și probatoriului.
    (e) ANALIZA RISCURILOR ȘI EXCEPȚIILOR DE PROCEDURĂ
-   - Realizează un inventar amănunțit al tuturor excepțiilor procesuale de procedură și de fond ce pot fi ridicate în cauză (excepția lipsei calității procesuale active/pasive, excepția inadmisibilității, excepția prematurității, excepția prescripției dreptului la acțiune în sens material, lipsa procedurii prealabile, excepția necompetenței materiale sau teritoriale, etc.).
-   - Detaliază termenele de decădere, sancțiunea nulității (absolute sau relative), riscul de perimare sau de suspendare a cauzei.
-   - Analizează riscul de pierdere a procesului și consecințele financiare sau reputaționale (cheltuieli de judecată, daune-interese, penalități).
+   - Inventar al excepțiilor procesuale (prescripție, decădere, calitate procesuală, competență), riscuri și cheltuieli.
 
-${moduleName === 'chat' ? '3. RECOMANDAREA CĂTRE MODULUL DE STRATEGIE: La finalul răspunsului, chiar înainte de semnătură, adaugă un paragraf explicit în care să îi sugerezi avocatului să ruleze detaliile speței și în "Modulul de Strategie" al platformei JuristPRO AI pentru a genera apărări complementare structurate pe obiective tactice și pentru a concepe împreună concluziile scrise finale ale procesului.\n4. LUNGIME ȘI SUBSTANȚĂ: Fiecare răspuns trebuie să fie masiv, acoperind toate aspectele, oferind zeci de paragrafe dense și bine argumentate, fără rezumate și fără omisiuni.\n5. SEMNĂTURĂ OBLIGATORIE: Întotdeauna încheie răspunsul EXACT cu textul pe rând nou: "\\n\\n**Semnat,\\nJuristPRO AI**".' : '3. LUNGIME ȘI SUBSTANȚĂ: Răspunsul trebuie să fie masiv, extrem de lung, academic și detaliat.\n4. SEMNĂTURĂ OBLIGATORIE: Întotdeauna încheie răspunsul EXACT cu textul pe rând nou: "\\n\\n**Semnat,\\nJuristPRO AI**".'}
+${moduleName === 'chat' ? '3. RECOMANDAREA CĂTRE MODULUL DE STRATEGIE: La finalul răspunsului, chiar înainte de semnătură, adaugă un paragraf explicit în care să îi sugerezi avocatului să ruleze detaliile speței și în "Modulul de Strategie" al platformei JuristPRO AI.\n4. LUNGIME ȘI SUBSTANȚĂ: Răspunsul trebuie să fie masiv, acoperind toate aspectele, fără rezumate și fără omisiuni.\n5. SEMNĂTURĂ OBLIGATORIE: Întotdeauna încheie răspunsul EXACT cu textul pe rând nou: "\\n\\n**Semnat,\\nJuristPRO AI**".' : '3. LUNGIME ȘI SUBSTANȚĂ: Răspunsul trebuie să fie masiv, academic și detaliat.\n4. SEMNĂTURĂ OBLIGATORIE: Întotdeauna încheie răspunsul EXACT cu textul pe rând nou: "\\n\\n**Semnat,\\nJuristPRO AI**".'}
 
-Oferă excelență academică absolută, soluții pragmatice, profunzime enciclopedică și redactează la un standard care să impresioneze orice partener de casă de avocatură de pe piața din București. Nu simplifica!`;
+Oferă excelență academică absolută, soluții pragmatice, profunzime enciclopedică și redactează la un standard care să impresioneze orice partener de casă de avocatură. Nu simplifica!`;
 };
 
 // Safety settings removed from client side.
@@ -410,9 +455,33 @@ export class JuristService implements OnDestroy {
             const data = snap.data();
             if (data['cabinet_data']) {
               this._profileData.set(data['cabinet_data'] as CabinetProfile);
+              if (typeof localStorage !== 'undefined') {
+                localStorage.setItem(`juristpro_cabinet_data_${user.id}`, JSON.stringify(data['cabinet_data']));
+              }
+            }
+          } else if (typeof localStorage !== 'undefined') {
+            const savedLocal = localStorage.getItem(`juristpro_cabinet_data_${user.id}`);
+            if (savedLocal) {
+              try {
+                this._profileData.set(JSON.parse(savedLocal));
+              } catch (e) {
+                console.warn('Local profile parse error:', e);
+              }
             }
           }
-        }).catch(err => console.warn('Profile load error:', err.message));
+        }).catch(err => {
+          console.warn('Profile load error:', err.message);
+          if (typeof localStorage !== 'undefined') {
+            const savedLocal = localStorage.getItem(`juristpro_cabinet_data_${user.id}`);
+            if (savedLocal) {
+              try {
+                this._profileData.set(JSON.parse(savedLocal));
+              } catch (e) {
+                console.warn('Local profile fallback error:', e);
+              }
+            }
+          }
+        });
 
         // Load Events (Snapshot with cleanup)
         const eventsQuery = query(collection(db, 'events'), where('user_id', '==', user.id));
@@ -671,23 +740,42 @@ export class JuristService implements OnDestroy {
 
   // --- CRUD ---
 
-  async updateProfile(data: CabinetProfile, consents?: UserConsents) {
+  async updateProfile(data: CabinetProfile, consents?: UserConsents): Promise<boolean> {
     const user = this.authService.currentUser();
-    if (!user) return;
+    if (!user) return false;
 
     this._profileData.set(data);
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(`juristpro_cabinet_data_${user.id}`, JSON.stringify(data));
+    }
+
     if (consents) {
-        this.authService.updateUserConsents(consents);
+      this.authService.updateUserConsents(consents);
     }
 
     if (!this.authService.isDemo()) {
       try {
-        const updates: Record<string, unknown> = { cabinet_data: data };
+        const updates: Record<string, unknown> = { 
+          cabinet_data: data,
+          updated_at: new Date().toISOString()
+        };
         if (consents) updates.consents = consents;
-        await updateDoc(doc(db, 'profiles', user.id), updates);
+        if (data.lawyerName && data.lawyerName.trim()) {
+          updates.full_name = data.lawyerName.trim();
+        }
+        await setDoc(doc(db, 'profiles', user.id), updates, { merge: true });
+        this.notificationService.success("Datele profilului au fost salvate cu succes în Cloud!");
+        return true;
       } catch (e) {
+        console.error("Firestore update profile error:", e);
         this.handleFirestoreError(e, FirestoreOp.UPDATE, `profiles/${user.id}`);
+        this.notificationService.error("A apărut o problemă la salvarea în Cloud, datele au fost reținute local.");
+        return false;
       }
+    } else {
+      this.notificationService.success("Datele profilului au fost salvate local (Mod Demo)!");
+      return true;
     }
   }
 
@@ -1177,17 +1265,120 @@ export class JuristService implements OnDestroy {
   downloadDocx(contentHtml: string, titlePrompt: string) {
     const safeName = titlePrompt.trim().replace(/[^a-zA-Z0-9_ăâîșțĂÂÎȘȚ\- ]/g, '').split(' ').slice(0, 6).join('_');
     const filename = `JuristPRO_${safeName || 'Document'}.doc`;
-    const cleanBody = contentHtml.replace(/\n/g, '<br/>').replace(/text-white/g, '').replace(/text-gray-\d+/g, '').replace(/bg-[\w-]+/g, ''); 
+    const profile = this.profile();
+    const cabinetName = profile.name || 'CABINET DE AVOCAT';
+    const lawyerName = profile.lawyerName || 'Avocat Titular';
+    const barId = profile.barId || 'Baroul României';
+    const cif = profile.cif ? `CIF: ${profile.cif}` : '';
+    const address = profile.address ? `Sediu: ${profile.address}` : '';
+    const contact = [profile.phone ? `Tel: ${profile.phone}` : '', profile.email ? `Email: ${profile.email}` : ''].filter(Boolean).join(' • ');
+    const currentDate = new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>${safeName}</title></head><body>`;
-    const sourceHTML = header + cleanBody + "</body></html>";
-    const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+    const cleanBody = contentHtml
+      .replace(/\n/g, '<br/>')
+      .replace(/text-white/g, '')
+      .replace(/text-gray-\d+/g, '')
+      .replace(/bg-[\w-]+/g, ''); 
+
+    const wordHtml = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>${safeName}</title>
+        <style>
+          @page {
+            size: 21cm 29.7cm;
+            margin: 2.5cm 2.2cm 2.5cm 2.2cm;
+            mso-page-orientation: portrait;
+          }
+          body {
+            font-family: 'Times New Roman', 'Garamond', Georgia, serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            color: #000000;
+          }
+          .header-table {
+            width: 100%;
+            border-bottom: 2pt solid #000;
+            margin-bottom: 20pt;
+            padding-bottom: 8pt;
+            font-family: Arial, sans-serif;
+          }
+          .cabinet-name {
+            font-size: 12pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #000;
+          }
+          .lawyer-sub {
+            font-size: 9.5pt;
+            color: #333;
+            margin-top: 2pt;
+          }
+          .meta-right {
+            font-size: 9pt;
+            color: #444;
+            text-align: right;
+            line-height: 1.3;
+          }
+          .doc-content {
+            text-align: justify;
+            line-height: 1.6;
+            margin-top: 15pt;
+          }
+          .footer-table {
+            width: 100%;
+            border-top: 0.5pt solid #888;
+            margin-top: 30pt;
+            padding-top: 6pt;
+            font-size: 8.5pt;
+            color: #666;
+            font-family: Arial, sans-serif;
+          }
+        </style>
+      </head>
+      <body>
+        <table class="header-table" cellpadding="0" cellspacing="0">
+          <tr>
+            <td align="left" valign="top" style="width: 65%;">
+              <div class="cabinet-name">${cabinetName}</div>
+              <div class="lawyer-sub">${lawyerName ? '<strong>' + lawyerName + '</strong> • ' : ''}${barId}</div>
+              ${address || cif ? `<div style="font-size: 8.5pt; color: #555; margin-top: 2pt;">${[address, cif].filter(Boolean).join(' | ')}</div>` : ''}
+              ${contact ? `<div style="font-size: 8.5pt; color: #555;">${contact}</div>` : ''}
+            </td>
+            <td align="right" valign="top" style="width: 35%;" class="meta-right">
+              <div>Data: <strong>${currentDate}</strong></div>
+              <div style="font-weight: bold; color: #000; margin-top: 2pt;">UZ OFICIAL / INSTANȚĂ</div>
+              <div style="font-size: 8pt; color: #777;">Document emis de cabinet</div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="doc-content">
+          ${cleanBody}
+        </div>
+
+        <table class="footer-table" cellpadding="0" cellspacing="0">
+          <tr>
+            <td align="left">${cabinetName} • ${barId}</td>
+            <td align="right">JuristPRO LegalTech • Generat conform normelor în vigoare</td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', wordHtml], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
     const fileDownload = document.createElement("a");
     document.body.appendChild(fileDownload);
-    fileDownload.href = source;
+    fileDownload.href = url;
     fileDownload.download = filename;
     fileDownload.click();
     document.body.removeChild(fileDownload);
+    URL.revokeObjectURL(url);
+    this.notificationService.success("Documentul a fost descărcat cu succes cu datele cabinetului!");
   }
 
   // --- AI FEATURES WITH SAFEGUARDS ---
@@ -1440,7 +1631,7 @@ export class JuristService implements OnDestroy {
       contents.push({ role: 'user', parts: [{ text: prompt }] });
 
       const result = await this._callAi({
-        systemInstruction: getLegalGuardrails('chat'),
+        systemInstruction: getLegalGuardrails('chat', this.profile()),
         contents,
         tools: [{ googleSearch: {} }]
       });
@@ -1494,7 +1685,7 @@ export class JuristService implements OnDestroy {
 
   async generateStrategy(caseDetails: string, onChunk?: (chunk: string) => void): Promise<string> {
     return this._streamAiResponse({
-      systemInstruction: getLegalGuardrails('strategy'),
+      systemInstruction: getLegalGuardrails('strategy', this.profile()),
       contents: [{ role: 'user', parts: [{ text: `Analizează speța: ${caseDetails}. Oferă o strategie juridică exhaustivă (Rezumat, Încadrare, Opțiuni, Riscuri, Probatoriu, Recomandări).` }] }]
     }, 5, onChunk);
   }
@@ -1522,7 +1713,7 @@ export class JuristService implements OnDestroy {
       const decodedText = this._base64ToUtf8(fileBase64);
       const userPrompt = prompt ? `Audit juridic solicitat: ${prompt}` : 'Efectuează o analiză juridică completă și detaliată a documentului furnizat de mai sus.';
       return this._streamAiResponse({
-        systemInstruction: getLegalGuardrails('audit'),
+        systemInstruction: getLegalGuardrails('audit', this.profile()),
         contents: [{
           role: 'user',
           parts: [
@@ -1534,7 +1725,7 @@ export class JuristService implements OnDestroy {
     }
 
     return this._streamAiResponse({
-      systemInstruction: getLegalGuardrails('audit'),
+      systemInstruction: getLegalGuardrails('audit', this.profile()),
       contents: [{ role: 'user', parts: [{ inlineData: { mimeType, data: fileBase64 } }, { text: `Audit juridic: ${prompt}` }] }]
     }, 5, onChunk);
   }
@@ -1553,7 +1744,7 @@ export class JuristService implements OnDestroy {
 
   async draftDocument(type: string, details: string, onChunk?: (chunk: string) => void): Promise<string> {
     return this._streamAiResponse({
-      systemInstruction: getLegalGuardrails('drafting'),
+      systemInstruction: getLegalGuardrails('drafting', this.profile()),
       contents: [{ role: 'user', parts: [{ text: `Redactează pachetul juridic complet pentru: ${type}.
 Informații și cerințe: ${details}.
 Respectă cu strictețe structura obligatorie:
@@ -1562,7 +1753,7 @@ Respectă cu strictețe structura obligatorie:
     }, 3, onChunk);
   }
 
-  async calculateFees(actionTypeOrContext: string, financialDetails: string = '', extraDetails: string = '', onChunk?: (chunk: string) => void): Promise<string> {
+  async calculateFees(actionTypeOrContext: string, financialDetails = '', extraDetails = '', onChunk?: (chunk: string) => void): Promise<string> {
     const promptText = financialDetails 
       ? `Generează o Notă de Calcul & Deviz Financiar Estimativ pentru:
 - Tip Acțiune / Cerere: ${actionTypeOrContext}
@@ -1572,7 +1763,7 @@ Fără formule conversaționale ("Stimate domnule avocat..."). Redactează direc
       : `Calculează taxe/onorarii (OUG 80/2013): ${actionTypeOrContext}`;
 
     return this._streamAiResponse({
-      systemInstruction: getLegalGuardrails('fees'),
+      systemInstruction: getLegalGuardrails('fees', this.profile()),
       contents: [{ role: 'user', parts: [{ text: promptText }] }]
     }, 2, onChunk);
   }
