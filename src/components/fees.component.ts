@@ -86,23 +86,79 @@ import { NotificationService } from '../services/notification.service';
                   (ngModelChange)="onParamChange()"
                   class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-xs text-white focus:border-jurist-orange font-medium"
                 >
-                  <option value="evaluable">Cerere evaluabilă în bani (Art. 3 alin. 1 - Regula Generală)</option>
-                  <option value="partaj">Partaj judiciar (Art. 5 - 3% din masă / 50 lei)</option>
-                  <option value="divort">Divorț prin acord (Art. 15 lit. a - 200 lei)</option>
-                  <option value="divort_culpa">Divorț din culpă / separare (Art. 15 lit. b - 100 lei)</option>
-                  <option value="ordonanta">Ordonanță de plată (Art. 6 alin. 2 - 200 lei)</option>
-                  <option value="evacuare">Evacuare din imobil (Art. 6 alin. 3 - 100 lei)</option>
-                  <option value="posesorie">Acțiune posesorie (Art. 4 alin. 1 - 100 lei)</option>
-                  <option value="neevaluabil">Cerere neevaluabilă în bani (Art. 8 alin. 1 - 20 lei)</option>
-                  <option value="apel">Apel / Cale de atac ordinară (50% din taxa inițială)</option>
-                  <option value="recurs">Recurs (100 lei sau 50% conform art. 24)</option>
-                  <option value="executare">Încuviințare executare silită (20 lei / titlu)</option>
-                  <option value="contestatie_executare">Contestație la executare (Art. 10 - plafonat max 1.000 lei)</option>
+                  <optgroup label="🏛️ Drept Civil, Pretenții & Proprietate">
+                    <option value="evaluable">Cerere evaluabilă în bani / Pretenții (Art. 3 alin. 1 - Grilă progresivă)</option>
+                    <option value="revendicare">Acțiune în revendicare imobiliară (Art. 3 raportat la valoare)</option>
+                    <option value="uzucapiune">Uzucapiune / Dobândire drept proprietate (Art. 3)</option>
+                    <option value="anulare_contract">Anulare / Rezoluțiune act juridic evaluabil (Art. 3)</option>
+                    <option value="granituire">Grănițuire fără revendicare (Art. 4 alin. 2 - 100 lei)</option>
+                    <option value="posesorie">Acțiune posesorie (Art. 4 alin. 1 - 100 lei)</option>
+                    <option value="neevaluabil">Cerere neevaluabilă în bani (Art. 8 alin. 1 - 20 lei)</option>
+                  </optgroup>
+
+                  <optgroup label="⚡ Proceduri Rapide & Urgență">
+                    <option value="ordonanta">Ordonanță de plată (Art. 6 alin. 2 - 200 lei)</option>
+                    <option value="valoare_redusa">Cerere de valoare redusă (Art. 6 alin. 1 - 50 lei &le; 2.000 lei / 200 lei &gt; 2.000 lei)</option>
+                    <option value="ordonanta_presedintiala">Ordonanță președințială (Art. 6 alin. 4 - 20 lei)</option>
+                    <option value="evacuare">Evacuare din imobil - procedură specială (Art. 6 alin. 3 - 100 lei)</option>
+                    <option value="sechestru_asigurator">Sechestru asigurător / Poprire asiguratorie (Art. 11 alin. 1 - 100 lei)</option>
+                    <option value="sechestru_judiciar">Sechestru judiciar (Art. 11 alin. 2 - 100 lei)</option>
+                    <option value="asigurare_dovezi">Asigurare de dovezi (Art. 7 - 20 lei)</option>
+                  </optgroup>
+
+                  <optgroup label="⚖️ Executare Silită & Carte Funciară">
+                    <option value="contestatie_executare">Contestație la executare silită (Art. 10 alin. 2 - la valoare, max 1.000 lei)</option>
+                    <option value="contestatie_executare_act">Contestație împotriva unui act de executare fără valoare (Art. 10 - 100 lei)</option>
+                    <option value="executare">Încuviințare executare silită (Art. 10 alin. 1 lit. a - 20 lei)</option>
+                    <option value="suspendare_executare">Suspendarea executării silite (Art. 10 alin. 1 lit. c - 50 lei)</option>
+                    <option value="validare_poprire">Validare de poprire (Art. 10 alin. 1 lit. a - 20 lei)</option>
+                    <option value="plangere_cf">Plângere împotriva încheierii de Carte Funciară (Art. 20 - 50 lei)</option>
+                    <option value="investire_titlu">Învestire cu formulă executorie / Titluri executorii (Art. 10 - 20 lei)</option>
+                  </optgroup>
+
+                  <optgroup label="👨‍👩‍👧 Dreptul Familiei & Persoane">
+                    <option value="divort">Divorț prin acordul soților (Art. 15 lit. a - 200 lei)</option>
+                    <option value="divort_culpa">Divorț din culpă / separare / motive temeinice (Art. 15 lit. b - 100 lei)</option>
+                    <option value="partaj">Partaj judiciar (Art. 5 alin. 1 - 3% din masă / 50 lei)</option>
+                    <option value="exercitare_autoritate">Autoritate părintească / Locuință minor / Program legături (Art. 15 lit. e - 20 lei)</option>
+                    <option value="pensie_intretinere">Pensie de întreținere (Art. 29 alin. 1 lit. c - Scutit 0 lei)</option>
+                    <option value="asociatii_fundatii">Înregistrare / Modificare Asociații & Fundații (Art. 12 - 100 lei)</option>
+                    <option value="curatela_tutela">Măsuri ocrotire / Curatelă / Tutelă (Art. 29 alin. 1 lit. e - Scutit 0 lei)</option>
+                  </optgroup>
+
+                  <optgroup label="📜 Contencios Administrativ, Fiscal & Contravențional">
+                    <option value="plangere_contraventionala">Plângere contravențională (O.G. 2/2001 & Art. 19 - 20 lei)</option>
+                    <option value="contencios_anulare">Anulare act administrativ neevaluabil (Art. 16 alin. 1 lit. a - 50 lei)</option>
+                    <option value="contencios_suspendare">Suspendare act administrativ (Art. 14 Legea 554/2004 - 50 lei)</option>
+                    <option value="contencios_patrimonial">Contencios administrativ patrimonial / Despăgubiri (Art. 16 alin. 1 lit. b - Art. 3)</option>
+                  </optgroup>
+
+                  <optgroup label="🏢 Comercial, Societăți & Insolvență">
+                    <option value="insolventa_deschidere">Deschidere procedură insolvență (Legea 85/2014 & Art. 14 alin. 1 - 200 lei)</option>
+                    <option value="insolventa_creanta">Declarație de creanță / Contestație tabel (Art. 14 alin. 2 - 200 lei)</option>
+                    <option value="anulare_aga">Anulare hotărâre AGA societate (Legea 31/1990 & Art. 18 - 100 lei)</option>
+                    <option value="registru_comert">Cereri / Plângeri Registrul Comerțului (Art. 18 - 100 lei)</option>
+                  </optgroup>
+
+                  <optgroup label="🔄 Căi de Atac">
+                    <option value="apel">Apel (Art. 23 alin. 1 - 50% din taxa datorată la fond)</option>
+                    <option value="recurs">Recurs (Art. 24 alin. 1 - 100 lei sau 50% conform legii)</option>
+                    <option value="contestatie_anulare">Contestație în anulare (Art. 25 alin. 1 - 100 lei)</option>
+                    <option value="revizuire">Revizuire (Art. 25 alin. 1 - 100 lei)</option>
+                  </optgroup>
+
+                  <optgroup label="🛡️ Cereri Scutite de Drept (Art. 29 OUG 80/2013)">
+                    <option value="scutit_munca">Conflicte de muncă & drepturi salariale (Art. 29 alin. 1 lit. a - Scutit 0 lei)</option>
+                    <option value="scutit_penal">Despăgubiri / Latura civilă din infracțiuni (Art. 29 alin. 1 lit. i - Scutit 0 lei)</option>
+                    <option value="scutit_protectie">Ordin de protecție (Legea 217/2003 & Art. 29 - Scutit 0 lei)</option>
+                    <option value="scutit_asigurari">Drepturi de asigurări sociale / Pensii (Art. 29 alin. 1 lit. a - Scutit 0 lei)</option>
+                    <option value="scutit_consumator">Acțiuni protecția consumatorilor (Art. 29 alin. 1 lit. f - Scutit 0 lei)</option>
+                  </optgroup>
                 </select>
               </div>
 
               <!-- Valoare Obiect Litigiu -->
-              @if (timbreCategory === 'evaluable' || timbreCategory === 'partaj' || timbreCategory === 'apel' || timbreCategory === 'contestatie_executare') {
+              @if (isClaimValueRequired()) {
                 <div>
                   <div class="flex items-center justify-between mb-1">
                     <label for="timbreValueInput" class="text-xs font-semibold text-gray-300">Valoarea Obiectului Cererii (RON)</label>
@@ -1043,34 +1099,36 @@ export class FeesComponent {
     }
   }
 
-  // --- TIMBRE LOGIC (OUG 80/2013) ---
+  isClaimValueRequired(): boolean {
+    return [
+      'evaluable',
+      'revendicare',
+      'uzucapiune',
+      'anulare_contract',
+      'partaj',
+      'apel',
+      'contestatie_executare',
+      'contencios_patrimonial',
+      'valoare_redusa'
+    ].includes(this.timbreCategory);
+  }
+
+  // --- TIMBRE LOGIC (OUG 80/2013 & CPC) ---
   calculateTimbreTax(): number {
     const category = this.timbreCategory;
     const value = Math.max(0, Number(this.timbreClaimValue) || 0);
     let totalTax = 0;
 
     switch (category) {
+      // 1. Drept Civil & Pretenții
       case 'evaluable':
+      case 'revendicare':
+      case 'uzucapiune':
+      case 'anulare_contract':
         totalTax = this.calculateBaseEvaluableTax(value);
         break;
 
-      case 'partaj':
-        totalTax = value > 0 ? value * 0.03 : 50;
-        break;
-
-      case 'divort':
-        totalTax = 200;
-        break;
-
-      case 'divort_culpa':
-        totalTax = 100;
-        break;
-
-      case 'ordonanta':
-        totalTax = 200;
-        break;
-
-      case 'evacuare':
+      case 'granituire':
         totalTax = 100;
         break;
 
@@ -1082,13 +1140,40 @@ export class FeesComponent {
         totalTax = 20;
         break;
 
-      case 'apel': {
-        const baseApel = this.calculateBaseEvaluableTax(value);
-        totalTax = baseApel * 0.5;
+      // 2. Proceduri Rapide & Urgență
+      case 'ordonanta':
+        totalTax = 200;
+        break;
+
+      case 'valoare_redusa':
+        totalTax = value <= 2000 ? 50 : 200;
+        break;
+
+      case 'ordonanta_presedintiala':
+        totalTax = 20;
+        break;
+
+      case 'evacuare':
+        totalTax = 100;
+        break;
+
+      case 'sechestru_asigurator':
+      case 'sechestru_judiciar':
+        totalTax = 100;
+        break;
+
+      case 'asigurare_dovezi':
+        totalTax = 20;
+        break;
+
+      // 3. Executare Silită & Carte Funciară
+      case 'contestatie_executare': {
+        const baseContestatie = this.calculateBaseEvaluableTax(value);
+        totalTax = Math.min(1000, baseContestatie);
         break;
       }
 
-      case 'recurs':
+      case 'contestatie_executare_act':
         totalTax = 100;
         break;
 
@@ -1096,14 +1181,97 @@ export class FeesComponent {
         totalTax = 20;
         break;
 
-      case 'contestatie_executare': {
-        const baseContestatie = this.calculateBaseEvaluableTax(value);
-        totalTax = Math.min(1000, baseContestatie);
+      case 'suspendare_executare':
+        totalTax = 50;
+        break;
+
+      case 'validare_poprire':
+        totalTax = 20;
+        break;
+
+      case 'plangere_cf':
+        totalTax = 50;
+        break;
+
+      case 'investire_titlu':
+        totalTax = 20;
+        break;
+
+      // 4. Dreptul Familiei & Persoane
+      case 'divort':
+        totalTax = 200;
+        break;
+
+      case 'divort_culpa':
+        totalTax = 100;
+        break;
+
+      case 'partaj':
+        totalTax = value > 0 ? value * 0.03 : 50;
+        break;
+
+      case 'exercitare_autoritate':
+        totalTax = 20;
+        break;
+
+      case 'pensie_intretinere':
+      case 'curatela_tutela':
+        totalTax = 0; // Scutit de drept conform art. 29
+        break;
+
+      case 'asociatii_fundatii':
+        totalTax = 100;
+        break;
+
+      // 5. Contencios Administrativ, Fiscal & Contravențional
+      case 'plangere_contraventionala':
+        totalTax = 20;
+        break;
+
+      case 'contencios_anulare':
+      case 'contencios_suspendare':
+        totalTax = 50;
+        break;
+
+      case 'contencios_patrimonial':
+        totalTax = this.calculateBaseEvaluableTax(value);
+        break;
+
+      // 6. Comercial, Societăți & Insolvență
+      case 'insolventa_deschidere':
+      case 'insolventa_creanta':
+        totalTax = 200;
+        break;
+
+      case 'anulare_aga':
+      case 'registru_comert':
+        totalTax = 100;
+        break;
+
+      // 7. Căi de Atac
+      case 'apel': {
+        const baseApel = this.calculateBaseEvaluableTax(value);
+        totalTax = baseApel * 0.5;
         break;
       }
+
+      case 'recurs':
+      case 'contestatie_anulare':
+      case 'revizuire':
+        totalTax = 100;
+        break;
+
+      // 8. Scutiri Expres (Art. 29)
+      case 'scutit_munca':
+      case 'scutit_penal':
+      case 'scutit_protectie':
+      case 'scutit_asigurari':
+      case 'scutit_consumator':
+        totalTax = 0;
+        break;
     }
 
-    if (this.timbreTranzactie) {
+    if (this.timbreTranzactie && totalTax > 0) {
       totalTax = totalTax / 2;
     }
 
@@ -1116,36 +1284,94 @@ export class FeesComponent {
 
     switch (category) {
       case 'evaluable':
+      case 'revendicare':
+      case 'uzucapiune':
+      case 'anulare_contract':
+      case 'contencios_patrimonial':
         if (value <= 500) return '8% din valoare, dar nu mai puțin de 20 lei';
         if (value <= 5000) return '40 lei + 7% pentru ce depășește 500 lei';
         if (value <= 25000) return '355 lei + 5% pentru ce depășește 5.000 lei';
         if (value <= 50000) return '1.355 lei + 3% pentru ce depășește 25.000 lei';
         if (value <= 250000) return '2.105 lei + 2% pentru ce depășește 50.000 lei';
         return '6.105 lei + 1% pentru ce depășește 250.000 lei';
-      case 'partaj':
-        return '3% din valoarea masei partajabile (sau 50 lei dacă nu se contestă masa/creanțele)';
-      case 'divort':
-        return 'Taxă fixă 200 lei pentru divorț prin acordul soților';
-      case 'divort_culpa':
-        return 'Taxă fixă 100 lei pentru divorț din culpă / separare';
-      case 'ordonanta':
-        return 'Taxă fixă 200 lei pentru procedura ordonanței de plată';
-      case 'evacuare':
-        return 'Taxă fixă 100 lei pentru cererile de evacuare procedură specială';
+      case 'granituire':
+        return 'Taxă fixă 100 lei (grănițuire fără revendicare); la revendicare se adaugă taxa la valoare conform art. 3';
       case 'posesorie':
         return 'Taxă fixă 100 lei pentru acțiuni posesorii';
       case 'neevaluabil':
-        return 'Taxă fixă 20 lei (cerere neevaluabilă în bani)';
-      case 'apel':
-        return '50% din taxa datorată pentru cererea introductivă la fond';
-      case 'recurs':
-        return '100 lei (sau 50% conform art. 24 OUG 80/2013)';
-      case 'executare':
-        return '20 lei pentru fiecare cerere de încuviințare a executării silite';
+        return 'Taxă fixă 20 lei (cerere neevaluabilă în bani conform art. 8 alin. 1)';
+      case 'ordonanta':
+        return 'Taxă fixă 200 lei pentru procedura ordonanței de plată';
+      case 'valoare_redusa':
+        return value <= 2000 
+          ? 'Taxă fixă 50 lei (debit principal & accesorii până la 2.000 lei inclusiv)' 
+          : 'Taxă fixă 200 lei (debit între 2.000 lei și 10.000 lei)';
+      case 'ordonanta_presedintiala':
+        return 'Taxă fixă 20 lei pentru cererile de ordonanță președințială';
+      case 'evacuare':
+        return 'Taxă fixă 100 lei pentru cererile de evacuare pe procedura specială din CPC';
+      case 'sechestru_asigurator':
+      case 'sechestru_judiciar':
+        return 'Taxă fixă 100 lei pentru încuviințarea măsurilor asigurătorii';
+      case 'asigurare_dovezi':
+        return 'Taxă fixă 20 lei pentru cererea de asigurare a dovezilor';
       case 'contestatie_executare':
-        return 'Calculată la valoarea bunurilor urmărite, plafonată la maxim 1.000 lei';
+        return 'Calculată la valoarea debitului / bunurilor urmărite conform grilei Art. 3, plafonată la maxim 1.000 lei';
+      case 'contestatie_executare_act':
+        return 'Taxă fixă 100 lei pentru contestație împotriva unui act de executare fără obiect evaluabil';
+      case 'executare':
+        return 'Taxă fixă 20 lei pentru fiecare cerere de încuviințare a executării silite';
+      case 'suspendare_executare':
+        return 'Taxă fixă 50 lei pentru cererea de suspendare a executării silite';
+      case 'validare_poprire':
+        return 'Taxă fixă 20 lei pentru cererea de validare a popririi';
+      case 'plangere_cf':
+        return 'Taxă fixă 50 lei pentru plângerea împotriva încheierii de carte funciară';
+      case 'investire_titlu':
+        return 'Taxă fixă 20 lei pentru învestirea sau recunoașterea titlului executoriu';
+      case 'divort':
+        return 'Taxă fixă 200 lei pentru divorț prin acordul soților (la cererea ambilor soți sau a unuia acceptată de celălalt)';
+      case 'divort_culpa':
+        return 'Taxă fixă 100 lei pentru divorț din culpă, separare în fapt sau motive temeinice';
+      case 'partaj':
+        return '3% din valoarea masei partajabile (sau 50 lei fix dacă nu se contestă compunerea masei / creanțele)';
+      case 'exercitare_autoritate':
+        return 'Taxă fixă 20 lei pentru cereri privind autoritatea părintească, locuința minorului și programul de vizită';
+      case 'pensie_intretinere':
+      case 'curatela_tutela':
+        return '0 lei — Scutită expres de la plata taxei judiciare de timbru conform Art. 29 OUG 80/2013';
+      case 'asociatii_fundatii':
+        return 'Taxă fixă 100 lei pentru cereri de înregistrare sau modificare acte constitutive asociații/fundații';
+      case 'plangere_contraventionala':
+        return 'Taxă fixă 20 lei pentru plângeri împotriva proceselor-verbale de contravenție (OG 2/2001 & Art. 19 OUG 80)';
+      case 'contencios_anulare':
+        return 'Taxă fixă 50 lei pentru cereri de anulare a actelor administrative cu caracter individual';
+      case 'contencios_suspendare':
+        return 'Taxă fixă 50 lei pentru cererea de suspendare a executării actului administrativ (Art. 14 Legea 554/2004)';
+      case 'insolventa_deschidere':
+      case 'insolventa_creanta':
+        return 'Taxă fixă 200 lei conform procedurilor speciale din Legea nr. 85/2014 & Art. 14 OUG 80/2013';
+      case 'anulare_aga':
+      case 'registru_comert':
+        return 'Taxă fixă 100 lei conform Legii 31/1990 și OUG 80/2013';
+      case 'apel':
+        return '50% din taxa datorată pentru cererea introductivă de fond (Art. 23 alin. 1 OUG 80/2013)';
+      case 'recurs':
+      case 'contestatie_anulare':
+      case 'revizuire':
+        return 'Taxă fixă 100 lei (sau 50% din taxa la fond conform dispozițiilor art. 24–25 OUG 80/2013)';
+      case 'scutit_munca':
+        return '0 lei — Scutită de drept conform Art. 29 alin. (1) lit. a) OUG 80/2013 (Litigii de muncă și salariale)';
+      case 'scutit_penal':
+        return '0 lei — Scutită de drept conform Art. 29 alin. (1) lit. i) OUG 80/2013 (Latura civilă din procesul penal)';
+      case 'scutit_protectie':
+        return '0 lei — Scutită de drept conform Legii nr. 217/2003 & Art. 29 OUG 80/2013 (Ordine de protecție)';
+      case 'scutit_asigurari':
+        return '0 lei — Scutită de drept conform Art. 29 alin. (1) lit. a) OUG 80/2013 (Drepturi pensii & asigurări sociale)';
+      case 'scutit_consumator':
+        return '0 lei — Scutită de drept conform Art. 29 alin. (1) lit. f) OUG 80/2013 (Protecția consumatorilor)';
       default:
-        return 'Calcul conform normelor OUG 80/2013';
+        return 'Calcul conform normelor OUG nr. 80/2013';
     }
   }
 
@@ -1153,17 +1379,50 @@ export class FeesComponent {
     const category = this.timbreCategory;
     switch (category) {
       case 'evaluable': return 'Art. 3 alin. (1) OUG 80/2013';
-      case 'partaj': return 'Art. 5 alin. (1) OUG 80/2013';
-      case 'divort': return 'Art. 15 lit. a) OUG 80/2013';
-      case 'divort_culpa': return 'Art. 15 lit. b) OUG 80/2013';
-      case 'ordonanta': return 'Art. 6 alin. (2) OUG 80/2013';
-      case 'evacuare': return 'Art. 6 alin. (3) OUG 80/2013';
+      case 'revendicare': return 'Art. 3 alin. (1) raportat la Art. 31 OUG 80/2013';
+      case 'uzucapiune': return 'Art. 3 alin. (1) OUG 80/2013';
+      case 'anulare_contract': return 'Art. 3 alin. (1) OUG 80/2013';
+      case 'granituire': return 'Art. 4 alin. (2) OUG 80/2013';
       case 'posesorie': return 'Art. 4 alin. (1) OUG 80/2013';
       case 'neevaluabil': return 'Art. 8 alin. (1) OUG 80/2013';
+      case 'ordonanta': return 'Art. 6 alin. (2) OUG 80/2013';
+      case 'valoare_redusa': return 'Art. 6 alin. (1) OUG 80/2013';
+      case 'ordonanta_presedintiala': return 'Art. 6 alin. (4) OUG 80/2013';
+      case 'evacuare': return 'Art. 6 alin. (3) OUG 80/2013';
+      case 'sechestru_asigurator':
+      case 'sechestru_judiciar': return 'Art. 11 alin. (1)-(2) OUG 80/2013';
+      case 'asigurare_dovezi': return 'Art. 7 OUG 80/2013';
+      case 'contestatie_executare': return 'Art. 10 alin. (2) OUG 80/2013';
+      case 'contestatie_executare_act': return 'Art. 10 alin. (2) OUG 80/2013';
+      case 'executare': return 'Art. 10 alin. (1) lit. a) OUG 80/2013';
+      case 'suspendare_executare': return 'Art. 10 alin. (1) lit. c) OUG 80/2013';
+      case 'validare_poprire': return 'Art. 10 alin. (1) lit. a) OUG 80/2013';
+      case 'plangere_cf': return 'Art. 20 OUG 80/2013 & Legea 7/1996';
+      case 'investire_titlu': return 'Art. 10 alin. (1) OUG 80/2013';
+      case 'divort': return 'Art. 15 lit. a) OUG 80/2013';
+      case 'divort_culpa': return 'Art. 15 lit. b) OUG 80/2013';
+      case 'partaj': return 'Art. 5 alin. (1) OUG 80/2013';
+      case 'exercitare_autoritate': return 'Art. 15 lit. e) OUG 80/2013';
+      case 'pensie_intretinere': return 'Art. 29 alin. (1) lit. c) OUG 80/2013 (Scutit)';
+      case 'curatela_tutela': return 'Art. 29 alin. (1) lit. e) OUG 80/2013 (Scutit)';
+      case 'asociatii_fundatii': return 'Art. 12 OUG 80/2013 & OG 26/2000';
+      case 'plangere_contraventionala': return 'Art. 19 OUG 80/2013 & OG 2/2001';
+      case 'contencios_anulare': return 'Art. 16 alin. (1) lit. a) OUG 80/2013';
+      case 'contencios_suspendare': return 'Art. 14 Legea 554/2004 & OUG 80/2013';
+      case 'contencios_patrimonial': return 'Art. 16 alin. (1) lit. b) OUG 80/2013';
+      case 'insolventa_deschidere': return 'Art. 14 alin. (1) OUG 80/2013 & Legea 85/2014';
+      case 'insolventa_creanta': return 'Art. 14 alin. (2) OUG 80/2013';
+      case 'anulare_aga': return 'Art. 18 OUG 80/2013 & Legea 31/1990';
+      case 'registru_comert': return 'Art. 18 OUG 80/2013';
       case 'apel': return 'Art. 23 alin. (1) OUG 80/2013';
       case 'recurs': return 'Art. 24 alin. (1) OUG 80/2013';
-      case 'executare': return 'Art. 10 alin. (1) OUG 80/2013';
-      case 'contestatie_executare': return 'Art. 10 alin. (2) OUG 80/2013';
+      case 'contestatie_anulare': return 'Art. 25 alin. (1) OUG 80/2013';
+      case 'revizuire': return 'Art. 25 alin. (1) OUG 80/2013';
+      case 'scutit_munca': return 'Art. 29 alin. (1) lit. a) OUG 80/2013 (Scutit de drept)';
+      case 'scutit_penal': return 'Art. 29 alin. (1) lit. i) OUG 80/2013 (Scutit de drept)';
+      case 'scutit_protectie': return 'Legea 217/2003 & Art. 29 OUG 80/2013 (Scutit de drept)';
+      case 'scutit_asigurari': return 'Art. 29 alin. (1) lit. a) OUG 80/2013 (Scutit de drept)';
+      case 'scutit_consumator': return 'Art. 29 alin. (1) lit. f) OUG 80/2013 (Scutit de drept)';
       default: return 'OUG 80/2013';
     }
   }
@@ -1179,18 +1438,51 @@ export class FeesComponent {
 
   timbreCategoryLabel(): string {
     const map: Record<string, string> = {
-      'evaluable': 'Acțiune evaluabilă în bani',
-      'partaj': 'Partaj judiciar',
-      'divort': 'Divorț prin acord',
-      'divort_culpa': 'Divorț din culpă',
-      'ordonanta': 'Ordonanță de plată',
-      'evacuare': 'Evacuare imobil',
+      'evaluable': 'Acțiune evaluabilă în bani / Pretenții',
+      'revendicare': 'Revendicare imobiliară',
+      'uzucapiune': 'Acțiune în uzucapiune',
+      'anulare_contract': 'Anulare / Rezoluțiune contract',
+      'granituire': 'Acțiune în grănițuire',
       'posesorie': 'Acțiune posesorie',
-      'neevaluabil': 'Cerere neevaluabilă',
-      'apel': 'Apel',
-      'recurs': 'Recurs',
-      'executare': 'Încuviințare executare',
-      'contestatie_executare': 'Contestație la executare'
+      'neevaluabil': 'Cerere neevaluabilă în bani',
+      'ordonanta': 'Ordonanță de plată',
+      'valoare_redusa': 'Cerere de valoare redusă',
+      'ordonanta_presedintiala': 'Ordonanță președințială',
+      'evacuare': 'Evacuare (procedură specială)',
+      'sechestru_asigurator': 'Sechestru / Poprire asiguratorie',
+      'sechestru_judiciar': 'Sechestru judiciar',
+      'asigurare_dovezi': 'Asigurare de dovezi',
+      'contestatie_executare': 'Contestație la executare (la valoare)',
+      'contestatie_executare_act': 'Contestație act executare (fără valoare)',
+      'executare': 'Încuviințare executare silită',
+      'suspendare_executare': 'Suspendare executare silită',
+      'validare_poprire': 'Validare de poprire',
+      'plangere_cf': 'Plângere încheiere carte funciară',
+      'investire_titlu': 'Învestire titlu executoriu',
+      'divort': 'Divorț prin acord',
+      'divort_culpa': 'Divorț din culpă / separare',
+      'partaj': 'Partaj judiciar',
+      'exercitare_autoritate': 'Autoritate părintească / Minori',
+      'pensie_intretinere': 'Pensie de întreținere (Scutit)',
+      'curatela_tutela': 'Măsuri ocrotire / Tutelă (Scutit)',
+      'asociatii_fundatii': 'Înregistrare / Modificare Asociații',
+      'plangere_contraventionala': 'Plângere contravențională (OG 2/2001)',
+      'contencios_anulare': 'Anulare act administrativ',
+      'contencios_suspendare': 'Suspendare act administrativ',
+      'contencios_patrimonial': 'Contencios patrimonial (Despăgubiri)',
+      'insolventa_deschidere': 'Deschidere insolvență (Legea 85/2014)',
+      'insolventa_creanta': 'Declarație creanță / Tabel',
+      'anulare_aga': 'Anulare hotărâre AGA',
+      'registru_comert': 'Cerere Registrul Comerțului',
+      'apel': 'Apel (50% din taxa inițială)',
+      'recurs': 'Recurs (Art. 24 OUG 80/2013)',
+      'contestatie_anulare': 'Contestație în anulare',
+      'revizuire': 'Cerere de revizuire',
+      'scutit_munca': 'Conflicte de muncă (Scutit)',
+      'scutit_penal': 'Latură civilă din penal (Scutit)',
+      'scutit_protectie': 'Ordin de protecție (Scutit)',
+      'scutit_asigurari': 'Asigurări sociale / Pensii (Scutit)',
+      'scutit_consumator': 'Protecția consumatorilor (Scutit)'
     };
     return map[this.timbreCategory] || 'Cerere introductivă';
   }
