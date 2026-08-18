@@ -220,7 +220,7 @@ interface WindowWithSpeechRecognition extends Window {
                   <button 
                     type="button"
                     (click)="applyPreset('apel')" 
-                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'apel' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset() === 'apel' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
                   >
                     <div class="font-bold flex items-center justify-between">
                       <span>Apel / Recurs</span>
@@ -232,7 +232,7 @@ interface WindowWithSpeechRecognition extends Window {
                   <button 
                     type="button"
                     (click)="applyPreset('intampinare')" 
-                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'intampinare' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset() === 'intampinare' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
                   >
                     <div class="font-bold flex items-center justify-between">
                       <span>Întâmpinare</span>
@@ -244,7 +244,7 @@ interface WindowWithSpeechRecognition extends Window {
                   <button 
                     type="button"
                     (click)="applyPreset('contestatie')" 
-                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'contestatie' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset() === 'contestatie' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
                   >
                     <div class="font-bold flex items-center justify-between">
                       <span>Contestație Executare</span>
@@ -256,7 +256,7 @@ interface WindowWithSpeechRecognition extends Window {
                   <button 
                     type="button"
                     (click)="applyPreset('plangere_contraventionala')" 
-                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'plangere_contraventionala' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset() === 'plangere_contraventionala' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
                   >
                     <div class="font-bold flex items-center justify-between">
                       <span>Plângere PV</span>
@@ -268,7 +268,7 @@ interface WindowWithSpeechRecognition extends Window {
                   <button 
                     type="button"
                     (click)="applyPreset('ordonanta_presedintiala')" 
-                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'ordonanta_presedintiala' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset() === 'ordonanta_presedintiala' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
                   >
                     <div class="font-bold flex items-center justify-between">
                       <span>Ordonanță Președințială</span>
@@ -280,7 +280,7 @@ interface WindowWithSpeechRecognition extends Window {
                   <button 
                     type="button"
                     (click)="applyPreset('custom')" 
-                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset === 'custom' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
+                    [class]="'text-left p-2 rounded-lg text-xs font-semibold border transition-all ' + (activePreset() === 'custom' ? 'bg-jurist-orange/15 border-jurist-orange text-jurist-orange' : 'bg-black/40 border-gray-800 text-gray-300 hover:border-gray-700')"
                   >
                     <div class="font-bold flex items-center justify-between">
                       <span>Personalizat</span>
@@ -295,24 +295,43 @@ interface WindowWithSpeechRecognition extends Window {
               <div class="bg-black/40 p-3.5 rounded-xl border border-gray-800 space-y-3">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label for="commDate" class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Data Comunicării</label>
+                    <div class="flex items-center justify-between mb-1">
+                      <label for="commDate" class="text-[10px] font-bold text-gray-400 uppercase">Data Comunicării</label>
+                      <div class="flex gap-1">
+                        <button type="button" (click)="setStartDateToToday()" class="text-[9px] bg-gray-800 hover:bg-gray-700 text-jurist-orange px-1.5 py-0.5 rounded font-bold border border-gray-700 transition-colors">Azi</button>
+                        <button type="button" (click)="setStartDateDaysAgo(1)" class="text-[9px] bg-gray-800 hover:bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded font-medium border border-gray-700 transition-colors">-1 zi</button>
+                        <button type="button" (click)="setStartDateDaysAgo(15)" class="text-[9px] bg-gray-800 hover:bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded font-medium border border-gray-700 transition-colors">-15z</button>
+                      </div>
+                    </div>
                     <input 
                       id="commDate" 
                       type="date" 
-                      [(ngModel)]="calcStartDate" 
+                      [ngModel]="calcStartDate()" 
+                      (ngModelChange)="onStartDateChange($event)"
+                      (input)="onStartDateInput($event)"
+                      (change)="onStartDateInput($event)"
                       class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white focus:border-jurist-orange outline-none [color-scheme:dark]"
                     >
                   </div>
                   <div>
-                    <label for="termDuration" class="block text-[10px] font-bold text-gray-400 uppercase mb-1">
-                      {{ calcUnitsType === 'months' ? 'Durată (Luni)' : 'Durată (Zile)' }}
-                    </label>
+                    <div class="flex items-center justify-between mb-1">
+                      <label for="termDuration" class="text-[10px] font-bold text-gray-400 uppercase">
+                        {{ calcUnitsType() === 'months' ? 'Durată (Luni)' : 'Durată (Zile)' }}
+                      </label>
+                      <div class="flex gap-1">
+                        <button type="button" (click)="setQuickDuration(5)" class="text-[9px] bg-gray-800 hover:bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded font-mono border border-gray-700">5z</button>
+                        <button type="button" (click)="setQuickDuration(15)" class="text-[9px] bg-gray-800 hover:bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded font-mono border border-gray-700">15z</button>
+                        <button type="button" (click)="setQuickDuration(25)" class="text-[9px] bg-gray-800 hover:bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded font-mono border border-gray-700">25z</button>
+                        <button type="button" (click)="setQuickDuration(30)" class="text-[9px] bg-gray-800 hover:bg-gray-700 text-jurist-orange px-1.5 py-0.5 rounded font-mono font-bold border border-gray-700">30z</button>
+                      </div>
+                    </div>
                     <input 
                       id="termDuration" 
                       type="number" 
                       min="1" 
-                      [(ngModel)]="calcDuration" 
-                      (input)="onDurationChange()"
+                      [ngModel]="calcDuration()" 
+                      (ngModelChange)="onDurationInput($event)"
+                      (input)="onDurationEvent($event)"
                       class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white focus:border-jurist-orange outline-none font-mono"
                     >
                   </div>
@@ -323,8 +342,8 @@ interface WindowWithSpeechRecognition extends Window {
                     <label for="calcUnits" class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Sistem de calcul</label>
                     <select 
                       id="calcUnits" 
-                      [(ngModel)]="calcUnitsType" 
-                      (change)="onDurationChange()"
+                      [ngModel]="calcUnitsType()" 
+                      (ngModelChange)="onUnitsTypeChange($event)"
                       class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white focus:border-jurist-orange outline-none cursor-pointer"
                     >
                       <option value="free_days">Zile libere (Art. 181 alin. 1 pct. 2)</option>
@@ -336,7 +355,8 @@ interface WindowWithSpeechRecognition extends Window {
                     <label for="limitHour" class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Ora limită depunere</label>
                     <select 
                       id="limitHour" 
-                      [(ngModel)]="calcSubmissionChannel" 
+                      [ngModel]="calcSubmissionChannel()" 
+                      (ngModelChange)="calcSubmissionChannel.set($event)"
                       class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-xs text-white focus:border-jurist-orange outline-none cursor-pointer"
                     >
                       <option value="postal">24:00 (Poștă / E-mail Art. 183)</option>
@@ -366,9 +386,9 @@ interface WindowWithSpeechRecognition extends Window {
                     {{ computedDeadline().formattedDate }}
                   </div>
                   <div class="text-xs text-gray-400 font-mono mt-0.5 flex items-center gap-2">
-                    <span>🕒 Până la ora <b>{{ calcSubmissionChannel === 'postal' ? '24:00' : '16:00' }}</b></span>
+                    <span>🕒 Până la ora <b>{{ calcSubmissionChannel() === 'postal' ? '24:00' : '16:00' }}</b></span>
                     <span>•</span>
-                    <span class="text-gray-500">{{ calcSubmissionChannel === 'postal' ? 'Art. 183 CPC' : 'Grefa instanței' }}</span>
+                    <span class="text-gray-500">{{ calcSubmissionChannel() === 'postal' ? 'Art. 183 CPC' : 'Grefa instanței' }}</span>
                   </div>
                 </div>
 
@@ -719,11 +739,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
   
   // --- PROCEDURAL DEADLINE CALCULATOR STATE ---
   calcMode = signal<'cpc' | 'ai'>('cpc');
-  calcStartDate = new Date().toISOString().split('T')[0];
-  calcDuration = 30;
-  calcUnitsType: 'free_days' | 'calendar_days' | 'months' = 'free_days';
-  calcSubmissionChannel: 'postal' | 'registry' = 'postal';
-  activePreset: 'apel' | 'intampinare' | 'contestatie' | 'plangere_contraventionala' | 'ordonanta_presedintiala' | 'custom' = 'apel';
+  calcStartDate = signal<string>(new Date().toISOString().split('T')[0]);
+  calcDuration = signal<number>(30);
+  calcUnitsType = signal<'free_days' | 'calendar_days' | 'months'>('free_days');
+  calcSubmissionChannel = signal<'postal' | 'registry'>('postal');
+  activePreset = signal<'apel' | 'intampinare' | 'contestatie' | 'plangere_contraventionala' | 'ordonanta_presedintiala' | 'custom'>('apel');
 
   aiPrompt = '';
   searchQuery = signal('');
@@ -817,12 +837,31 @@ export class CalendarComponent implements OnInit, OnDestroy {
     '2027-12-26': 'A doua zi de Crăciun'
   };
 
+  private formatLocalDate(d: Date): string {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private parseLocalDate(str: string): Date {
+    if (!str) return new Date();
+    if (str.includes('-')) {
+      const parts = str.split('-').map(Number);
+      if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+        return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+      }
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? new Date() : d;
+  }
+
   private isNonWorkingDay(date: Date): { isNonWorking: boolean; reason?: string } {
     const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
     if (dayOfWeek === 0) return { isNonWorking: true, reason: 'Duminică (zi de repaus săptămânal)' };
     if (dayOfWeek === 6) return { isNonWorking: true, reason: 'Sâmbătă (zi de repaus săptămânal)' };
 
-    const isoDate = date.toISOString().split('T')[0];
+    const isoDate = this.formatLocalDate(date);
     if (this.RO_HOLIDAYS[isoDate]) {
       return { isNonWorking: true, reason: `Sărbătoare Legală: ${this.RO_HOLIDAYS[isoDate]}` };
     }
@@ -831,9 +870,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   // Live computed deadline calculation adhering strictly to Romanian CPC Art. 181
   computedDeadline = computed(() => {
-    const startStr = this.calcStartDate;
-    const duration = Math.max(1, this.calcDuration || 1);
-    const units = this.calcUnitsType;
+    const startStr = this.calcStartDate();
+    const duration = Math.max(1, this.calcDuration() || 1);
+    const units = this.calcUnitsType();
 
     if (!startStr) {
       return {
@@ -848,7 +887,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       };
     }
 
-    const startDate = new Date(startStr + 'T00:00:00');
+    const startDate = this.parseLocalDate(startStr);
     const theoreticalDate = new Date(startDate.getTime());
 
     if (units === 'free_days') {
@@ -893,7 +932,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       check = this.isNonWorkingDay(finalDate);
     }
 
-    const finalIso = finalDate.toISOString().split('T')[0];
+    const finalIso = this.formatLocalDate(finalDate);
     const formattedDate = finalDate.toLocaleDateString('ro-RO', {
       weekday: 'long',
       day: 'numeric',
@@ -911,8 +950,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
     // Days remaining relative to today
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    const diffTime = finalDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const finalMidnight = new Date(finalDate.getFullYear(), finalDate.getMonth(), finalDate.getDate());
+    const diffTime = finalMidnight.getTime() - now.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     let daysRemainingText: string;
     if (diffDays > 0) {
       daysRemainingText = `⏳ ${diffDays} zile rămase`;
@@ -938,28 +978,78 @@ export class CalendarComponent implements OnInit, OnDestroy {
     };
   });
 
-  applyPreset(preset: 'apel' | 'intampinare' | 'contestatie' | 'plangere_contraventionala' | 'ordonanta_presedintiala' | 'custom') {
-    this.activePreset = preset;
-    if (preset === 'apel') {
-      this.calcDuration = 30;
-      this.calcUnitsType = 'free_days';
-    } else if (preset === 'intampinare') {
-      this.calcDuration = 25;
-      this.calcUnitsType = 'free_days';
-    } else if (preset === 'contestatie') {
-      this.calcDuration = 15;
-      this.calcUnitsType = 'free_days';
-    } else if (preset === 'plangere_contraventionala') {
-      this.calcDuration = 15;
-      this.calcUnitsType = 'free_days';
-    } else if (preset === 'ordonanta_presedintiala') {
-      this.calcDuration = 5;
-      this.calcUnitsType = 'free_days';
+  onStartDateChange(val: string) {
+    if (val) {
+      this.calcStartDate.set(val);
+      this.activePreset.set('custom');
     }
   }
 
-  onDurationChange() {
-    this.activePreset = 'custom';
+  onStartDateInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input && input.value) {
+      this.calcStartDate.set(input.value);
+      this.activePreset.set('custom');
+    }
+  }
+
+  setStartDateToToday() {
+    this.calcStartDate.set(this.formatLocalDate(new Date()));
+    this.activePreset.set('custom');
+  }
+
+  setStartDateDaysAgo(days: number) {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    this.calcStartDate.set(this.formatLocalDate(d));
+    this.activePreset.set('custom');
+  }
+
+  setQuickDuration(days: number) {
+    this.calcDuration.set(days);
+    this.calcUnitsType.set('free_days');
+    this.activePreset.set('custom');
+  }
+
+  onDurationEvent(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input) {
+      const val = Number(input.value);
+      if (val && !isNaN(val)) {
+        this.calcDuration.set(val);
+        this.activePreset.set('custom');
+      }
+    }
+  }
+
+  applyPreset(preset: 'apel' | 'intampinare' | 'contestatie' | 'plangere_contraventionala' | 'ordonanta_presedintiala' | 'custom') {
+    this.activePreset.set(preset);
+    if (preset === 'apel') {
+      this.calcDuration.set(30);
+      this.calcUnitsType.set('free_days');
+    } else if (preset === 'intampinare') {
+      this.calcDuration.set(25);
+      this.calcUnitsType.set('free_days');
+    } else if (preset === 'contestatie') {
+      this.calcDuration.set(15);
+      this.calcUnitsType.set('free_days');
+    } else if (preset === 'plangere_contraventionala') {
+      this.calcDuration.set(15);
+      this.calcUnitsType.set('free_days');
+    } else if (preset === 'ordonanta_presedintiala') {
+      this.calcDuration.set(5);
+      this.calcUnitsType.set('free_days');
+    }
+  }
+
+  onDurationInput(val: number) {
+    this.calcDuration.set(Number(val) || 1);
+    this.activePreset.set('custom');
+  }
+
+  onUnitsTypeChange(val: 'free_days' | 'calendar_days' | 'months') {
+    this.calcUnitsType.set(val);
+    this.activePreset.set('custom');
   }
 
   addCalculatedDeadlineToAgenda() {
@@ -969,15 +1059,16 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.editingEvent = JSON.parse(JSON.stringify(this.defaultEvent));
     this.editingEvent.id = '';
     this.editingEvent.date = calc.rawDate;
-    this.editingEvent.time = this.calcSubmissionChannel === 'postal' ? '23:59' : '16:00';
+    this.editingEvent.time = this.calcSubmissionChannel() === 'postal' ? '23:59' : '16:00';
     this.editingEvent.type = 'deadline';
     
     let titlePreset = 'Termen Procedural';
-    if (this.activePreset === 'apel') titlePreset = 'Termen Apel / Recurs (30 zile)';
-    else if (this.activePreset === 'intampinare') titlePreset = 'Termen Depunere Întâmpinare (25 zile)';
-    else if (this.activePreset === 'contestatie') titlePreset = 'Termen Contestație Executare (15 zile)';
-    else if (this.activePreset === 'plangere_contraventionala') titlePreset = 'Termen Plângere Contravențională (15 zile)';
-    else if (this.activePreset === 'ordonanta_presedintiala') titlePreset = 'Termen Ordonanță Președințială (5 zile)';
+    const preset = this.activePreset();
+    if (preset === 'apel') titlePreset = 'Termen Apel / Recurs (30 zile)';
+    else if (preset === 'intampinare') titlePreset = 'Termen Depunere Întâmpinare (25 zile)';
+    else if (preset === 'contestatie') titlePreset = 'Termen Contestație Executare (15 zile)';
+    else if (preset === 'plangere_contraventionala') titlePreset = 'Termen Plângere Contravențională (15 zile)';
+    else if (preset === 'ordonanta_presedintiala') titlePreset = 'Termen Ordonanță Președințială (5 zile)';
 
     this.editingEvent.title = titlePreset;
     this.editingEvent.notes = `Data comunicării: ${calc.startDateFormatted}\nDurată calcul: ${calc.durationLabel}\nScadență: ${calc.formattedDate}\n${calc.isProrogued ? 'Prorogare aplicată: ' + calc.prorogationReason : ''}`;
@@ -997,7 +1088,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       `Data Comunicării: ${calc.startDateFormatted}\n` +
       `Durată & Sistem: ${calc.durationLabel}\n` +
       `Data Teoretică: ${calc.theoreticalDateFormatted}\n` +
-      `DATA LIMITĂ SCADENȚĂ: ${calc.formattedDate} (ora ${this.calcSubmissionChannel === 'postal' ? '24:00' : '16:00'})\n` +
+      `DATA LIMITĂ SCADENȚĂ: ${calc.formattedDate} (ora ${this.calcSubmissionChannel() === 'postal' ? '24:00' : '16:00'})\n` +
       (calc.isProrogued ? `Mențiune Prorogare: ${calc.prorogationReason}\n` : '') +
       `----------------------------------------\n` +
       `Generat prin JuristPRO AI`;
