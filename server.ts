@@ -407,17 +407,23 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
   app.post('/api/gemini', async (req, res) => {
   const { contents, systemInstruction } = req.body;
   let { tools } = req.body;
-  if (!process.env.GEMINI_API_KEY) {
-    return res.status(500).json({ error: 'Cheia API Gemini nu este configurată pe server.' });
+  let rawKey = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+  let apiKey = rawKey.trim();
+  
+  // Clean quotes or key=value format if user pasted with wrapper
+  if ((apiKey.startsWith('"') && apiKey.endsWith('"')) || (apiKey.startsWith("'") && apiKey.endsWith("'"))) {
+    apiKey = apiKey.slice(1, -1).trim();
   }
-  
-  const apiKey = process.env.GEMINI_API_KEY.trim();
-  console.log('[GEMINI] Using API key:', apiKey.substring(0, 5) + '...');
-  
-  if (!apiKey.startsWith('AIza')) {
-      return res.status(500).json({ 
-          error: 'Cheia API Gemini configurată în aplicație nu este validă. Vă rugăm să verificați setările (Secrets) aplicației.' 
-      });
+  if (apiKey.includes('GEMINI_API_KEY=')) {
+    apiKey = apiKey.split('GEMINI_API_KEY=')[1].trim();
+  } else if (apiKey.includes('=')) {
+    apiKey = apiKey.split('=')[1].trim();
+  }
+
+  if (!apiKey || apiKey.length < 8) {
+    return res.status(500).json({ 
+      error: 'Cheia API Gemini nu este configurată sau este incompletă. Vă rugăm să deschideți meniul Settings ➔ Secrets și să salvați cheia în variabila GEMINI_API_KEY.' 
+    });
   }
   
   // Google Search Grounding:
