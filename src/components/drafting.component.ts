@@ -315,12 +315,16 @@ interface DocCategory {
                         </div>
                         @if (juristService.profile().address || juristService.profile().cif) {
                           <div class="text-[10px] text-gray-500 mt-0.5">
-                            {{ [juristService.profile().address, juristService.profile().cif ? 'CIF: ' + juristService.profile().cif : ''].filter(Boolean).join(' | ') }}
+                            @if (juristService.profile().address) { <span>{{ juristService.profile().address }}</span> }
+                            @if (juristService.profile().address && juristService.profile().cif) { <span> | </span> }
+                            @if (juristService.profile().cif) { <span>CIF: {{ juristService.profile().cif }}</span> }
                           </div>
                         }
                         @if (juristService.profile().phone || juristService.profile().email) {
                           <div class="text-[10px] text-gray-500">
-                            {{ [juristService.profile().phone ? 'Tel: ' + juristService.profile().phone : '', juristService.profile().email ? 'Email: ' + juristService.profile().email : ''].filter(Boolean).join(' | ') }}
+                            @if (juristService.profile().phone) { <span>Tel: {{ juristService.profile().phone }}</span> }
+                            @if (juristService.profile().phone && juristService.profile().email) { <span> | </span> }
+                            @if (juristService.profile().email) { <span>Email: {{ juristService.profile().email }}</span> }
                           </div>
                         }
                       </div>
