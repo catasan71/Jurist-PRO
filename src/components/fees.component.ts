@@ -1,9 +1,10 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef, ViewChild, ElementRef, effect } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy, ChangeDetectorRef, ViewChild, ElementRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JuristService } from '../services/jurist.service';
 import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../services/notification.service';
+
 @Component({
   selector: 'app-fees',
   standalone: true,
@@ -30,28 +31,28 @@ import { NotificationService } from '../services/notification.service';
         <div class="flex items-center gap-1.5 bg-black/60 p-1 rounded-xl border border-gray-800">
           <button 
             (click)="setMode('timbre')"
-            [class]="'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ' + 
+            [class]="'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ' + 
               (activeMode() === 'timbre' ? 'bg-jurist-orange text-black shadow-md' : 'text-gray-400 hover:text-white')"
           >
             <span>🏛️ Taxă Timbru OUG 80</span>
           </button>
           <button 
             (click)="setMode('interest')"
-            [class]="'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ' + 
+            [class]="'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ' + 
               (activeMode() === 'interest' ? 'bg-jurist-orange text-black shadow-md' : 'text-gray-400 hover:text-white')"
           >
             <span>📈 Dobândă Legală OG 13</span>
           </button>
           <button 
             (click)="setMode('fee')"
-            [class]="'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ' + 
+            [class]="'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ' + 
               (activeMode() === 'fee' ? 'bg-jurist-orange text-black shadow-md' : 'text-gray-400 hover:text-white')"
           >
             <span>💼 Decont Onorariu & Art. 453</span>
           </button>
           <button 
             (click)="setMode('ai_deviz')"
-            [class]="'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ' + 
+            [class]="'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ' + 
               (activeMode() === 'ai_deviz' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-400 hover:text-white')"
           >
             <span>✨ Deviz AI Avansat</span>
@@ -62,7 +63,7 @@ import { NotificationService } from '../services/notification.service';
       <!-- Main Workspace Grid -->
       <div class="flex-1 overflow-y-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <!-- LEFT PANEL: Controls (5 cols) -->
+        <!-- LEFT PANEL: Controls & Form (5 cols) -->
         <div class="lg:col-span-5 flex flex-col gap-4 overflow-y-auto pr-1">
           
           <!-- TAB 1: TAXA DE TIMBRU OUG 80/2013 -->
@@ -81,7 +82,8 @@ import { NotificationService } from '../services/notification.service';
                 <label for="timbreCatSelect" class="block text-xs font-semibold text-gray-300 mb-1">Tipul Acțiunii / Cererii</label>
                 <select 
                   id="timbreCatSelect"
-                  [(ngModel)]="timbreCategory" 
+                  [(ngModel)]="timbreCategory"
+                  (ngModelChange)="onParamChange()"
                   class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-xs text-white focus:border-jurist-orange font-medium"
                 >
                   <option value="evaluable">Cerere evaluabilă în bani (Art. 3 alin. 1 - Regula Generală)</option>
@@ -104,13 +106,14 @@ import { NotificationService } from '../services/notification.service';
                 <div>
                   <div class="flex items-center justify-between mb-1">
                     <label for="timbreValueInput" class="text-xs font-semibold text-gray-300">Valoarea Obiectului Cererii (RON)</label>
-                    <span class="text-[10px] text-amber-400 font-mono">{{ formatCurrency(timbreClaimValue) }} RON</span>
+                    <span class="text-[10px] text-amber-400 font-mono font-bold">{{ formatCurrency(timbreClaimValue) }} RON</span>
                   </div>
                   <div class="relative">
                     <input 
                       id="timbreValueInput"
                       type="number" 
                       [(ngModel)]="timbreClaimValue" 
+                      (ngModelChange)="onParamChange()"
                       placeholder="0"
                       min="0"
                       step="100"
@@ -118,7 +121,17 @@ import { NotificationService } from '../services/notification.service';
                     />
                     <span class="absolute right-3 top-2.5 text-xs text-gray-500 font-bold">RON</span>
                   </div>
-                  <p class="text-[10px] text-gray-400 mt-1">Calcul automat pe tranșele prevăzute de art. 3 alin. (1) din OUG 80/2013.</p>
+
+                  <!-- Quick Presets for Amounts -->
+                  <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span class="text-[10px] text-gray-400 mr-1">Preseturi:</span>
+                    <button type="button" (click)="setTimbreAmount(10000)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700 cursor-pointer">10.000 lei</button>
+                    <button type="button" (click)="setTimbreAmount(25000)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700 cursor-pointer">25.000 lei</button>
+                    <button type="button" (click)="setTimbreAmount(50000)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-amber-300 text-[10px] rounded border border-amber-500/40 cursor-pointer font-bold">50.000 lei</button>
+                    <button type="button" (click)="setTimbreAmount(100000)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700 cursor-pointer">100.000 lei</button>
+                    <button type="button" (click)="setTimbreAmount(250000)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700 cursor-pointer">250.000 lei</button>
+                    <button type="button" (click)="setTimbreAmount(500000)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700 cursor-pointer">500.000 lei</button>
+                  </div>
                 </div>
               }
 
@@ -126,13 +139,25 @@ import { NotificationService } from '../services/notification.service';
               <div class="bg-black/50 p-3 rounded-lg border border-gray-800 space-y-2">
                 <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider block">Opțiuni & Scutiri</span>
                 <label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                  <input type="checkbox" [(ngModel)]="timbreAjutorPublic" class="rounded border-gray-700 text-amber-500 focus:ring-jurist-orange bg-gray-900" />
+                  <input type="checkbox" [(ngModel)]="timbreAjutorPublic" (ngModelChange)="onParamChange()" class="rounded border-gray-700 text-amber-500 focus:ring-jurist-orange bg-gray-900" />
                   <span>Se solicită ajutor public judiciar (OUG 51/2008)</span>
                 </label>
                 <label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                  <input type="checkbox" [(ngModel)]="timbreTranzactie" class="rounded border-gray-700 text-amber-500 focus:ring-jurist-orange bg-gray-900" />
+                  <input type="checkbox" [(ngModel)]="timbreTranzactie" (ngModelChange)="onParamChange()" class="rounded border-gray-700 text-amber-500 focus:ring-jurist-orange bg-gray-900" />
                   <span>Stingere prin tranzacție (restituire 50% conform art. 45 OUG 80)</span>
                 </label>
+              </div>
+
+              <!-- Live Calculation Result Card -->
+              <div class="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent p-3.5 rounded-lg border border-amber-500/30 flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-amber-400 block tracking-wider">Taxă Judiciară Datorată</span>
+                  <span class="text-[11px] text-gray-400 leading-tight block">{{ getTimbreLegalBasis() }}</span>
+                </div>
+                <div class="text-right">
+                  <div class="text-lg font-black text-amber-300 font-mono">{{ formatCurrency(calculateTimbreTax()) }} RON</div>
+                  <span class="text-[10px] text-emerald-400 font-medium">Calculat OUG 80/2013</span>
+                </div>
               </div>
 
               <!-- Detalii Dosar & Părți -->
@@ -141,22 +166,37 @@ import { NotificationService } from '../services/notification.service';
                 <input 
                   type="text" 
                   [(ngModel)]="dossierNumber" 
+                  (ngModelChange)="onParamChange()"
                   placeholder="Nr. Dosar (Ex: 12345/299/2026)" 
                   class="w-full bg-black border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-jurist-orange font-mono"
                 />
                 <input 
                   type="text" 
                   [(ngModel)]="courtName" 
+                  (ngModelChange)="onParamChange()"
                   placeholder="Instanța (Ex: Tribunalul București - Secția a IV-a Civilă)" 
                   class="w-full bg-black border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-jurist-orange"
                 />
                 <input 
                   type="text" 
                   [(ngModel)]="partiesDesc" 
+                  (ngModelChange)="onParamChange()"
                   placeholder="Părți (Ex: Reclamant SC Alfa SRL vs. Pârât SC Beta SRL)" 
                   class="w-full bg-black border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-jurist-orange"
                 />
               </div>
+
+              <!-- Primary Action Button: Generează Notă de Calcul -->
+              <button 
+                type="button"
+                (click)="generateReport('timbre')"
+                class="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-black py-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                <span>⚡ Generează / Actualizează Notă A4</span>
+              </button>
 
             </div>
           }
@@ -180,11 +220,20 @@ import { NotificationService } from '../services/notification.service';
                     id="interestPrincipalInput"
                     type="number" 
                     [(ngModel)]="interestPrincipal" 
+                    (ngModelChange)="onParamChange()"
                     placeholder="0"
                     min="0"
                     class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-sm text-amber-300 font-bold focus:border-jurist-orange font-mono"
                   />
                   <span class="absolute right-3 top-2.5 text-xs text-gray-500 font-bold">RON</span>
+                </div>
+                <!-- Quick Presets -->
+                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span class="text-[10px] text-gray-400 mr-1">Preseturi:</span>
+                  <button type="button" (click)="setInterestPrincipal(10000)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700 cursor-pointer">10.000 lei</button>
+                  <button type="button" (click)="setInterestPrincipal(25000)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-amber-300 text-[10px] rounded border border-amber-500/40 cursor-pointer font-bold">25.000 lei</button>
+                  <button type="button" (click)="setInterestPrincipal(50000)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700 cursor-pointer">50.000 lei</button>
+                  <button type="button" (click)="setInterestPrincipal(100000)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700 cursor-pointer">100.000 lei</button>
                 </div>
               </div>
 
@@ -194,6 +243,7 @@ import { NotificationService } from '../services/notification.service';
                 <select 
                   id="interestRelationSelect"
                   [(ngModel)]="interestRelationType" 
+                  (ngModelChange)="onParamChange()"
                   class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-xs text-white focus:border-jurist-orange font-medium"
                 >
                   <option value="b2b">Între profesioniști / Comercianți (Rata BNR + 8% conform art. 3 alin. 2 ind. 1)</option>
@@ -210,6 +260,7 @@ import { NotificationService } from '../services/notification.service';
                     id="customRateInput"
                     type="number" 
                     [(ngModel)]="interestCustomRate" 
+                    (ngModelChange)="onParamChange()"
                     placeholder="12" 
                     class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-xs text-white focus:border-jurist-orange font-mono"
                   />
@@ -222,7 +273,7 @@ import { NotificationService } from '../services/notification.service';
                   </div>
                   <div class="text-right">
                     <span class="text-gray-400 block">Rată Legală Totală:</span>
-                    <span class="text-emerald-400 font-bold font-mono">{{ computedInterestRate() }}% / an</span>
+                    <span class="text-emerald-400 font-bold font-mono">{{ getEffectiveInterestRate() }}% / an</span>
                   </div>
                 </div>
               }
@@ -235,6 +286,7 @@ import { NotificationService } from '../services/notification.service';
                     id="interestStartInput"
                     type="date" 
                     [(ngModel)]="interestStartDate" 
+                    (ngModelChange)="onParamChange()"
                     class="w-full bg-black border border-gray-700 rounded-lg p-2 text-xs text-white focus:border-jurist-orange font-mono"
                   />
                 </div>
@@ -244,15 +296,47 @@ import { NotificationService } from '../services/notification.service';
                     id="interestEndInput"
                     type="date" 
                     [(ngModel)]="interestEndDate" 
+                    (ngModelChange)="onParamChange()"
                     class="w-full bg-black border border-gray-700 rounded-lg p-2 text-xs text-white focus:border-jurist-orange font-mono"
                   />
                 </div>
               </div>
 
-              <div class="text-xs text-gray-400 flex justify-between px-1">
-                <span>Număr zile întârziere:</span>
-                <span class="text-white font-bold font-mono">{{ computedDaysDiff() }} zile</span>
+              <!-- Quick Period Presets -->
+              <div class="flex flex-wrap items-center justify-between text-xs text-gray-400 gap-1 bg-black/40 p-2 rounded border border-gray-800">
+                <span class="text-[10px]">Intervale rapide:</span>
+                <div class="flex gap-1">
+                  <button type="button" (click)="setInterestPeriodDays(30)" class="px-1.5 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded cursor-pointer">30z</button>
+                  <button type="button" (click)="setInterestPeriodDays(90)" class="px-1.5 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded cursor-pointer">90z</button>
+                  <button type="button" (click)="setInterestPeriodMonths(6)" class="px-1.5 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded cursor-pointer">6 luni</button>
+                  <button type="button" (click)="setInterestPeriodMonths(12)" class="px-1.5 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded cursor-pointer">1 an</button>
+                  <button type="button" (click)="setInterestPeriodMonths(36)" class="px-1.5 py-0.5 bg-gray-800 hover:bg-gray-700 text-amber-300 text-[10px] rounded cursor-pointer font-bold">3 ani</button>
+                </div>
               </div>
+
+              <!-- Live Interest Result Card -->
+              <div class="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent p-3.5 rounded-lg border border-amber-500/30 space-y-1">
+                <div class="flex justify-between items-center">
+                  <span class="text-[10px] uppercase font-bold text-gray-400">Total Dobândă Penalizatoare:</span>
+                  <span class="text-sm font-bold text-amber-400 font-mono">{{ formatCurrency(calculateInterestTotal()) }} RON</span>
+                </div>
+                <div class="flex justify-between items-center pt-1 border-t border-gray-800">
+                  <span class="text-xs font-bold text-white uppercase">Total Creanță Recuperabilă:</span>
+                  <span class="text-base font-black text-emerald-400 font-mono">{{ formatCurrency(calculateTotalClaimDue()) }} RON</span>
+                </div>
+              </div>
+
+              <!-- Primary Action Button: Generează Raport Dobândă -->
+              <button 
+                type="button"
+                (click)="generateReport('interest')"
+                class="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-black py-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                <span>⚡ Generează / Actualizează Raport Dobândă</span>
+              </button>
 
             </div>
           }
@@ -274,6 +358,7 @@ import { NotificationService } from '../services/notification.service';
                 <select 
                   id="feeTypeSelect"
                   [(ngModel)]="feeType" 
+                  (ngModelChange)="onParamChange()"
                   class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-xs text-white focus:border-jurist-orange font-medium"
                 >
                   <option value="fixed">Onorariu Forfetar Fix</option>
@@ -290,6 +375,7 @@ import { NotificationService } from '../services/notification.service';
                       id="hourlyRateInput"
                       type="number" 
                       [(ngModel)]="hourlyRate" 
+                      (ngModelChange)="onParamChange()"
                       placeholder="350"
                       class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-xs text-amber-300 font-mono font-bold focus:border-jurist-orange"
                     />
@@ -300,6 +386,7 @@ import { NotificationService } from '../services/notification.service';
                       id="hoursSpentInput"
                       type="number" 
                       [(ngModel)]="hoursSpent" 
+                      (ngModelChange)="onParamChange()"
                       placeholder="10"
                       class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-xs text-white font-mono focus:border-jurist-orange"
                     />
@@ -312,9 +399,18 @@ import { NotificationService } from '../services/notification.service';
                     id="baseFeeInput"
                     type="number" 
                     [(ngModel)]="baseFee" 
+                    (ngModelChange)="onParamChange()"
                     placeholder="3500"
                     class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-sm text-amber-300 font-bold font-mono focus:border-jurist-orange"
                   />
+                  <!-- Quick UNBR Guide Presets -->
+                  <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span class="text-[10px] text-gray-400 mr-1">Recomandări UNBR:</span>
+                    <button type="button" (click)="setBaseFeeAmount(1500)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700 cursor-pointer">1.500 lei (Ordonanță)</button>
+                    <button type="button" (click)="setBaseFeeAmount(2500)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700 cursor-pointer">2.500 lei (Muncă)</button>
+                    <button type="button" (click)="setBaseFeeAmount(3500)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-amber-300 text-[10px] rounded border border-amber-500/40 cursor-pointer font-bold">3.500 lei (Drept comun)</button>
+                    <button type="button" (click)="setBaseFeeAmount(4500)" class="px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-[10px] rounded border border-gray-700 cursor-pointer">4.500 lei (Comercial)</button>
+                  </div>
                 </div>
               }
 
@@ -326,6 +422,7 @@ import { NotificationService } from '../services/notification.service';
                       id="successPercentInput"
                       type="number" 
                       [(ngModel)]="successPercent" 
+                      (ngModelChange)="onParamChange()"
                       placeholder="10"
                       class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-xs text-white font-mono focus:border-jurist-orange"
                     />
@@ -336,6 +433,7 @@ import { NotificationService } from '../services/notification.service';
                       id="successStakeInput"
                       type="number" 
                       [(ngModel)]="successStakeValue" 
+                      (ngModelChange)="onParamChange()"
                       placeholder="50000"
                       class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-xs text-white font-mono focus:border-jurist-orange"
                     />
@@ -350,25 +448,52 @@ import { NotificationService } from '../services/notification.service';
                   id="otherExpensesInput"
                   type="number" 
                   [(ngModel)]="otherExpenses" 
+                  (ngModelChange)="onParamChange()"
                   placeholder="0 (Ex: expertiză, deplasare, traduceri)" 
                   class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-xs text-white font-mono focus:border-jurist-orange"
                 />
+              </div>
+
+              <!-- Live Decont Result Card -->
+              <div class="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent p-3.5 rounded-lg border border-amber-500/30 flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-amber-400 block tracking-wider">Total Decont Cheltuieli</span>
+                  <span class="text-[11px] text-gray-400 leading-tight block">Art. 451-453 CPC</span>
+                </div>
+                <div class="text-right">
+                  <div class="text-lg font-black text-amber-300 font-mono">{{ formatCurrency(calculateFeeTotal()) }} RON</div>
+                  <span class="text-[10px] text-emerald-400 font-medium">Pregătit pentru Instanță</span>
+                </div>
               </div>
 
               <div class="space-y-2 pt-2 border-t border-gray-800">
                 <input 
                   type="text" 
                   [(ngModel)]="contractNumber" 
+                  (ngModelChange)="onParamChange()"
                   placeholder="Nr. Contract Asistență Juridică (Ex: CAJ 89/2026)" 
                   class="w-full bg-black border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-jurist-orange font-mono"
                 />
                 <input 
                   type="text" 
                   [(ngModel)]="clientName" 
+                  (ngModelChange)="onParamChange()"
                   placeholder="Nume Client / Beneficiar" 
                   class="w-full bg-black border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-jurist-orange"
                 />
               </div>
+
+              <!-- Primary Action Button: Generează Decont -->
+              <button 
+                type="button"
+                (click)="generateReport('fee')"
+                class="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-black py-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                <span>⚡ Generează / Actualizează Decont A4</span>
+              </button>
 
             </div>
           }
@@ -446,16 +571,10 @@ import { NotificationService } from '../services/notification.service';
             <input 
               type="text" 
               [(ngModel)]="cabinetTitle" 
+              (ngModelChange)="onParamChange()"
               placeholder="CABINET DE AVOCAT POPESCU IOAN / SCA POPESCU & ASOCIAȚII" 
               class="w-full bg-black border border-gray-700 rounded-lg px-2.5 py-2 text-xs text-amber-300 placeholder-gray-600 focus:border-jurist-orange font-mono"
             />
-            @if (juristService.profile().address || juristService.profile().cif || juristService.profile().phone) {
-              <div class="text-[10px] text-gray-500 flex flex-wrap gap-2 pt-0.5">
-                @if (juristService.profile().barId) { <span>🏛️ {{ juristService.profile().barId }}</span> }
-                @if (juristService.profile().cif) { <span>📋 CIF: {{ juristService.profile().cif }}</span> }
-                @if (juristService.profile().address) { <span>📍 {{ juristService.profile().address }}</span> }
-              </div>
-            }
           </div>
 
         </div>
@@ -467,7 +586,7 @@ import { NotificationService } from '../services/notification.service';
           <div class="bg-gray-900/90 border-b border-gray-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 backdrop-blur-md">
             <div class="flex items-center gap-2">
               <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 Document Oficial A4 • Format Instanță / Decont
               </span>
             </div>
@@ -520,6 +639,7 @@ import { NotificationService } from '../services/notification.service';
               
               <!-- Top Antet Cabinet -->
               <div>
+                <!-- Antet Cabinet (Header A4) -->
                 <div class="border-b-2 border-gray-900 pb-4 mb-6 flex items-start justify-between gap-4">
                   <div>
                     <div class="text-[13px] font-bold tracking-widest text-black uppercase">
@@ -530,12 +650,16 @@ import { NotificationService } from '../services/notification.service';
                     </div>
                     @if (juristService.profile().address || juristService.profile().cif) {
                       <div class="text-[10px] text-gray-500 mt-0.5">
-                        {{ [juristService.profile().address, juristService.profile().cif ? 'CIF: ' + juristService.profile().cif : ''].filter(Boolean).join(' | ') }}
+                        @if (juristService.profile().address) { <span>{{ juristService.profile().address }}</span> }
+                        @if (juristService.profile().address && juristService.profile().cif) { <span> | </span> }
+                        @if (juristService.profile().cif) { <span>CIF: {{ juristService.profile().cif }}</span> }
                       </div>
                     }
                     @if (juristService.profile().phone || juristService.profile().email) {
                       <div class="text-[10px] text-gray-500">
-                        {{ [juristService.profile().phone ? 'Tel: ' + juristService.profile().phone : '', juristService.profile().email ? 'Email: ' + juristService.profile().email : ''].filter(Boolean).join(' | ') }}
+                        @if (juristService.profile().phone) { <span>Tel: {{ juristService.profile().phone }}</span> }
+                        @if (juristService.profile().phone && juristService.profile().email) { <span> | </span> }
+                        @if (juristService.profile().email) { <span>Email: {{ juristService.profile().email }}</span> }
                       </div>
                     }
                   </div>
@@ -597,7 +721,7 @@ import { NotificationService } from '../services/notification.service';
                         <tbody class="divide-y divide-gray-200">
                           <tr>
                             <td class="p-2.5 font-medium">Obiect cerere / Categorie</td>
-                            <td class="p-2.5 text-gray-600">{{ timbreCalculation().legalBasis }}</td>
+                            <td class="p-2.5 text-gray-600">{{ getTimbreLegalBasis() }}</td>
                             <td class="p-2.5 text-right font-mono">{{ timbreCategoryLabel() }}</td>
                           </tr>
                           @if (timbreClaimValue > 0) {
@@ -609,7 +733,7 @@ import { NotificationService } from '../services/notification.service';
                           }
                           <tr>
                             <td class="p-2.5 font-medium">Formulă aplicată de calcul</td>
-                            <td class="p-2.5 text-gray-600" colspan="2">{{ timbreCalculation().formula }}</td>
+                            <td class="p-2.5 text-gray-600" colspan="2">{{ getTimbreFormula() }}</td>
                           </tr>
                           @if (timbreAjutorPublic) {
                             <tr class="text-amber-800 bg-amber-50">
@@ -622,7 +746,7 @@ import { NotificationService } from '../services/notification.service';
                             <tr class="text-emerald-800 bg-emerald-50">
                               <td class="p-2.5 font-medium">Restituire în caz de tranzacție (50%)</td>
                               <td class="p-2.5">Art. 45 alin. (1) OUG 80/2013</td>
-                              <td class="p-2.5 text-right font-mono font-bold">- {{ formatCurrency(timbreCalculation().totalTax / 2) }} RON</td>
+                              <td class="p-2.5 text-right font-mono font-bold">- {{ formatCurrency(calculateTimbreTax() / 2) }} RON</td>
                             </tr>
                           }
                         </tbody>
@@ -630,7 +754,7 @@ import { NotificationService } from '../services/notification.service';
                           <tr class="bg-gray-900 text-white font-bold text-sm">
                             <td class="p-3 uppercase" colspan="2">TOTAL TAXĂ JUDICIARĂ DE TIMBRU DATORATĂ:</td>
                             <td class="p-3 text-right font-mono text-amber-400 text-base">
-                              {{ formatCurrency(timbreCalculation().totalTax) }} RON
+                              {{ formatCurrency(calculateTimbreTax()) }} RON
                             </td>
                           </tr>
                         </tfoot>
@@ -664,18 +788,18 @@ import { NotificationService } from '../services/notification.service';
                           <tr>
                             <td class="p-2.5 font-medium">Rată de bază BNR + Marjă legală</td>
                             <td class="p-2.5 text-gray-600">OG 13/2011 ({{ interestRelationLabel() }})</td>
-                            <td class="p-2.5 text-right font-mono font-bold">{{ computedInterestRate() }}% / an</td>
+                            <td class="p-2.5 text-right font-mono font-bold">{{ getEffectiveInterestRate() }}% / an</td>
                           </tr>
                           <tr>
                             <td class="p-2.5 font-medium">Interval întârziere</td>
                             <td class="p-2.5 text-gray-600">{{ interestStartDate }} — {{ interestEndDate }}</td>
-                            <td class="p-2.5 text-right font-mono font-bold">{{ computedDaysDiff() }} zile</td>
+                            <td class="p-2.5 text-right font-mono font-bold">{{ getDaysDiff() }} zile</td>
                           </tr>
                           <tr>
                             <td class="p-2.5 font-medium">Formulă matematică aplicată</td>
                             <td class="p-2.5 text-gray-600" colspan="2">
                               Debit × (Rată % / 365) × Număr Zile = 
-                              {{ formatCurrency(interestPrincipal) }} × ({{ computedInterestRate() }}% / 365) × {{ computedDaysDiff() }}
+                              {{ formatCurrency(interestPrincipal) }} × ({{ getEffectiveInterestRate() }}% / 365) × {{ getDaysDiff() }} zile
                             </td>
                           </tr>
                         </tbody>
@@ -683,13 +807,13 @@ import { NotificationService } from '../services/notification.service';
                           <tr class="bg-gray-100 font-bold border-t border-gray-300">
                             <td class="p-2.5 uppercase" colspan="2">Total Dobândă Penalizatoare Calculată:</td>
                             <td class="p-2.5 text-right font-mono text-amber-700 text-sm">
-                              {{ formatCurrency(interestCalculation().totalInterest) }} RON
+                              {{ formatCurrency(calculateInterestTotal()) }} RON
                             </td>
                           </tr>
                           <tr class="bg-gray-900 text-white font-bold text-sm">
                             <td class="p-3 uppercase" colspan="2">TOTAL CREANȚĂ DE RECUPERAT (DEBIT + DOBÂNDĂ):</td>
                             <td class="p-3 text-right font-mono text-amber-400 text-base">
-                              {{ formatCurrency(interestCalculation().totalDue) }} RON
+                              {{ formatCurrency(calculateTotalClaimDue()) }} RON
                             </td>
                           </tr>
                         </tfoot>
@@ -720,13 +844,13 @@ import { NotificationService } from '../services/notification.service';
                               }
                             </td>
                             <td class="p-2.5 text-gray-600">Legea 51/1995 & Contract</td>
-                            <td class="p-2.5 text-right font-mono font-bold">{{ formatCurrency(feeCalculation().baseFeeAmount) }} RON</td>
+                            <td class="p-2.5 text-right font-mono font-bold">{{ formatCurrency(getBaseFeeCalculated()) }} RON</td>
                           </tr>
-                          @if (feeType === 'success' && feeCalculation().successAmount > 0) {
+                          @if (feeType === 'success' && getSuccessFeeCalculated() > 0) {
                             <tr>
                               <td class="p-2.5 font-medium">Onorariu de succes ({{ successPercent }}% din {{ formatCurrency(successStakeValue) }} RON)</td>
                               <td class="p-2.5 text-gray-600">Statutul profesiei de avocat</td>
-                              <td class="p-2.5 text-right font-mono font-bold">{{ formatCurrency(feeCalculation().successAmount) }} RON</td>
+                              <td class="p-2.5 text-right font-mono font-bold">{{ formatCurrency(getSuccessFeeCalculated()) }} RON</td>
                             </tr>
                           }
                           @if (otherExpenses > 0) {
@@ -741,7 +865,7 @@ import { NotificationService } from '../services/notification.service';
                           <tr class="bg-gray-900 text-white font-bold text-sm">
                             <td class="p-3 uppercase" colspan="2">TOTAL CHELTUIELI DE JUDECATĂ SOLICITATE:</td>
                             <td class="p-3 text-right font-mono text-amber-400 text-base">
-                              {{ formatCurrency(feeCalculation().totalFee) }} RON
+                              {{ formatCurrency(calculateFeeTotal()) }} RON
                             </td>
                           </tr>
                         </tfoot>
@@ -824,7 +948,7 @@ export class FeesComponent {
 
   // 1. Timbre State
   timbreCategory = 'evaluable';
-  timbreClaimValue = 100000;
+  timbreClaimValue = 50000;
   timbreAjutorPublic = false;
   timbreTranzactie = false;
 
@@ -863,108 +987,118 @@ export class FeesComponent {
 
   setMode(mode: 'timbre' | 'interest' | 'fee' | 'ai_deviz') {
     this.activeMode.set(mode);
+    this.cdr.markForCheck();
+  }
+
+  onParamChange() {
+    this.cdr.markForCheck();
+  }
+
+  setTimbreAmount(amount: number) {
+    this.timbreClaimValue = amount;
+    this.cdr.markForCheck();
+    this.notificationService.info(`Valoare obiect setată la ${this.formatCurrency(amount)} RON`);
+  }
+
+  setInterestPrincipal(amount: number) {
+    this.interestPrincipal = amount;
+    this.cdr.markForCheck();
+    this.notificationService.info(`Debit setat la ${this.formatCurrency(amount)} RON`);
+  }
+
+  setInterestPeriodDays(days: number) {
+    const end = new Date();
+    const start = new Date(end.getTime() - days * 24 * 60 * 60 * 1000);
+    this.interestEndDate = end.toISOString().slice(0, 10);
+    this.interestStartDate = start.toISOString().slice(0, 10);
+    this.cdr.markForCheck();
+  }
+
+  setInterestPeriodMonths(months: number) {
+    const end = new Date();
+    const start = new Date();
+    start.setMonth(start.getMonth() - months);
+    this.interestEndDate = end.toISOString().slice(0, 10);
+    this.interestStartDate = start.toISOString().slice(0, 10);
+    this.cdr.markForCheck();
+  }
+
+  setBaseFeeAmount(amount: number) {
+    this.baseFee = amount;
+    this.cdr.markForCheck();
+    this.notificationService.info(`Onorariu setat la ${this.formatCurrency(amount)} RON`);
+  }
+
+  generateReport(mode: 'timbre' | 'interest' | 'fee') {
+    this.cdr.markForCheck();
+    if (mode === 'timbre') {
+      const tax = this.calculateTimbreTax();
+      this.notificationService.success(`Notă de calcul generată: Taxă timbru ${this.formatCurrency(tax)} RON`);
+    } else if (mode === 'interest') {
+      const interest = this.calculateInterestTotal();
+      this.notificationService.success(`Raport dobândă generat: ${this.formatCurrency(interest)} RON dobândă`);
+    } else {
+      const fee = this.calculateFeeTotal();
+      this.notificationService.success(`Decont justificativ generat: Total ${this.formatCurrency(fee)} RON`);
+    }
   }
 
   // --- TIMBRE LOGIC (OUG 80/2013) ---
-  timbreCalculation = computed(() => {
+  calculateTimbreTax(): number {
     const category = this.timbreCategory;
-    const value = Math.max(0, this.timbreClaimValue || 0);
-
+    const value = Math.max(0, Number(this.timbreClaimValue) || 0);
     let totalTax = 0;
-    let formula = '';
-    let legalBasis = 'OUG 80/2013';
 
     switch (category) {
       case 'evaluable':
-        legalBasis = 'Art. 3 alin. (1) OUG 80/2013';
-        if (value <= 500) {
-          totalTax = Math.max(20, value * 0.08);
-          formula = '8% din valoare, dar nu mai puțin de 20 lei';
-        } else if (value <= 5000) {
-          totalTax = 40 + (value - 500) * 0.07;
-          formula = '40 lei + 7% pentru ce depășește 500 lei';
-        } else if (value <= 25000) {
-          totalTax = 355 + (value - 5000) * 0.05;
-          formula = '355 lei + 5% pentru ce depășește 5.000 lei';
-        } else if (value <= 50000) {
-          totalTax = 1355 + (value - 25000) * 0.03;
-          formula = '1.355 lei + 3% pentru ce depășește 25.000 lei';
-        } else if (value <= 250000) {
-          totalTax = 2105 + (value - 50000) * 0.02;
-          formula = '2.105 lei + 2% pentru ce depășește 50.000 lei';
-        } else {
-          totalTax = 6105 + (value - 250000) * 0.01;
-          formula = '6.105 lei + 1% pentru ce depășește 250.000 lei';
-        }
+        totalTax = this.calculateBaseEvaluableTax(value);
         break;
 
       case 'partaj':
-        legalBasis = 'Art. 5 alin. (1) OUG 80/2013';
         totalTax = value > 0 ? value * 0.03 : 50;
-        formula = '3% din valoarea masei partajabile (sau 50 lei dacă nu se contestă masa/creanțele)';
         break;
 
       case 'divort':
-        legalBasis = 'Art. 15 lit. a) OUG 80/2013';
         totalTax = 200;
-        formula = 'Taxă fixă 200 lei pentru divorț prin acordul soților';
         break;
 
       case 'divort_culpa':
-        legalBasis = 'Art. 15 lit. b) OUG 80/2013';
         totalTax = 100;
-        formula = 'Taxă fixă 100 lei pentru divorț din culpă / separare';
         break;
 
       case 'ordonanta':
-        legalBasis = 'Art. 6 alin. (2) OUG 80/2013';
         totalTax = 200;
-        formula = 'Taxă fixă 200 lei pentru procedura ordonanței de plată';
         break;
 
       case 'evacuare':
-        legalBasis = 'Art. 6 alin. (3) OUG 80/2013';
         totalTax = 100;
-        formula = 'Taxă fixă 100 lei pentru cererile de evacuare procedură specială';
         break;
 
       case 'posesorie':
-        legalBasis = 'Art. 4 alin. (1) OUG 80/2013';
         totalTax = 100;
-        formula = 'Taxă fixă 100 lei pentru acțiuni posesorii';
         break;
 
       case 'neevaluabil':
-        legalBasis = 'Art. 8 alin. (1) OUG 80/2013';
         totalTax = 20;
-        formula = 'Taxă fixă 20 lei (cerere neevaluabilă în bani)';
         break;
 
       case 'apel': {
-        legalBasis = 'Art. 23 alin. (1) OUG 80/2013';
         const baseApel = this.calculateBaseEvaluableTax(value);
         totalTax = baseApel * 0.5;
-        formula = '50% din taxa datorată pentru fond';
         break;
       }
 
       case 'recurs':
-        legalBasis = 'Art. 24 alin. (1) OUG 80/2013';
         totalTax = 100;
-        formula = '100 lei (sau 50% din taxa inițială)';
         break;
 
       case 'executare':
-        legalBasis = 'Art. 10 alin. (1) OUG 80/2013';
         totalTax = 20;
-        formula = '20 lei pentru fiecare cerere de încuviințare a executării silite';
         break;
 
       case 'contestatie_executare': {
-        legalBasis = 'Art. 10 alin. (2) OUG 80/2013';
         const baseContestatie = this.calculateBaseEvaluableTax(value);
         totalTax = Math.min(1000, baseContestatie);
-        formula = 'Calculată la valoarea bunurilor/creanței urmărite, plafonată la maxim 1.000 lei';
         break;
       }
     }
@@ -973,12 +1107,66 @@ export class FeesComponent {
       totalTax = totalTax / 2;
     }
 
-    return {
-      totalTax: Math.round(totalTax * 100) / 100,
-      formula,
-      legalBasis
-    };
-  });
+    return Math.round(totalTax * 100) / 100;
+  }
+
+  getTimbreFormula(): string {
+    const category = this.timbreCategory;
+    const value = Math.max(0, Number(this.timbreClaimValue) || 0);
+
+    switch (category) {
+      case 'evaluable':
+        if (value <= 500) return '8% din valoare, dar nu mai puțin de 20 lei';
+        if (value <= 5000) return '40 lei + 7% pentru ce depășește 500 lei';
+        if (value <= 25000) return '355 lei + 5% pentru ce depășește 5.000 lei';
+        if (value <= 50000) return '1.355 lei + 3% pentru ce depășește 25.000 lei';
+        if (value <= 250000) return '2.105 lei + 2% pentru ce depășește 50.000 lei';
+        return '6.105 lei + 1% pentru ce depășește 250.000 lei';
+      case 'partaj':
+        return '3% din valoarea masei partajabile (sau 50 lei dacă nu se contestă masa/creanțele)';
+      case 'divort':
+        return 'Taxă fixă 200 lei pentru divorț prin acordul soților';
+      case 'divort_culpa':
+        return 'Taxă fixă 100 lei pentru divorț din culpă / separare';
+      case 'ordonanta':
+        return 'Taxă fixă 200 lei pentru procedura ordonanței de plată';
+      case 'evacuare':
+        return 'Taxă fixă 100 lei pentru cererile de evacuare procedură specială';
+      case 'posesorie':
+        return 'Taxă fixă 100 lei pentru acțiuni posesorii';
+      case 'neevaluabil':
+        return 'Taxă fixă 20 lei (cerere neevaluabilă în bani)';
+      case 'apel':
+        return '50% din taxa datorată pentru cererea introductivă la fond';
+      case 'recurs':
+        return '100 lei (sau 50% conform art. 24 OUG 80/2013)';
+      case 'executare':
+        return '20 lei pentru fiecare cerere de încuviințare a executării silite';
+      case 'contestatie_executare':
+        return 'Calculată la valoarea bunurilor urmărite, plafonată la maxim 1.000 lei';
+      default:
+        return 'Calcul conform normelor OUG 80/2013';
+    }
+  }
+
+  getTimbreLegalBasis(): string {
+    const category = this.timbreCategory;
+    switch (category) {
+      case 'evaluable': return 'Art. 3 alin. (1) OUG 80/2013';
+      case 'partaj': return 'Art. 5 alin. (1) OUG 80/2013';
+      case 'divort': return 'Art. 15 lit. a) OUG 80/2013';
+      case 'divort_culpa': return 'Art. 15 lit. b) OUG 80/2013';
+      case 'ordonanta': return 'Art. 6 alin. (2) OUG 80/2013';
+      case 'evacuare': return 'Art. 6 alin. (3) OUG 80/2013';
+      case 'posesorie': return 'Art. 4 alin. (1) OUG 80/2013';
+      case 'neevaluabil': return 'Art. 8 alin. (1) OUG 80/2013';
+      case 'apel': return 'Art. 23 alin. (1) OUG 80/2013';
+      case 'recurs': return 'Art. 24 alin. (1) OUG 80/2013';
+      case 'executare': return 'Art. 10 alin. (1) OUG 80/2013';
+      case 'contestatie_executare': return 'Art. 10 alin. (2) OUG 80/2013';
+      default: return 'OUG 80/2013';
+    }
+  }
 
   private calculateBaseEvaluableTax(value: number): number {
     if (value <= 500) return Math.max(20, value * 0.08);
@@ -1008,39 +1196,40 @@ export class FeesComponent {
   }
 
   // --- INTEREST LOGIC (OG 13/2011) ---
-  computedInterestRate = computed(() => {
+  getEffectiveInterestRate(): number {
     if (this.interestRelationType === 'custom') {
-      return this.interestCustomRate || 0;
+      return Number(this.interestCustomRate) || 0;
     }
     if (this.interestRelationType === 'b2b') {
-      return this.bnrReferenceRate + 8;
+      return Number(this.bnrReferenceRate) + 8;
     }
     if (this.interestRelationType === 'b2c_penal') {
-      return this.bnrReferenceRate + 4;
+      return Number(this.bnrReferenceRate) + 4;
     }
-    return this.bnrReferenceRate;
-  });
+    return Number(this.bnrReferenceRate);
+  }
 
-  computedDaysDiff = computed(() => {
+  getDaysDiff(): number {
     if (!this.interestStartDate || !this.interestEndDate) return 0;
     const start = new Date(this.interestStartDate).getTime();
     const end = new Date(this.interestEndDate).getTime();
     return Math.max(0, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
-  });
+  }
 
-  interestCalculation = computed(() => {
-    const principal = Math.max(0, this.interestPrincipal || 0);
-    const ratePercent = this.computedInterestRate();
-    const days = this.computedDaysDiff();
+  calculateInterestTotal(): number {
+    const principal = Math.max(0, Number(this.interestPrincipal) || 0);
+    const ratePercent = this.getEffectiveInterestRate();
+    const days = this.getDaysDiff();
 
     const totalInterest = (principal * (ratePercent / 100) * days) / 365;
-    const totalDue = principal + totalInterest;
+    return Math.round(totalInterest * 100) / 100;
+  }
 
-    return {
-      totalInterest: Math.round(totalInterest * 100) / 100,
-      totalDue: Math.round(totalDue * 100) / 100
-    };
-  });
+  calculateTotalClaimDue(): number {
+    const principal = Math.max(0, Number(this.interestPrincipal) || 0);
+    const totalInterest = this.calculateInterestTotal();
+    return Math.round((principal + totalInterest) * 100) / 100;
+  }
 
   interestRelationLabel(): string {
     if (this.interestRelationType === 'b2b') return 'Art. 3 alin. 2 ind. 1 (Profesioniști B2B: BNR + 8%)';
@@ -1050,25 +1239,26 @@ export class FeesComponent {
   }
 
   // --- FEE LOGIC (Art. 453 CPC) ---
-  feeCalculation = computed(() => {
-    const baseFeeAmount = this.feeType === 'hourly'
-      ? (this.hourlyRate || 0) * (this.hoursSpent || 0)
-      : (this.baseFee || 0);
-
-    let successAmount = 0;
-    if (this.feeType === 'success') {
-      successAmount = ((this.successStakeValue || 0) * (this.successPercent || 0)) / 100;
+  getBaseFeeCalculated(): number {
+    if (this.feeType === 'hourly') {
+      return (Number(this.hourlyRate) || 0) * (Number(this.hoursSpent) || 0);
     }
+    return Number(this.baseFee) || 0;
+  }
 
-    const expenses = this.otherExpenses || 0;
-    const totalFee = baseFeeAmount + successAmount + expenses;
+  getSuccessFeeCalculated(): number {
+    if (this.feeType === 'success') {
+      return ((Number(this.successStakeValue) || 0) * (Number(this.successPercent) || 0)) / 100;
+    }
+    return 0;
+  }
 
-    return {
-      baseFeeAmount,
-      successAmount,
-      totalFee: Math.round(totalFee * 100) / 100
-    };
-  });
+  calculateFeeTotal(): number {
+    const base = this.getBaseFeeCalculated();
+    const success = this.getSuccessFeeCalculated();
+    const expenses = Number(this.otherExpenses) || 0;
+    return Math.round((base + success + expenses) * 100) / 100;
+  }
 
   // --- AI DEVIZ GENERATION ---
   async generateAiDeviz() {
