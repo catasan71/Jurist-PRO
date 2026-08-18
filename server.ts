@@ -508,8 +508,12 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
         // ignore
     }
     
-    if (errMsg.includes('API key not valid')) {
-        errMsg = 'Cheia API Gemini furnizată nu este validă. Vă rugăm să verificați meniul Settings (Secrets) și să introduceți o cheie API validă din Google AI Studio.';
+    if (errMsg.includes('API key not valid') || errMsg.includes('API_KEY_INVALID')) {
+        errMsg = 'Cheia API Gemini furnizată nu este validă. Vă rugăm să verificați meniul Settings / Secrets și să introduceți o cheie API validă din Google AI Studio.';
+    } else if (errMsg.includes('leaked') || errMsg.includes('reported as leaked')) {
+        errMsg = 'Cheia API Gemini a fost dezactivată de Google deoarece a fost raportată ca expusă. Vă rugăm să generați o cheie nouă gratuită pe aistudio.google.com și să o introduceți în meniul Settings / Secrets (variabila GEMINI_API_KEY).';
+    } else if (errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('429') || errMsg.includes('Quota exceeded')) {
+        errMsg = 'S-a atins limita de apeluri a cheii API (Quota Exceeded). Vă rugăm să așteptați câteva momente sau să folosiți o cheie cu facturare activată.';
     }
     
     // If headers were already sent, propagate the error through the stream, otherwise send status 500

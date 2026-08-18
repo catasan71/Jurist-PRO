@@ -1554,8 +1554,8 @@ export class JuristService implements OnDestroy {
     if (msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand') || msg.includes('overloaded')) {
       throw new Error('Sistemul AI este momentan suprasolicitat din cauza cererii ridicate (Eroare 503). Vă rugăm să așteptați câteva momente și să reîncercați. Nu vi s-au reținut credite.', { cause: e });
     }
-    if (msg.includes('API_KEY_INVALID') || msg.includes('API key not valid') || msg.includes('API key is invalid') || msg.includes('API key has expired') || (msg.includes('key') && msg.includes('invalid'))) {
-      throw new Error('Cheie API invalidă sau expirată.', { cause: e });
+    if (msg.includes('API_KEY_INVALID') || msg.includes('API key not valid') || msg.includes('API key is invalid') || msg.includes('API key has expired') || msg.includes('leaked') || msg.includes('reported as leaked') || (msg.includes('key') && msg.includes('invalid'))) {
+      throw new Error('Cheia API Gemini a fost invalidată sau raportată ca expusă de Google. Vă rugăm să generați o cheie API gratuită nouă pe https://aistudio.google.com și să o introduceți în Settings (Secrets -> GEMINI_API_KEY).', { cause: e });
     }
     
     // Fallback to a cleaner error message instead of raw JSON
