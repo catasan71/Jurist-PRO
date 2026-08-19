@@ -25,6 +25,46 @@ function getResend() {
 const app = express();
 const port = 3000;
 
+// Security hardening: Disable x-powered-by header
+app.disable('x-powered-by');
+
+// Security headers middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
+  next();
+});
+
+// In-memory rate limiting map for API abuse protection
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const apiRateLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const ip = req.ip || req.headers['x-forwarded-for'] || 'client';
+  const key = String(ip);
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute
+  const maxRequests = 100; // 100 requests per minute per IP
+
+  const record = rateLimitMap.get(key);
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
+    return next();
+  }
+
+  if (record.count >= maxRequests) {
+    return res.status(429).json({ 
+      error: 'Prea multe solicitări într-un interval scurt. Vă rugăm să așteptați 30 de secunde.' 
+    });
+  }
+
+  record.count++;
+  next();
+};
+
+app.use('/api/', apiRateLimiter);
+
 // Lazy initialization
 let adminDbInstance: admin.firestore.Firestore | null = null;
 function getAdminDb() {

@@ -72,19 +72,14 @@ import { AuthService, UserConsents } from '../services/auth.service';
                     Sistemul adaugă automat prefixul <span class="font-bold">+40 (România)</span> pentru alerte WhatsApp corecte.
                   </p>
                   <button 
-                    [disabled]="!formData.phone || testingWhatsApp()"
                     (click)="testWhatsApp()"
-                    class="mt-3 w-full text-xs font-bold text-center bg-green-500/10 hover:bg-green-500/20 active:bg-green-500/30 text-green-400 py-2.5 px-3 rounded-lg border border-green-400/20 hover:border-green-400/40 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="mt-3 w-full text-xs font-bold text-center bg-gray-800 hover:bg-gray-700 active:bg-gray-600 text-gray-300 py-2.5 px-3 rounded-lg border border-gray-700 hover:border-gray-600 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    @if (testingWhatsApp()) {
-                      <div class="w-3.5 h-3.5 border-2 border-green-400 border-t-transparent rounded-full animate-spin"></div>
-                      Se trimite testul...
-                    } @else {
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-whatsapp" viewBox="0 0 16 16">
-                        <path d="M13.601 2.326A7.85 7.85 0 0 0 8 0a7.85 7.85 0 0 0-7.85 7.85c0 1.39.363 2.748 1.053 3.96L0 16l4.288-1.124a7.9 7.9 0 0 0 3.713.92H8a7.85 7.85 0 0 0 7.85-7.85z"/>
-                      </svg>
-                      Trimite un Mesaj de Test WhatsApp
-                    }
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-whatsapp text-gray-400" viewBox="0 0 16 16">
+                      <path d="M13.601 2.326A7.85 7.85 0 0 0 8 0a7.85 7.85 0 0 0-7.85 7.85c0 1.39.363 2.748 1.053 3.96L0 16l4.288-1.124a7.9 7.9 0 0 0 3.713.92H8a7.85 7.85 0 0 0 7.85-7.85z"/>
+                    </svg>
+                    <span>Test WhatsApp</span>
+                    <span class="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-medium">Momentan indisponibil</span>
                   </button>
                 </div>
                 <div>
@@ -304,15 +299,7 @@ export class ProfileComponent {
     this.juristService.setModule('pricing');
   }
 
-  async testWhatsApp() {
-    if (!this.formData.phone) return;
-    this.testingWhatsApp.set(true);
-    try {
-      await this.juristService.sendTestWhatsApp(this.formData.phone);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      this.testingWhatsApp.set(false);
-    }
+  testWhatsApp() {
+    this.juristService.notificationService.info('Serviciul de alerte WhatsApp este momentan indisponibil.');
   }
 }

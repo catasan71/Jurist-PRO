@@ -888,45 +888,10 @@ export class JuristService implements OnDestroy {
     return cleaned;
   }
 
-  sendWhatsAppAlert(event: CalendarEvent, automated = false) {
-    // Constructing message with high-visibility markers
-    const location = event.details || 'Nespecificat';
-    const notes = event.notes || 'Fără note adiționale';
-    
-    const messageLines = [
-      `🔔 *ALERTA JURISTPRO - REAMINTIRE 24H*`,
-      ``,
-      `⚖️ *DOSAR/SUBIECT:* ${event.title || 'Nespecificat'}`,
-      `👤 *CLIENT:* ${event.clientName || 'Nespecificat'}`,
-      `📅 *DATA:* ${event.date || '...'}`,
-      `🕒 *ORA:* ${event.time || '...'}`,
-      `📂 *OBIECT:* ${event.caseObject || 'Nespecificat'}`,
-      `📍 *LOCAȚIE:* ${location}`,
-      ``,
-      `📝 *NOTE:* ${notes}`,
-      ``,
-      `_Mesaj automat generat de către JuristPRO AI_`
-    ];
-
-    const message = encodeURIComponent(messageLines.join('\n'));
-    const phoneNum = this.profile().phone || '';
-    const cleanPhone = this.getSanitizedPhone(phoneNum);
-
-    if (!automated) {
-      const url = cleanPhone 
-        ? `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${message}`
-        : `https://api.whatsapp.com/send?text=${message}`;
-
-      console.log('[WHATSAPP] Opening Link:', url);
-      const win = window.open(url, '_blank');
-      if (!win) {
-         console.warn('[WHATSAPP] Popup blocked, falling back to window.location.href');
-         this.notificationService.warning('Pop-up blocat de browser. Despachetăm și transferăm pe WhatsApp...');
-         setTimeout(() => {
-            window.location.href = url;
-         }, 1500);
-      }
-    }
+  sendWhatsAppAlert(event?: CalendarEvent, automated = false) {
+    void event;
+    void automated;
+    this.notificationService.info('Serviciul de alerte WhatsApp este momentan indisponibil.');
   }
 
   /**

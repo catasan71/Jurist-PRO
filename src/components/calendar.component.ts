@@ -617,15 +617,18 @@ interface WindowWithSpeechRecognition extends Window {
                 <textarea id="caseNotes" [(ngModel)]="editingEvent.notes" rows="5" class="w-full bg-black border border-gray-700 rounded-xl p-4 text-sm text-gray-200 focus:border-jurist-orange outline-none resize-none transition-all placeholder-gray-800" placeholder="Strategia, probe, martori propuși..."></textarea>
               </div>
 
-              <div class="flex items-center gap-4 bg-emerald-500/5 p-4 rounded-xl border border-emerald-500/10 hover:border-emerald-500/30 transition-all group">
-                <div class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="alert" [(ngModel)]="editingEvent.whatsappAlert" class="w-5 h-5 accent-jurist-orange cursor-pointer">
+              <button type="button" (click)="onWhatsAppAlertToggle()" class="w-full text-left flex items-center gap-4 bg-gray-850 p-4 rounded-xl border border-gray-750 hover:border-gray-600 transition-all cursor-pointer group">
+                <div class="relative inline-flex items-center">
+                  <input type="checkbox" id="alert" [checked]="editingEvent.whatsappAlert" (click)="$event.stopPropagation(); onWhatsAppAlertToggle()" class="w-5 h-5 accent-jurist-orange cursor-pointer">
                 </div>
-                <label for="alert" class="text-sm text-gray-300 cursor-pointer select-none">
-                  <span class="font-bold text-white block">Alerte WhatsApp Automate</span>
-                  <span class="text-xs text-gray-500 group-hover:text-gray-400">Primiți o notificare pe WhatsApp cu 24h înainte.</span>
-                </label>
-              </div>
+                <div class="text-sm text-gray-300 select-none flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-white">Alerte WhatsApp Automate</span>
+                    <span class="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-medium">Momentan indisponibil</span>
+                  </div>
+                  <span class="text-xs text-gray-400 group-hover:text-gray-300">Primiți o notificare pe WhatsApp cu 24h înainte de termen.</span>
+                </div>
+              </button>
             </div>
 
             <div class="p-4 sm:p-6 border-t border-gray-800 flex flex-col sm:flex-row justify-between gap-3 bg-jurist-dark">
@@ -1287,17 +1290,12 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
   }
 
-  syncWhatsAppAlerts() {
-    const alerts = this.juristService.readyAlerts();
-    if (alerts.length === 0) {
-      this.juristService.notificationService.warning('Nu există alerte pregătite în mod activ pentru următoarele 24 de ore.');
-      return;
-    }
+  onWhatsAppAlertToggle() {
+    this.juristService.notificationService.info('Alertele automate prin WhatsApp sunt momentan indisponibile.');
+  }
 
-    this.queueAlertsList.set(alerts);
-    this.currentQueueIndex.set(0);
-    this.showQueueModal.set(true);
-    this.juristService.notificationService.info(`S-a deschis asistentul pentru ${alerts.length} alerte pregătite.`);
+  syncWhatsAppAlerts() {
+    this.juristService.notificationService.info('Serviciul de alerte WhatsApp este momentan indisponibil.');
   }
 
   closeQueueModal() {
