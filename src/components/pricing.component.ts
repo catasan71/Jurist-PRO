@@ -442,16 +442,16 @@ export class PricingComponent {
 
     this.processing.set(true);
     
+    const finalBillingData = {
+      type: this.billingType,
+      name: this.billingType === 'juridica' ? this.billingData.companyName : this.billingData.fullName,
+      cui: this.billingType === 'juridica' ? this.billingData.cui : null,
+      regCom: this.billingType === 'juridica' ? this.billingData.regCom : null,
+      address: this.billingData.address
+    };
+
     const user = this.authService.currentUser();
     if (user) {
-      const finalBillingData = {
-        type: this.billingType,
-        name: this.billingType === 'juridica' ? this.billingData.companyName : this.billingData.fullName,
-        cui: this.billingType === 'juridica' ? this.billingData.cui : null,
-        regCom: this.billingType === 'juridica' ? this.billingData.regCom : null,
-        address: this.billingData.address
-      };
-      
       // Do not await this to prevent popup blocker in the subsequent calls
       this.authService.updateBillingData(user.id, finalBillingData).catch(console.error);
     }
@@ -488,7 +488,7 @@ export class PricingComponent {
   getModalCredits(): number {
     const topUp = this.pendingTopUpAmount();
     if (topUp) {
-      const pkg = this.topUpPackages().find(p => p.price === topUp);
+      const pkg = this.juristService.topUpPackages().find((p: { price: number; credits: number }) => p.price === topUp);
       return pkg ? pkg.credits : 0;
     }
     if (this.pendingPlan === 'expert') return 150;

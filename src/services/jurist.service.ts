@@ -1105,7 +1105,7 @@ export class JuristService implements OnDestroy {
 
   // --- SUB/CREDITS ---
 
-  async upgradePlan(newPlan: PlanType, billingData?: any) {
+  async upgradePlan(newPlan: PlanType, billingData?: Record<string, unknown>) {
     const user = this.authService.currentUser();
     if (!user) return;
 
@@ -1236,7 +1236,7 @@ export class JuristService implements OnDestroy {
     }
   }
 
-  async purchaseTopUp(amount: number, billingData?: any) {
+  async purchaseTopUp(amount: number, billingData?: Record<string, unknown>) {
     const user = this.authService.currentUser();
     if (!user) return;
 
