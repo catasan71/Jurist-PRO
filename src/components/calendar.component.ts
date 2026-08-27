@@ -129,7 +129,16 @@ interface WindowWithSpeechRecognition extends Window {
                        <h4 class="text-base sm:text-lg font-bold text-white truncate pr-2">{{ event.title }}</h4>
                        <p class="text-jurist-orange text-xs sm:text-sm font-semibold truncate">{{ event.clientName }}</p>
                      </div>
-                     <span [class]="getBadgeClass(event.type) + ' self-start sm:self-auto'">{{ getTypeLabel(event.type) }}</span>
+                      <div class="flex items-center gap-2 self-start sm:self-auto">
+                        @if (juristService.isEventPast(event)) {
+                          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">Trecut</span>
+                        } @else {
+                          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                            {{ juristService.getEventCountdownLabel(event) }}
+                          </span>
+                        }
+                        <span [class]="getBadgeClass(event.type)">{{ getTypeLabel(event.type) }}</span>
+                      </div>
                    </div>
                    
                    <p class="text-gray-400 text-xs sm:text-sm mt-1 italic truncate">{{ event.caseObject }}</p>
@@ -1105,15 +1114,32 @@ export class CalendarComponent implements OnInit, OnDestroy {
   
   filteredEvents = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
-    const events = this.juristService.events();
-    if (!q) return events;
-    return events.filter(e => 
-      e.title.toLowerCase().includes(q) || 
-      e.clientName.toLowerCase().includes(q) || 
-      e.caseObject.toLowerCase().includes(q) ||
-      e.details.toLowerCase().includes(q) ||
-      e.notes.toLowerCase().includes(q)
-    );
+    let events = this.juristService.events();
+    if (q) {
+      events = events.filter(e => 
+        e.title.toLowerCase().includes(q) || 
+        e.clientName.toLowerCase().includes(q) || 
+        e.caseObject.toLowerCase().includes(q) ||
+        e.details.toLowerCase().includes(q) ||
+        e.notes.toLowerCase().includes(q)
+      );
+    }
+    
+    // Sort upcoming first (ascending), then past (descending)
+    const upcoming = events.filter(e => !this.juristService.isEventPast(e))
+      .sort((a, b) => {
+        const da = this.juristService.parseEventDate(a.date, a.time)?.getTime() || 0;
+        const db = this.juristService.parseEventDate(b.date, b.time)?.getTime() || 0;
+        return da - db;
+      });
+    const past = events.filter(e => this.juristService.isEventPast(e))
+      .sort((a, b) => {
+        const da = this.juristService.parseEventDate(a.date, a.time)?.getTime() || 0;
+        const db = this.juristService.parseEventDate(b.date, b.time)?.getTime() || 0;
+        return db - da;
+      });
+
+    return [...upcoming, ...past];
   });
 
   defaultEvent: CalendarEvent = {
@@ -1153,7 +1179,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
   // Helper to update signal properties
   updateCurrentEvent(field: string, value: string | boolean | undefined) {
     this.currentEventSignal.update(s => ({ ...s, [field]: value }));
-    console.log('Event updated:', field, value);
   }
 
   // Helper for nested financial field
@@ -1277,8 +1302,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       );
 
       if (pending.length > 0 && this.juristService.profile().phone) {
-        // We could automatically pop one here, but it's better to show a "Sync" button if multiple
-        console.log(`Found ${pending.length} pending WhatsApp alerts.`);
+        // Pending WhatsApp alerts available
       }
     }, 2000);
   }

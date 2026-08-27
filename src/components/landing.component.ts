@@ -22,7 +22,7 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
             <div class="w-10 h-10 bg-jurist-orange rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(255,140,0,0.4)] group-hover:shadow-[0_0_25px_rgba(255,140,0,0.6)] transition-all duration-300">
               <span class="text-black font-black text-xl">J</span>
             </div>
-            <h1 class="text-2xl font-bold tracking-wide text-white">Jurist<span class="text-jurist-orange">PRO</span></h1>
+            <span class="text-2xl font-bold tracking-wide text-white">Jurist<span class="text-jurist-orange">PRO</span></span>
           </div>
 
           <!-- Desktop Nav -->
@@ -185,7 +185,7 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                 <section id="security" class="py-32 bg-black relative border-y border-gray-900 overflow-hidden">
                    <div class="absolute inset-0 bg-jurist-orange/5 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-jurist-orange/20 via-transparent to-transparent"></div>
                    
-                   <div class="max-w-7xl mx-auto px-6 relative z-10">
+                   <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
                       <div class="text-center mb-20 opacity-0 translate-y-10 transition-all duration-700" #anim>
                          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 text-green-500 mb-6">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
@@ -198,30 +198,30 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                          </p>
                       </div>
 
-                      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-12 items-start">
                          <!-- Left Column: What happens to data -->
-                         <div class="space-y-8 opacity-0 -translate-x-10 transition-all duration-1000" #anim>
+                         <div class="space-y-8 opacity-0 translate-y-10 transition-all duration-1000" #anim>
                             <h3 class="text-2xl font-bold text-white border-b border-gray-800 pb-4">Ce se întâmplă cu documentele încărcate?</h3>
                             
                             <div class="space-y-6">
-                               <div class="flex gap-4">
-                                  <div class="w-10 h-10 rounded-full bg-jurist-orange/20 text-jurist-orange flex items-center justify-center shrink-0 font-bold">1</div>
+                               <div class="flex gap-4 p-5 bg-[#111] rounded-2xl border border-gray-800 hover:border-gray-700 transition-colors">
+                                  <div class="w-10 h-10 rounded-xl bg-jurist-orange/20 text-jurist-orange flex items-center justify-center shrink-0 font-bold">1</div>
                                   <div>
                                      <h4 class="text-lg font-bold text-gray-200 mb-2">Criptare în Tranzit și în Repaus</h4>
                                      <p class="text-gray-400 text-sm leading-relaxed">În momentul încărcării, documentul este criptat folosind protocolul <strong>TLS 1.3</strong>. Odată ajuns pe serverele noastre din Frankfurt (UE), este criptat cu algoritmul militar <strong>AES-256</strong>. Doar tu deții cheia de decriptare.</p>
                                   </div>
                                </div>
                                
-                               <div class="flex gap-4">
-                                  <div class="w-10 h-10 rounded-full bg-jurist-orange/20 text-jurist-orange flex items-center justify-center shrink-0 font-bold">2</div>
+                               <div class="flex gap-4 p-5 bg-[#111] rounded-2xl border border-gray-800 hover:border-gray-700 transition-colors">
+                                  <div class="w-10 h-10 rounded-xl bg-jurist-orange/20 text-jurist-orange flex items-center justify-center shrink-0 font-bold">2</div>
                                   <div>
                                      <h4 class="text-lg font-bold text-gray-200 mb-2">Procesare Efemeră (In-Memory)</h4>
                                      <p class="text-gray-400 text-sm leading-relaxed">Când soliciți o analiză AI, documentul este decriptat strict în memoria RAM a serverului pentru fracțiuni de secundă. <strong>Nu este salvat niciodată pe disc în formă necriptată.</strong></p>
                                   </div>
                                </div>
 
-                               <div class="flex gap-4">
-                                  <div class="w-10 h-10 rounded-full bg-jurist-orange/20 text-jurist-orange flex items-center justify-center shrink-0 font-bold">3</div>
+                               <div class="flex gap-4 p-5 bg-[#111] rounded-2xl border border-gray-800 hover:border-gray-700 transition-colors">
+                                  <div class="w-10 h-10 rounded-xl bg-jurist-orange/20 text-jurist-orange flex items-center justify-center shrink-0 font-bold">3</div>
                                   <div>
                                      <h4 class="text-lg font-bold text-gray-200 mb-2">Ștergere Automată (Zero Retention)</h4>
                                      <p class="text-gray-400 text-sm leading-relaxed">Imediat după generarea răspunsului sau a sintezei, documentul sursă și datele extrase sunt <strong>șterse ireversibil</strong> din memoria sistemului AI. Nu păstrăm istoricul documentelor analizate.</p>
@@ -231,11 +231,11 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                          </div>
 
                          <!-- Right Column: Technical Guarantees -->
-                         <div class="space-y-8 opacity-0 translate-x-10 transition-all duration-1000 delay-100" #anim>
+                         <div class="space-y-8 opacity-0 translate-y-10 transition-all duration-1000 delay-100" #anim>
                             <h3 class="text-2xl font-bold text-white border-b border-gray-800 pb-4">Garanții Tehnice și Legale</h3>
                             
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                               <div class="bg-[#111] p-5 rounded-xl border border-gray-800 hover:border-jurist-orange/50 transition-colors">
+                               <div class="bg-[#111] p-5 rounded-2xl border border-gray-800 hover:border-jurist-orange/50 transition-colors">
                                   <div class="text-jurist-orange mb-3">
                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
                                   </div>
@@ -243,7 +243,7 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                                   <p class="text-xs text-gray-400">Garantăm contractual că datele, spețele sau documentele tale <strong>NU</strong> sunt folosite pentru antrenarea modelelor de inteligență artificială.</p>
                                </div>
 
-                               <div class="bg-[#111] p-5 rounded-xl border border-gray-800 hover:border-jurist-orange/50 transition-colors">
+                               <div class="bg-[#111] p-5 rounded-2xl border border-gray-800 hover:border-jurist-orange/50 transition-colors">
                                   <div class="text-jurist-orange mb-3">
                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                   </div>
@@ -251,7 +251,7 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                                   <p class="text-xs text-gray-400">Infrastructura respectă normele GDPR și cerințele de confidențialitate impuse de Statutul Profesiei de Avocat.</p>
                                </div>
 
-                               <div class="bg-[#111] p-5 rounded-xl border border-gray-800 hover:border-jurist-orange/50 transition-colors">
+                               <div class="bg-[#111] p-5 rounded-2xl border border-gray-800 hover:border-jurist-orange/50 transition-colors">
                                   <div class="text-jurist-orange mb-3">
                                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm-3-6h.008v.008h-.008v-.008z" /></svg>
                                   </div>
@@ -265,6 +265,27 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                                   </div>
                                   <h4 class="font-bold text-white text-sm mb-2">Acces Restricționat</h4>
                                   <p class="text-xs text-gray-400">Niciun angajat JuristPRO nu are acces la documentele tale. Autentificarea se face prin token-uri securizate.</p>
+                               </div>
+                            </div>
+
+                            <!-- Direct verification and contract confirmation banner -->
+                            <div class="p-5 bg-gradient-to-r from-gray-900 via-gray-900/90 to-black border border-gray-800 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                               <div class="space-y-1">
+                                  <div class="flex items-center gap-2">
+                                     <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20 text-green-400 text-xs font-bold">✓</span>
+                                     <h5 class="text-sm font-bold text-white">Garanții Confirmate Contractual</h5>
+                                  </div>
+                                  <p class="text-xs text-gray-400">
+                                     Toate claim-urile de securitate (criptare AES-256, servere Frankfurt ISO 27001, No-Training) sunt clauze obligatorii în acordul juridic.
+                                  </p>
+                               </div>
+                               <div class="flex flex-wrap items-center gap-2 shrink-0 w-full md:w-auto">
+                                  <button (click)="setView('privacy')" class="flex-1 md:flex-initial text-xs bg-blue-950/40 hover:bg-blue-900/60 text-blue-300 border border-blue-500/30 px-3.5 py-2 rounded-lg font-medium transition-colors text-center">
+                                     Consultă DPA & GDPR &rarr;
+                                  </button>
+                                  <button (click)="setView('terms')" class="flex-1 md:flex-initial text-xs bg-jurist-orange/15 hover:bg-jurist-orange/25 text-jurist-orange border border-jurist-orange/30 px-3.5 py-2 rounded-lg font-medium transition-colors text-center">
+                                     Termeni & Condiții &rarr;
+                                  </button>
                                </div>
                             </div>
                          </div>
@@ -352,7 +373,13 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                                            </div>
                                         </div>
                                         <div>
-                                           <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2"><span class="text-jurist-orange">2.</span> Sinteză Jurisprudență</h3>
+                                           <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                                              <h3 class="text-xl font-bold text-white flex items-center gap-2"><span class="text-jurist-orange">2.</span> Sinteză Jurisprudență</h3>
+                                              <span class="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full font-medium flex items-center gap-1.5 shadow-sm">
+                                                 <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                 Exemplu ilustrativ demo
+                                              </span>
+                                           </div>
                                            <div class="bg-[#111] rounded-xl p-5 border border-gray-800">
                                               <div class="flex gap-4 mb-4">
                                                  <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center shrink-0 text-sm">👤</div>
@@ -360,13 +387,22 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                                               </div>
                                               <div class="flex gap-4">
                                                  <div class="w-8 h-8 rounded-full bg-jurist-orange/20 text-jurist-orange flex items-center justify-center shrink-0 text-sm font-bold">J</div>
-                                                 <div class="text-gray-300 text-sm bg-jurist-orange/5 p-4 rounded-lg rounded-tl-none border border-jurist-orange/10 space-y-3">
-                                                    <p>Am identificat 3 decizii relevante recente ale Înaltei Curți de Casație și Justiție:</p>
-                                                    <ul class="list-disc pl-5 space-y-1 text-gray-400">
+                                                 <div class="text-gray-300 text-sm bg-jurist-orange/5 p-4 rounded-lg rounded-tl-none border border-jurist-orange/10 space-y-3 w-full">
+                                                    <div class="flex items-center justify-between gap-2 border-b border-jurist-orange/10 pb-2">
+                                                       <p class="font-medium text-white text-sm">Am identificat decizii relevante în practica judiciară:</p>
+                                                       <span class="text-[10px] text-gray-400 bg-black/40 px-2 py-0.5 rounded border border-gray-800 font-mono shrink-0">Simulare Format</span>
+                                                    </div>
+                                                    <ul class="list-disc pl-5 space-y-1.5 text-gray-300 text-sm">
                                                        <li><strong>Decizia nr. 1234/2023 (Secția a II-a Civilă):</strong> Constată caracterul abuziv al clauzei de risc valutar, obligând banca la stabilizarea cursului la momentul acordării creditului.</li>
                                                        <li><strong>Decizia nr. 892/2023:</strong> Respinge acțiunea consumatorului pe motiv de prescripție a dreptului la acțiune pentru restituirea prestațiilor.</li>
                                                     </ul>
-                                                    <button class="text-jurist-orange text-xs font-bold hover:underline mt-2">Vezi documentele complete (PDF) &rarr;</button>
+                                                    <div class="pt-3 border-t border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                                       <p class="text-[11px] text-gray-400 flex items-center gap-1.5">
+                                                          <span class="text-amber-400 font-bold">●</span>
+                                                          <em>Notă: Numerele de decizie sunt ilustrative pentru demo. În aplicație, citările sunt extrase cu linkuri reale și verificare juridică RAG.</em>
+                                                       </p>
+                                                       <button class="text-jurist-orange text-xs font-bold hover:underline shrink-0 text-left">Vezi documentele complete (PDF) &rarr;</button>
+                                                    </div>
                                                  </div>
                                               </div>
                                            </div>
@@ -590,15 +626,23 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                          </div>
 
                          <!-- Gold -->
-                         <div class="bg-black border border-gray-800 p-8 rounded-3xl opacity-0 translate-y-10 transition-all duration-700 delay-200" #anim>
-                            <h3 class="text-xl font-bold text-yellow-500">Gold</h3>
-                            <div class="my-6"><span class="text-4xl font-bold text-white">500 RON</span></div>
-                            <ul class="space-y-4 mb-8 text-gray-400 text-sm">
-                               <li class="flex gap-2">✓ 500 Credite / lună</li>
-                               <li class="flex gap-2">✓ Suport Prioritar</li>
-                               <li class="flex gap-2">✓ Acces API Beta</li>
-                            </ul>
-                            <button (click)="enterApp()" class="w-full py-3 border border-gray-700 rounded-xl text-yellow-500 font-bold hover:bg-gray-800">Alege Gold</button>
+                         <div class="bg-gradient-to-b from-[#18160e] to-[#0c0c0c] border-2 border-amber-500/50 hover:border-amber-400 p-8 rounded-3xl relative shadow-[0_0_35px_rgba(245,158,11,0.12)] opacity-0 translate-y-10 transition-all duration-700 delay-200 flex flex-col justify-between" #anim>
+                            <div class="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-yellow-500 text-black text-xs font-black px-4 py-1.5 rounded-bl-xl rounded-tr-2xl tracking-wider uppercase shadow-md">VIP</div>
+                            <div>
+                               <h3 class="text-2xl font-black text-amber-300">Gold</h3>
+                               <div class="my-6">
+                                  <span class="text-4xl font-black text-white">500</span> 
+                                  <span class="text-amber-200/80 font-bold text-lg"> RON</span>
+                                  <span class="text-gray-400 text-xs block mt-0.5">/ lună</span>
+                               </div>
+                               <ul class="space-y-4 mb-8 text-sm">
+                                  <li class="flex items-center gap-2.5 text-white font-medium"><span class="text-amber-400 font-bold text-base">✓</span> 500 Credite AI / lună</li>
+                                  <li class="flex items-center gap-2.5 text-white font-medium"><span class="text-amber-400 font-bold text-base">✓</span> Suport Prioritar Dedicat</li>
+                                  <li class="flex items-center gap-2.5 text-white font-medium"><span class="text-amber-400 font-bold text-base">✓</span> Export DOCX Nelimitat</li>
+                                  <li class="flex items-center gap-2.5 text-white font-medium"><span class="text-amber-400 font-bold text-base">✓</span> Acces API & Funcții Beta</li>
+                               </ul>
+                            </div>
+                            <button (click)="enterApp()" class="w-full py-4 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:brightness-110 active:scale-98 text-black font-black rounded-xl shadow-lg transition-all">Alege Gold</button>
                          </div>
                       </div>
 
@@ -668,20 +712,20 @@ type LandingView = 'home' | 'terms' | 'privacy' | 'cookies' | 'guide';
                                   <p class="text-gray-400 text-sm leading-relaxed mb-4">Creditele reprezintă unitatea de măsură pentru puterea de procesare a modelelor noastre AI. Consumul variază în funcție de complexitatea sarcinii:</p>
                                   <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                                      <div class="bg-black/40 p-3 rounded-lg border border-white/5">
-                                        <span class="text-jurist-orange font-bold block">3 Credite</span>
-                                        <span class="text-[10px] text-gray-500 uppercase">Chat / Redactare</span>
+                                        <span class="text-jurist-orange font-bold block">1 Credit</span>
+                                        <span class="text-[10px] text-gray-500 uppercase">Chat AI / Termene</span>
                                      </div>
                                      <div class="bg-black/40 p-3 rounded-lg border border-white/5">
-                                        <span class="text-jurist-orange font-bold block">5 Credite</span>
-                                        <span class="text-[10px] text-gray-500 uppercase">Strategie / Audit</span>
+                                        <span class="text-jurist-orange font-bold block">3 Credite</span>
+                                        <span class="text-[10px] text-gray-500 uppercase">Redactare Documente</span>
                                      </div>
                                      <div class="bg-black/40 p-3 rounded-lg border border-white/5">
                                         <span class="text-jurist-orange font-bold block">2 Credite</span>
-                                        <span class="text-[10px] text-gray-500 uppercase">Calcul Taxe</span>
+                                        <span class="text-[10px] text-gray-500 uppercase">Calcul Taxe / Deviz</span>
                                      </div>
                                      <div class="bg-black/40 p-3 rounded-lg border border-white/5">
                                         <span class="text-jurist-orange font-bold block">5 Credite</span>
-                                        <span class="text-[10px] text-gray-500 uppercase">Generare Imagini</span>
+                                        <span class="text-[10px] text-gray-500 uppercase">Strategie / Audit Probe</span>
                                      </div>
                                   </div>
                                </div>
@@ -975,96 +1019,132 @@ export class LandingComponent implements OnInit, AfterViewInit {
     });
   }
 
-  contentTerms = `
+    contentTerms = `
     <div class="space-y-12">
       <section>
-        <h1 class='text-5xl font-black text-white mb-8 tracking-tight'>Termeni și Condiții de Utilizare</h1>
-        <p class='text-gray-400 text-lg leading-relaxed mb-6 italic'>Ultima actualizare: 24.04.2026</p>
-        <p class='text-gray-300 text-lg leading-relaxed'>Bine ați venit pe JuristPRO. Accesarea și utilizarea acestei platforme de inteligență artificială juridică sunt guvernate de prezentul set de reguli. Prin utilizarea serviciilor noastre, confirmați că ați citit, înțeles și acceptat acești termeni în totalitate.</p>
+        <h1 class='text-4xl md:text-5xl font-black text-white mb-6 tracking-tight'>Termeni și Condiții de Utilizare</h1>
+        <p class='text-gray-400 text-sm leading-relaxed mb-6 italic'>Ultima actualizare: 27.08.2026 | Versiunea 2.4</p>
+        <p class='text-gray-300 text-base leading-relaxed'>Bine ați venit pe JuristPRO. Accesarea și utilizarea acestei platforme de inteligență artificială juridică sunt guvernate de prezentul set de reguli și de Acordul de Prelucrare a Datelor (DPA). Prin utilizarea serviciilor noastre, confirmați că ați citit, înțeles și acceptat acești termeni în totalitate.</p>
       </section>
 
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">0. Identificarea Autorului</h2>
-        <p class="text-gray-400 leading-relaxed">JuristPRO este denumirea comercială (aliasul comercial) a lui Catalin MI SANDU, un contractor independent înregistrat în Romania, (ID 54552543), cu adresa: Strada Infratirii, Nr. 15, Craiova, Romania. În acești Termeni, ne vom referi la noi înșine ca „JuristPRO” sau „noi”. Ne puteți contacta la adresa de e-mail: office@juridicpro.ro.</p>
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">0. Identificarea Operatorului și Furnizorului</h2>
+        <p class="text-gray-400 leading-relaxed text-sm">JuristPRO este denumirea comercială a serviciilor furnizate de Cătălin MI SANDU, contractor independent înregistrat în România (ID 54552543), cu adresa: Strada Înfrățirii, Nr. 15, Craiova, România. În acești Termeni, ne vom referi ca „JuristPRO” sau „noi”. Ne puteți contacta la adresa: <span class="text-jurist-orange font-medium">office@juridicpro.ro</span>.</p>
       </section>
 
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">1. Definiții și Obiectul Contractului</h2>
-        <p class="text-gray-400 leading-relaxed">JuristPRO reprezintă o platformă software bazată pe modele avansate de procesare a limbajului natural, destinată exclusiv profesioniștilor din domeniul juridic (avocați, consilieri juridici, notari, executori). Obiectul contractului este furnizarea accesului la instrumente de analiză, redactare și cercetare juridică asistată de AI.</p>
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">1. Definiții și Obiectul Contractului</h2>
+        <p class="text-gray-400 leading-relaxed text-sm">JuristPRO reprezintă o platformă software bazată pe modele avansate de procesare a limbajului natural (LLM) și tehnologie RAG (Retrieated-Augmented Generation), destinată exclusiv profesioniștilor din domeniul juridic (avocați, consilieri juridici, notari, magistrați, executori). Obiectul contractului este furnizarea accesului la instrumente specializate de analiză, redactare, audit de probe și cercetare jurisprudențială asistată de AI.</p>
       </section>
 
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">2. Natura Serviciului (Disclaimer Legal)</h2>
-        <div class="bg-jurist-orange/5 border border-jurist-orange/20 p-6 rounded-xl">
-          <p class="text-jurist-orange font-bold mb-2">IMPORTANT:</p>
-          <p class="text-gray-300 leading-relaxed italic">JuristPRO NU este o casă de avocatură și NU oferă consultanță juridică în sensul Legii 51/1995. Rezultatele generate de Inteligența Artificială au caracter informativ și reprezintă un instrument de suport. Utilizatorul are obligația profesională și legală de a verifica, valida și asuma orice document sau opinie generată de platformă înainte de utilizarea acestora în relația cu clienții sau instanțele de judecată.</p>
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">2. Natura Serviciului (Disclaimer Legal & Standarde Profesionale)</h2>
+        <div class="bg-jurist-orange/5 border border-jurist-orange/20 p-6 rounded-2xl">
+          <p class="text-jurist-orange font-bold mb-2 flex items-center gap-2">
+            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            AVIZ LEGAL IMPORTANT (Legea 51/1995 & Statutul Profesiei de Avocat):
+          </p>
+          <p class="text-gray-300 text-sm leading-relaxed">JuristPRO NU este o casă de avocatură și NU oferă consultanță juridică în sensul Legii nr. 51/1995. Rezultatele generate de sistemul de inteligență artificială au caracter de suport tehnic și documentar auxiliar. Utilizatorul are obligația deontologică, profesională și legală exclusivă de a verifica, valida și asuma orice document, strategie sau opinie generată de platformă înainte de utilizarea acestora în relația cu instanțele judecătorești sau clienții.</p>
         </div>
       </section>
 
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">3. Utilizarea Contului și Securitatea</h2>
-        <p class="text-gray-400 leading-relaxed">Utilizatorul este responsabil pentru menținerea confidențialității datelor de acces. Este strict interzisă partajarea contului cu terțe persoane. Orice utilizare abuzivă sau suspiciune de compromitere a contului trebuie raportată imediat echipei de suport.</p>
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">3. Angajamente Contractuale de Securitate și Garanții Tehnice</h2>
+        <p class="text-gray-400 leading-relaxed text-sm">JuristPRO își asumă contractual următoarele garanții tehnice față de fiecare abonat:</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div class="p-4 bg-[#111] rounded-xl border border-gray-800">
+            <h3 class="text-white font-bold mb-1">a) Interdicție Antrenare AI (No Training)</h3>
+            <p class="text-gray-400 text-xs">Datele, textul prompt-urilor, documentele încărcate și spețele redactate NU sunt folosite și nu vor fi utilizate niciodată pentru antrenarea, re-antrenarea sau calibrarea modelelor publice de inteligență artificială (Google, OpenAI sau modele open-source).</p>
+          </div>
+          <div class="p-4 bg-[#111] rounded-xl border border-gray-800">
+            <h3 class="text-white font-bold mb-1">b) Criptare Militară & Servere UE</h3>
+            <p class="text-gray-400 text-xs">Toate fluxurile de date în tranzit folosesc protocolul TLS 1.3, iar datele în repaus sunt criptate AES-256. Infrastructura primară este găzduită exclusiv în centre de date din Uniunea Europeană (regiunea Frankfurt / UE), certificate ISO/IEC 27001, ISO 27017 și ISO 27018.</p>
+          </div>
+          <div class="p-4 bg-[#111] rounded-xl border border-gray-800">
+            <h3 class="text-white font-bold mb-1">c) Politică Zero Retention pentru Analiză</h3>
+            <p class="text-gray-400 text-xs">Documentele transmise spre analiză efemeră sau sinteză sunt decriptate exclusiv în memoria volatilă (RAM) pe durata executării inferenței AI și sunt eliminate definitiv după generarea răspunsului.</p>
+          </div>
+          <div class="p-4 bg-[#111] rounded-xl border border-gray-800">
+            <h3 class="text-white font-bold mb-1">d) Secretul Profesional & Zero Access</h3>
+            <p class="text-gray-400 text-xs">Personalul administrativ JuristPRO nu are acces la documentele procesate sau la dosarele cabinetului. Autentificarea și autorizarea sunt asigurate prin token-uri criptografice unice.</p>
+          </div>
+        </div>
       </section>
 
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">4. Proprietate Intelectuală</h2>
-        <p class="text-gray-400 leading-relaxed">Interfața, algoritmii proprietari, bazele de date și elementele de design sunt proprietatea exclusivă a JuristPRO AI. Utilizatorul deține drepturile de autor asupra documentelor finale redactate prin intermediul platformei, putând să le utilizeze liber în activitatea sa profesională.</p>
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">4. Proprietate Intelectuală</h2>
+        <p class="text-gray-400 leading-relaxed text-sm">Interfața de utilizator, algoritmii de prompt-engineering, arhitectura RAG și mărcile aparțin exclusiv JuristPRO. <strong>Utilizatorul deține drepturile depline și exclusive de proprietate și autorat</strong> asupra tuturor cererilor de chemare în judecată, întâmpinărilor, contractelor sau documentelor finale redactate prin intermediul platformei.</p>
       </section>
 
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">5. Limitarea Răspunderii</h2>
-        <p class="text-gray-400 leading-relaxed">JuristPRO nu poate fi trasă la răspundere pentru erori juridice, omisiuni sau interpretări greșite ale AI-ului care ar putea conduce la pierderea unor procese sau alte prejudicii. Responsabilitatea finală asupra calității actului juridic aparține exclusiv profesionistului care utilizează platforma.</p>
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">5. Limitarea Răspunderii</h2>
+        <p class="text-gray-400 leading-relaxed text-sm">JuristPRO oferă o unealtă de productivitate de înaltă precizie, însă nu garantează obținerea unui anumit rezultat procesual în instanță. În măsura maximă permisă de lege, JuristPRO nu este răspunzătoare pentru pierderi indirecte sau erori apărute ca urmare a neverificării actelor de către practicianul în drept.</p>
       </section>
 
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">6. Modificări și Reziliere</h2>
-        <p class="text-gray-400 leading-relaxed">Ne rezervăm dreptul de a actualiza acești termeni periodic. Utilizarea continuă a platformei după publicarea modificărilor constituie acceptarea acestora. Neplata abonamentului atrage suspendarea automată a accesului la funcțiile premium.</p>
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-jurist-orange pl-4">6. Jurisdicție și Soluționarea Disputelor</h2>
+        <p class="text-gray-400 leading-relaxed text-sm">Prezentul contract este guvernat de legislația română și de reglementările UE aplicabile. Orice litigiu va fi supus instanțelor judecătorești competente din România.</p>
       </section>
     </div>
   `;
   contentPrivacy = `
     <div class="space-y-12">
       <section>
-        <h1 class='text-5xl font-black text-white mb-8 tracking-tight'>Politica de Confidențialitate (GDPR)</h1>
-        <p class='text-gray-400 text-lg leading-relaxed mb-6 italic'>Versiunea 2.1 | Conformă cu Regulamentul (UE) 2016/679</p>
-        <p class='text-gray-300 text-lg leading-relaxed'>Protecția datelor cu caracter personal și a secretului profesional sunt priorități absolute pentru JuristPRO. Această politică explică modul în care colectăm, utilizăm și protejăm informațiile dvs.</p>
+        <h1 class='text-4xl md:text-5xl font-black text-white mb-6 tracking-tight'>Politica de Confidențialitate & Acordul DPA</h1>
+        <p class='text-gray-400 text-sm leading-relaxed mb-6 italic'>Versiunea 2.4 | Conformă cu Regulamentul (UE) 2016/679 (GDPR) și Statutul UNBR</p>
+        <p class='text-gray-300 text-base leading-relaxed'>Protecția datelor cu caracter personal, secretul profesional al avocatului și confidențialitatea clienților reprezintă temelia pe care a fost construită platforma JuristPRO. Prezentul document stabilește cadrul contractual complet și anexele tehnice privind prelucrarea datelor (Data Processing Agreement - DPA).</p>
       </section>
 
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-blue-500 pl-4">1. Operatorul de Date</h2>
-        <p class="text-gray-400 leading-relaxed">În conformitate cu Regulamentul (UE) 2016/679 (GDPR), operatorul datelor cu caracter personal colectate prin intermediul platformei JuristPRO este entitatea care gestionează serviciul, cu sediul social în Craiova, Strada Infratirii, Nr. 15, România. JuristPRO își asumă responsabilitatea pentru prelucrarea sigură a datelor dvs. și pentru respectarea drepturilor utilizatorilor. Pentru orice întrebări, solicitări sau exercitarea drepturilor prevăzute de legislația în vigoare, ne puteți contacta prin intermediul responsabilului nostru cu protecția datelor (DPO) la adresa de e-mail: <span class="text-blue-400">office@juridicpro.ro</span>.</p>
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-blue-500 pl-4">1. Operatorul de Date & Date de Contact DPO</h2>
+        <p class="text-gray-400 leading-relaxed text-sm">Operatorul responsabil pentru datele colectate prin intermediul platformei JuristPRO este Cătălin MI SANDU (contractor independent înregistrat, ID 54552543), cu sediul în Craiova, Strada Înfrățirii, Nr. 15, România. Pentru orice solicitări privind drepturile GDPR sau acordul DPA, puteți contacta responsabilul nostru la: <span class="text-blue-400 font-semibold">office@juridicpro.ro</span>.</p>
       </section>
 
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-blue-500 pl-4">2. Date Colectate și Scopul Prelucrării</h2>
-        <ul class="space-y-4 text-gray-400">
-          <li class="flex gap-3"><span class="text-blue-500 font-bold">●</span> <strong>Date de Identificare:</strong> Nume, prenume, e-mail, număr de telefon (pentru crearea contului și facturare).</li>
-          <li class="flex gap-3"><span class="text-blue-500 font-bold">●</span> <strong>Date Profesionale:</strong> Baroul de apartenență, număr de legitimație (pentru validarea calității de profesionist).</li>
-          <li class="flex gap-3"><span class="text-blue-500 font-bold">●</span> <strong>Date de Utilizare:</strong> Adresa IP, log-uri de sistem (pentru securitate și prevenirea fraudelor).</li>
-        </ul>
-      </section>
-
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-blue-500 pl-4">3. Procesarea Documentelor și Confidențialitatea AI</h2>
-        <div class="bg-blue-500/5 border border-blue-500/20 p-6 rounded-xl">
-          <p class="text-gray-300 leading-relaxed">Documentele încărcate pentru analiză sau redactare sunt procesate într-un mediu securizat și efemer. <strong>JuristPRO NU utilizează datele din documentele dvs. pentru a antrena modelele AI publice.</strong> Datele sunt șterse automat din memoria de procesare imediat după finalizarea sarcinii solicitate.</p>
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-blue-500 pl-4">2. Categorii de Date Prelucrate și Temei Juridic</h2>
+        <div class="space-y-3 text-sm text-gray-300">
+          <div class="p-4 bg-[#111] rounded-xl border border-gray-800">
+            <p class="font-bold text-white mb-1">a) Date de Cont & Facturare (Temei: Executarea Contractului - Art. 6(1)(b) GDPR):</p>
+            <p class="text-gray-400 text-xs">Nume, prenume, adresă de e-mail, denumire formă de exercitare a profesiei, barou, CIF/CUI, sediu profesional.</p>
+          </div>
+          <div class="p-4 bg-[#111] rounded-xl border border-gray-800">
+            <p class="font-bold text-white mb-1">b) Date Tehnice & Securitate (Temei: Interes Legitim - Art. 6(1)(f) GDPR):</p>
+            <p class="text-gray-400 text-xs">Adrese IP pseudonimizate, log-uri de acces securizat, token-uri de sesiune pentru prevenirea atacurilor cibernetice.</p>
+          </div>
+          <div class="p-4 bg-[#111] rounded-xl border border-gray-800">
+            <p class="font-bold text-white mb-1">c) Documente și Conținut Juridic Încărcat (Rolul JuristPRO: Persoană Împuternicită / Data Processor):</p>
+            <p class="text-gray-400 text-xs">Documentele de lucru, dosarele și contractele încărcate de avocat rămân sub controlul exclusiv al avocatului (în calitate de Operator al clienților săi).</p>
+          </div>
         </div>
       </section>
 
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-blue-500 pl-4">4. Drepturile Dumneavoastră</h2>
-        <p class="text-gray-400 leading-relaxed mb-4">Conform GDPR, beneficiați de următoarele drepturi:</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-[#111] p-4 rounded-lg border border-gray-800"><span class="text-white font-bold block mb-1">Dreptul de Acces</span> Vizualizarea datelor pe care le deținem despre dvs.</div>
-          <div class="bg-[#111] p-4 rounded-lg border border-gray-800"><span class="text-white font-bold block mb-1">Dreptul la Rectificare</span> Corectarea informațiilor inexacte.</div>
-          <div class="bg-[#111] p-4 rounded-lg border border-gray-800"><span class="text-white font-bold block mb-1">Dreptul la Ștergere</span> Solicitarea eliminării definitive a contului.</div>
-          <div class="bg-[#111] p-4 rounded-lg border border-gray-800"><span class="text-white font-bold block mb-1">Portabilitatea Datelor</span> Transferul datelor către un alt operator.</div>
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-blue-500 pl-4">3. Clauza DPA: Garanții privind Confidențialitatea AI & Zero Retention</h2>
+        <div class="bg-blue-950/20 border border-blue-500/30 p-6 rounded-2xl space-y-4">
+          <h3 class="text-white font-bold flex items-center gap-2">
+            <span class="text-blue-400">🛡️</span> Clauze Contractuale Obligatorii privind Modelele AI
+          </h3>
+          <ul class="space-y-3 text-sm text-gray-300">
+            <li class="flex gap-3"><span class="text-blue-400 font-bold">1.</span> <span><strong>Excluderea Antrenării Modelelor:</strong> JuristPRO garantează contractual că datele din solicitări (prompts) și fișierele încărcate NU sunt stocate sau utilizate de furnizorii de infrastructură AI (Google Enterprise / Vertex AI) pentru antrenarea modelelor fundamentale.</span></li>
+            <li class="flex gap-3"><span class="text-blue-400 font-bold">2.</span> <span><strong>Procesare Efemeră (Zero-Retention):</strong> Procesarea documentelor pentru extragere și audit de probe se realizează in-memory. După generarea răspunsului, buffer-ul de procesare este șters ireversibil.</span></li>
+            <li class="flex gap-3"><span class="text-blue-400 font-bold">3.</span> <span><strong>Localizarea Datelor în UE:</strong> Centrele de date primare utilizate pentru stocare și inferență AI sunt situate exclusiv în Spațiul Economic European (Frankfurt / Germania), respectând cerințele Curții de Justiție a UE (Schrems II).</span></li>
+          </ul>
         </div>
       </section>
 
-      <section class="space-y-6">
-        <h2 class="text-2xl font-bold text-white border-l-4 border-blue-500 pl-4">5. Securitatea Datelor</h2>
-        <p class="text-gray-400 leading-relaxed">Implementăm măsuri tehnice avansate: criptare AES-256 la nivel de bază de date, autentificare multi-factor (MFA) opțională și audituri de securitate periodice.</p>
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-blue-500 pl-4">4. Măsuri Tehnice și Organizatorice de Securitate (TOMs)</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div class="bg-[#111] p-4 rounded-xl border border-gray-800"><span class="text-blue-400 font-bold block mb-1">Criptare Avansată</span> Criptare TLS 1.3 pentru toate canalele de transport și AES-256 pentru datele persistente.</div>
+          <div class="bg-[#111] p-4 rounded-xl border border-gray-800"><span class="text-blue-400 font-bold block mb-1">Certificări Standard</span> Infrastructură gazdă auditată și certificată conform ISO/IEC 27001, SOC 1/2/3.</div>
+          <div class="bg-[#111] p-4 rounded-xl border border-gray-800"><span class="text-blue-400 font-bold block mb-1">Control Strict al Accesului</span> Autentificare prin token-uri securizate, fără acces uman din partea echipei JuristPRO la datele sensibile.</div>
+          <div class="bg-[#111] p-4 rounded-xl border border-gray-800"><span class="text-blue-400 font-bold block mb-1">Izolare Multi-Tenant</span> Separare logică strictă a bazelor de date și a spațiilor de lucru per cabinet.</div>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <h2 class="text-xl md:text-2xl font-bold text-white border-l-4 border-blue-500 pl-4">5. Drepturile Persoanelor Vizate</h2>
+        <p class="text-gray-400 leading-relaxed text-sm">Conform Regulamentului GDPR, beneficiați de dreptul de acces, rectificare, ștergere („dreptul de a fi uitat”), restricționare a prelucrării, portabilitate a datelor și dreptul de a nu face obiectul unei decizii automatizate fără revizuire umană. Orice solicitare se soluționează în termen de maxim 30 de zile.</p>
       </section>
     </div>
   `;

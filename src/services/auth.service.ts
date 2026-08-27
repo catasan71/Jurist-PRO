@@ -85,9 +85,8 @@ export class AuthService {
     try {
       const docRef = doc(db, 'profiles', userId);
       await updateDoc(docRef, { role: 'admin' });
-      console.log(`[AUTH] Utilizatorul ${userId} a fost promovat la rolul de admin.`);
     } catch (error) {
-      console.error(`[AUTH] Eroare la promovarea utilizatorului ${userId}:`, error);
+      this.handleFirestoreError(error, FirestoreOp.UPDATE, `profiles/${userId}`);
     }
   }
   
@@ -250,13 +249,11 @@ export class AuthService {
   }
 
   async resetPassword(email: string): Promise<{ error: string | null }> {
-    console.log('DEBUG: Resetting password for:', email);
     try {
       await sendPasswordResetEmail(auth, email);
       this.notificationService.info('Email-ul de resetare a fost trimis.');
       return { error: null };
     } catch (error: unknown) {
-      console.error('DEBUG: Reset password error:', error);
       const err = error as { message?: string, code?: string };
       let msg = err.message || 'Eroare la trimiterea emailului.';
       
@@ -478,8 +475,6 @@ export class AuthService {
         if (docSnap.exists()) {
           this._isCreatingProfile = false;
           const data = docSnap.data();
-          const emailFromData = data['email'] || email;
-          console.log(`[AUTH] fetchProfile for ${userId}. Data:`, data, 'Email:', emailFromData, 'isAdminEmail:', isAdminEmail);
           
           let role = data['role'] || 'lawyer';
           let status = data['status'];
@@ -487,7 +482,6 @@ export class AuthService {
           let credits = data['credits'];
 
           if (isAdminEmail) {
-             console.log(`[AUTH] Force-promoting ${emailFromData} to admin`);
              role = 'admin';
              status = 'active';
              plan = 'expert';
@@ -537,9 +531,7 @@ export class AuthService {
           
           this._pendingRegistrationData = null; // clear it
 
-          console.log(`[AUTH] Creating new profile for ${userId} (${email})...`);
           setDoc(docRef, newProfile).then(() => {
-            console.log(`[AUTH] Profile created successfully for ${userId}`);
             this._isCreatingProfile = false;
           }).catch(err => {
             this._isCreatingProfile = false;

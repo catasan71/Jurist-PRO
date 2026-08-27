@@ -314,6 +314,110 @@ export class JuristService implements OnDestroy {
 
   totalRevenue = computed(() => this._transactions().reduce((acc, tx) => acc + tx.amount, 0));
 
+  parseEventDate(dateStr?: string, timeStr?: string): Date | null {
+    if (!dateStr) return null;
+    const trimmed = String(dateStr).trim();
+    if (!trimmed) return null;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      const [y, m, d] = trimmed.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      if (timeStr && /^\d{1,2}:\d{2}$/.test(timeStr.trim())) {
+        const [hh, mm] = timeStr.trim().split(':').map(Number);
+        date.setHours(hh, mm, 0, 0);
+      } else {
+        date.setHours(12, 0, 0, 0);
+      }
+      return date;
+    }
+
+    if (/^\d{1,2}[./-]\d{1,2}[./-]\d{4}$/.test(trimmed)) {
+      const parts = trimmed.split(/[./-]/).map(Number);
+      const d = parts[0];
+      const m = parts[1];
+      const y = parts[2];
+      const date = new Date(y, m - 1, d);
+      if (timeStr && /^\d{1,2}:\d{2}$/.test(timeStr.trim())) {
+        const [hh, mm] = timeStr.trim().split(':').map(Number);
+        date.setHours(hh, mm, 0, 0);
+      } else {
+        date.setHours(12, 0, 0, 0);
+      }
+      return date;
+    }
+
+    const fallback = new Date(trimmed);
+    return isNaN(fallback.getTime()) ? null : fallback;
+  }
+
+  isEventPast(event: CalendarEvent): boolean {
+    const d = this.parseEventDate(event.date, event.time);
+    if (!d) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const eventDay = new Date(d);
+    eventDay.setHours(0, 0, 0, 0);
+    return eventDay.getTime() < today.getTime();
+  }
+
+  getEventCountdownLabel(event: CalendarEvent): string {
+    const d = this.parseEventDate(event.date, event.time);
+    if (!d) return '';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const eventDay = new Date(d);
+    eventDay.setHours(0, 0, 0, 0);
+    
+    const diffMs = eventDay.getTime() - today.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Astăzi';
+    if (diffDays === 1) return 'Mâine';
+    if (diffDays > 1) return `Peste ${diffDays} zile`;
+    if (diffDays === -1) return 'Ieri';
+    return `Trecut (${Math.abs(diffDays)}z)`;
+  }
+
+  upcomingEvents = computed(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return this.events()
+      .filter(e => {
+        const d = this.parseEventDate(e.date, e.time);
+        if (!d) return true;
+        const eDay = new Date(d);
+        eDay.setHours(0, 0, 0, 0);
+        return eDay.getTime() >= today.getTime();
+      })
+      .sort((a, b) => {
+        const da = this.parseEventDate(a.date, a.time)?.getTime() || 0;
+        const db = this.parseEventDate(b.date, b.time)?.getTime() || 0;
+        return da - db;
+      });
+  });
+
+  nextUpcomingEvent = computed(() => {
+    const upcoming = this.upcomingEvents();
+    return upcoming.length > 0 ? upcoming[0] : null;
+  });
+
+  pastEvents = computed(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return this.events()
+      .filter(e => {
+        const d = this.parseEventDate(e.date, e.time);
+        if (!d) return false;
+        const eDay = new Date(d);
+        eDay.setHours(0, 0, 0, 0);
+        return eDay.getTime() < today.getTime();
+      })
+      .sort((a, b) => {
+        const da = this.parseEventDate(a.date, a.time)?.getTime() || 0;
+        const db = this.parseEventDate(b.date, b.time)?.getTime() || 0;
+        return db - da;
+      });
+  });
 
   private handleFirestoreError(error: unknown, operation: FirestoreOp | string, path: string | null = null) {
     const errInfo = {
@@ -602,7 +706,6 @@ export class JuristService implements OnDestroy {
   }
 
   setModule(module: ModuleType) {
-    console.log('DEBUG: setModule', module, new Error().stack);
     this._currentModule.set(module);
     if (typeof window !== 'undefined') {
       window.scrollTo(0, 0);
@@ -809,7 +912,6 @@ export class JuristService implements OnDestroy {
         financial: event.financial || { total: 0, paid: 0, rest: 0 }
       };
 
-      console.log('[FIRESTORE] Adăugare dosar:', dbPayload);
       const docRef = await addDoc(collection(db, 'events'), dbPayload);
       if (docRef.id) {
         this.notificationService.success("Dosarul a fost salvat cu succes în baza de date!");
@@ -1013,7 +1115,6 @@ export class JuristService implements OnDestroy {
       if (!this.authService.isDemo()) {
         await updateDoc(doc(db, 'profiles', user.id), { plan: 'trial', status: 'active' });
       }
-      console.log('Planul Trial a fost activat.');
       this._loading.set(false);
       return;
     }
@@ -1696,11 +1797,11 @@ export class JuristService implements OnDestroy {
   }
 
   async generateEvidenceImage(prompt: string): Promise<string> {
+    if (!prompt.trim()) throw new Error("Descrierea imaginii este necesară.");
     if (!this.checkCredits(5)) throw new Error("Fonduri insuficiente.");
     this._loading.set(true);
     try {
       await this.consumeCredit(5);
-      console.log('Solicitare imagine pentru:', prompt);
       return "https://picsum.photos/seed/legal/800/600";
     } finally {
       this._loading.set(false);

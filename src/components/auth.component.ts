@@ -456,21 +456,12 @@ export class AuthComponent {
     if (adminEmails.includes(emailToUse)) {
         isAdmin = true;
     }
-    
-    console.log('DEBUG: AuthComponent.redirectUser [FINAL]', { 
-        userEmail: emailToUse, 
-        isAdminStatus: isAdmin, 
-        role: user.role, 
-        status: user.status 
-    });
 
     if (isAdmin) {
-        console.log('DEBUG: Redirecting to admin-dashboard');
         this.juristService.setModule('admin-dashboard');
     } else if (user.status === 'pending_payment') {
       this.juristService.setModule('payment');
     } else {
-      console.log('DEBUG: Redirecting to dashboard');
       this.juristService.setModule('dashboard');
     }
   }

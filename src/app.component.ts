@@ -228,16 +228,11 @@ export class AppComponent implements OnInit {
       const currentModule = this.juristService.currentModule();
       const currentUser = this.authService.currentUser();
       
-      console.log('DEBUG: AppStateEffect', { currentModule, currentUser, isAdmin: this.authService.isAdmin() });
-      
       // Auto-redirect from Landing to Dashboard/Admin if already logged in
       if (currentModule === 'landing' && currentUser) {
         const isAdminByEmail = ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'].includes(currentUser.email || '');
-        
-        console.log('DEBUG: LandingRedirectCheck', { isAdminByEmail, isAdminFunc: this.authService.isAdmin() });
 
         if (this.authService.isAdmin() || isAdminByEmail) {
-          console.log('DEBUG: Redirecting to admin-dashboard');
           this.juristService.setModule('admin-dashboard');
         } else if (currentUser.status === 'pending_payment') {
           this.juristService.setModule('payment');
@@ -257,7 +252,6 @@ export class AppComponent implements OnInit {
 
       // Redirect admins from standard dashboard/payment to admin-dashboard
       if ((currentModule === 'dashboard' || currentModule === 'payment') && this.authService.isAdmin()) {
-        console.log('DEBUG: Admin detected on client side, redirecting to admin-dashboard');
         this.juristService.setModule('admin-dashboard');
       }
     });

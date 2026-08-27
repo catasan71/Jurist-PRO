@@ -59,18 +59,50 @@ import { AuthService } from '../services/auth.service';
         </div>
 
         <!-- Gold -->
-        <div class="bg-gray-900 rounded-2xl p-8 border border-yellow-500/50 hover:border-yellow-400 transition-all flex flex-col relative overflow-hidden">
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 to-yellow-300"></div>
-          <h3 class="text-xl font-bold text-yellow-400">Gold</h3>
-          <div class="my-4"><span class="text-3xl font-bold text-white">500 RON</span> <span class="text-gray-500">/ lună</span></div>
-          <p class="text-gray-400 text-sm mb-6">Pentru elită și case de avocatură.</p>
+        <div class="bg-gradient-to-b from-[#18160e] to-gray-900 rounded-2xl p-8 border-2 border-amber-500/50 hover:border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.1)] transition-all flex flex-col relative overflow-hidden">
+          <div class="absolute top-0 right-0 bg-gradient-to-r from-amber-400 to-yellow-500 text-black text-xs font-black px-3.5 py-1 rounded-bl-lg tracking-wider uppercase shadow-md">VIP</div>
+          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 via-amber-400 to-yellow-300"></div>
+          <h3 class="text-2xl font-black text-amber-300">Gold</h3>
+          <div class="my-4"><span class="text-3xl font-black text-white">500 RON</span> <span class="text-amber-200/80 font-semibold">/ lună</span></div>
+          <p class="text-gray-300 text-sm mb-6 font-medium">Pentru elită și case de avocatură.</p>
           <ul class="space-y-3 mb-8 flex-1">
-            <li class="flex items-center text-sm text-gray-300"><span class="text-yellow-500 mr-2">✓</span> 500 Credite AI / lună</li>
-            <li class="flex items-center text-sm text-gray-300"><span class="text-yellow-500 mr-2">✓</span> Export DOCX Nelimitat</li>
-            <li class="flex items-center text-sm text-gray-300"><span class="text-yellow-500 mr-2">✓</span> Formular Contact Expert</li>
-            <li class="flex items-center text-sm text-gray-300"><span class="text-yellow-500 mr-2">✓</span> Suport Prioritar</li>
+            <li class="flex items-center text-sm text-white font-medium"><span class="text-amber-400 mr-2 font-bold text-base">✓</span> 500 Credite AI / lună</li>
+            <li class="flex items-center text-sm text-white font-medium"><span class="text-amber-400 mr-2 font-bold text-base">✓</span> Export DOCX Nelimitat</li>
+            <li class="flex items-center text-sm text-white font-medium"><span class="text-amber-400 mr-2 font-bold text-base">✓</span> Formular Contact Expert</li>
+            <li class="flex items-center text-sm text-white font-medium"><span class="text-amber-400 mr-2 font-bold text-base">✓</span> Suport Prioritar Dedicat</li>
           </ul>
-          <button (click)="selectPlan('gold')" class="w-full py-3 rounded-xl border border-yellow-600 text-yellow-500 hover:bg-yellow-900/20 transition-colors">Alege Gold</button>
+          <button (click)="selectPlan('gold')" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:brightness-110 active:scale-98 text-black font-black shadow-lg transition-all">Alege Gold</button>
+        </div>
+      </div>
+
+      <!-- Credit Consumption Explanation Card -->
+      <div class="w-full max-w-6xl bg-gray-900/40 border border-gray-800 rounded-2xl p-6 md:p-8 mt-2">
+        <div class="flex flex-col md:flex-row gap-6 items-center">
+          <div class="shrink-0 w-12 h-12 bg-jurist-orange/20 rounded-xl flex items-center justify-center text-jurist-orange">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+          </div>
+          <div class="flex-1 w-full">
+            <h4 class="text-base md:text-lg font-bold text-white mb-1">Ghid Transparent: Consum Credite per Operațiune</h4>
+            <p class="text-gray-400 text-xs md:text-sm mb-4">Fiecare modul consumă un număr exact de credite, proporțional cu volumul de procesare AI și complexitatea juridică:</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+              <div class="bg-black/60 p-3 rounded-xl border border-gray-800">
+                <span class="text-jurist-orange font-bold text-base block">1 Credit</span>
+                <span class="text-[11px] text-gray-300 font-medium">Asistent Chat / Termene</span>
+              </div>
+              <div class="bg-black/60 p-3 rounded-xl border border-gray-800">
+                <span class="text-jurist-orange font-bold text-base block">3 Credite</span>
+                <span class="text-[11px] text-gray-300 font-medium">Redactare Documente</span>
+              </div>
+              <div class="bg-black/60 p-3 rounded-xl border border-gray-800">
+                <span class="text-jurist-orange font-bold text-base block">2 Credite</span>
+                <span class="text-[11px] text-gray-300 font-medium">Calcul Taxe & Deviz</span>
+              </div>
+              <div class="bg-black/60 p-3 rounded-xl border border-gray-800">
+                <span class="text-jurist-orange font-bold text-base block">5 Credite</span>
+                <span class="text-[11px] text-gray-300 font-medium">Strategie / Audit Probe</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

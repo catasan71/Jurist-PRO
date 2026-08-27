@@ -153,24 +153,30 @@ import { AuthService, UserConsents } from '../services/auth.service';
                     
                     <div class="space-y-3">
                         
-                        <!-- 1. Terms (Read Only) -->
-                        <div class="flex items-center justify-between p-3 bg-black/40 rounded border border-gray-800 opacity-70">
+                        <!-- 1. Terms (Read Only & Modal View) -->
+                        <div class="flex items-center justify-between p-3 bg-black/40 rounded border border-gray-800 hover:border-gray-700 transition-colors">
                             <div>
-                                <p class="text-sm text-gray-300 font-bold">Termeni și Condiții</p>
-                                <p class="text-[10px] text-gray-500">Acceptat la înregistrare</p>
+                                <div class="flex items-center gap-2">
+                                   <p class="text-sm text-gray-200 font-bold">Termeni și Condiții</p>
+                                   <button (click)="openLegalModal('terms')" class="text-[11px] text-jurist-orange hover:underline font-medium cursor-pointer">[Citește textul complet]</button>
+                                </div>
+                                <p class="text-[10px] text-gray-500">Acceptat la înregistrare • Clauze No-Training & Răspundere</p>
                             </div>
-                            <div class="flex items-center gap-2 text-green-500 text-xs font-bold">
+                            <div class="flex items-center gap-2 text-green-500 text-xs font-bold shrink-0">
                                 <span>✓ ACCEPTAT</span>
                             </div>
                         </div>
 
-                        <!-- 2. GDPR (Read Only) -->
-                        <div class="flex items-center justify-between p-3 bg-black/40 rounded border border-gray-800 opacity-70">
+                        <!-- 2. GDPR & DPA (Read Only & Modal View) -->
+                        <div class="flex items-center justify-between p-3 bg-black/40 rounded border border-gray-800 hover:border-gray-700 transition-colors">
                             <div>
-                                <p class="text-sm text-gray-300 font-bold">Politica GDPR</p>
-                                <p class="text-[10px] text-gray-500">Prelucrare date contractuală</p>
+                                <div class="flex items-center gap-2">
+                                   <p class="text-sm text-gray-200 font-bold">Politica GDPR & Acordul DPA</p>
+                                   <button (click)="openLegalModal('privacy')" class="text-[11px] text-blue-400 hover:underline font-medium cursor-pointer">[Citește DPA & TOMs]</button>
+                                </div>
+                                <p class="text-[10px] text-gray-500">Garanții ISO 27001, Servere UE, Criptare AES-256</p>
                             </div>
-                            <div class="flex items-center gap-2 text-green-500 text-xs font-bold">
+                            <div class="flex items-center gap-2 text-green-500 text-xs font-bold shrink-0">
                                 <span>✓ ACCEPTAT</span>
                             </div>
                         </div>
@@ -206,11 +212,72 @@ import { AuthService, UserConsents } from '../services/auth.service';
 
         </div>
       </div>
+
+      <!-- LEGAL VIEWER MODAL -->
+      @if (activeLegalModal()) {
+        <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div class="bg-jurist-dark border border-gray-700 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-5 border-b border-gray-800 flex items-center justify-between bg-black/40">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">{{ activeLegalModal() === 'terms' ? '📜' : '🛡️' }}</span>
+                <h3 class="text-lg font-bold text-white">{{ activeLegalModal() === 'terms' ? 'Termeni și Condiții de Utilizare' : 'Politica GDPR & Acordul DPA' }}</h3>
+              </div>
+              <button (click)="activeLegalModal.set(null)" class="text-gray-400 hover:text-white text-xl p-1 font-bold">✕</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 text-gray-300 text-sm leading-relaxed space-y-6 custom-scrollbar-orange">
+              @if (activeLegalModal() === 'terms') {
+                <div class="space-y-4">
+                  <div class="p-4 bg-jurist-orange/10 border border-jurist-orange/20 rounded-xl text-xs text-gray-300">
+                    <p class="font-bold text-jurist-orange mb-1">Confirmare Contractuală:</p>
+                    <p>Acest set de termeni guvernează accesul la platforma JuristPRO și garantează faptul că datele încărcate NU sunt folosite pentru antrenarea modelelor AI.</p>
+                  </div>
+                  <h4 class="font-bold text-white text-base border-l-4 border-jurist-orange pl-3">1. Garanții de Securitate și Confidențialitate</h4>
+                  <ul class="list-disc pl-5 space-y-1.5 text-xs text-gray-400">
+                    <li><strong>Interdicție Antrenare:</strong> Datele, documentele și solicitările (prompt-urile) avocatului NU sunt utilizate pentru antrenarea modelelor publice LLM.</li>
+                    <li><strong>Criptare:</strong> Toate conexiunile sunt criptate în tranzit cu TLS 1.3 și în repaus cu algoritmul militar AES-256.</li>
+                    <li><strong>Servere UE:</strong> Datele sunt găzduite exclusiv în centre de date din Uniunea Europeană (Frankfurt / Germania), certificate ISO/IEC 27001.</li>
+                    <li><strong>Zero Retention:</strong> Documentele încărcate pentru analiză efemeră sunt eliminate ireversibil din memoria RAM după finalizarea sarcinii.</li>
+                  </ul>
+                  <h4 class="font-bold text-white text-base border-l-4 border-jurist-orange pl-3">2. Drepturi de Proprietate Intelectuală</h4>
+                  <p class="text-xs text-gray-400">Avocatul sau utilizatorul titular deține toate drepturile de autor și proprietate asupra documentelor juridice finale generate și redactate prin intermediul JuristPRO.</p>
+                  <h4 class="font-bold text-white text-base border-l-4 border-jurist-orange pl-3">3. Disclaimer Profesional (Legea 51/1995)</h4>
+                  <p class="text-xs text-gray-400">JuristPRO reprezintă un instrument tehnic avansat de asistență. Validarea finală a oricărui act redactat aparține practicianului în drept.</p>
+                </div>
+              } @else {
+                <div class="space-y-4">
+                  <div class="p-4 bg-blue-950/40 border border-blue-500/30 rounded-xl text-xs text-gray-300">
+                    <p class="font-bold text-blue-400 mb-1">Acord de Prelucrare a Datelor (DPA - Data Processing Agreement):</p>
+                    <p>Conform Art. 28 din Regulamentul (UE) 2016/679 (GDPR), JuristPRO acționează ca Persoană Împuternicită (Data Processor) pentru documentele cabinetului încărcate de avocat.</p>
+                  </div>
+                  <h4 class="font-bold text-white text-base border-l-4 border-blue-500 pl-3">1. Măsuri Tehnice și Organizatorice (TOMs)</h4>
+                  <ul class="list-disc pl-5 space-y-1.5 text-xs text-gray-400">
+                    <li><strong>Infrastructură ISO 27001:</strong> Servere securizate situate la Frankfurt, Germania (UE), conforme cu cerințele GDPR și hotărârea Schrems II.</li>
+                    <li><strong>Criptare End-to-End:</strong> Datele în tranzit sunt protejate prin TLS 1.3, iar bazele de date prin AES-256.</li>
+                    <li><strong>Zero-Access:</strong> Personalul tehnic JuristPRO nu are acces direct la conținutul dosarelor sau la datele cu caracter personal din acte.</li>
+                  </ul>
+                  <h4 class="font-bold text-white text-base border-l-4 border-blue-500 pl-3">2. Drepturile Persoanelor Vizate</h4>
+                  <p class="text-xs text-gray-400">Beneficiați de dreptul de acces, rectificare, ștergere completă a contului („dreptul de a fi uitat”) și portabilitate a datelor. Contact DPO: <span class="text-blue-400 font-semibold">office@juridicpro.ro</span>.</p>
+                </div>
+              }
+            </div>
+
+            <div class="p-4 border-t border-gray-800 bg-black/40 flex justify-end">
+              <button (click)="activeLegalModal.set(null)" class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold px-4 py-2 rounded-lg border border-gray-700 transition-colors cursor-pointer">Închide Fereastra</button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
 export class ProfileComponent {
   juristService = inject(JuristService);
+  activeLegalModal = signal<'terms' | 'privacy' | null>(null);
+
+  openLegalModal(type: 'terms' | 'privacy') {
+    this.activeLegalModal.set(type);
+  }
   authService = inject(AuthService);
   saving = signal(false);
   saveSuccess = signal(false);

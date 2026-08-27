@@ -45,26 +45,27 @@ interface DocCategory {
       <!-- Main Workspace Grid -->
       <div class="flex-1 overflow-y-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <!-- LEFT: Configuration & Details (5 cols) -->
-        <div class="lg:col-span-4 flex flex-col gap-4 overflow-y-auto pr-1">
+        <!-- LEFT: Configuration & Details (5 cols on lg, 4 cols on xl) -->
+        <div class="lg:col-span-5 xl:col-span-4 flex flex-col gap-4 overflow-y-auto pr-1">
           
           <!-- 1. Category Selector -->
           <div class="bg-gray-900/80 p-4 rounded-xl border border-gray-800 space-y-2.5">
             <div class="flex items-center justify-between">
               <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider">1. Alege Materia</h3>
-              <span class="text-[10px] text-gray-500">Jurisdicție</span>
+              <span class="text-[10px] text-gray-500 font-medium">Jurisdicție</span>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2">
               @for (cat of categories; track cat.id) {
                 <button 
                   (click)="selectCategory(cat)"
-                  [class]="'p-2.5 rounded-lg text-xs font-medium border transition-all text-left flex items-center gap-1.5 ' + 
+                  [class]="'p-2.5 rounded-xl text-xs font-semibold border transition-all text-left flex items-center gap-2 min-w-0 ' + 
                     (selectedCategory().id === cat.id 
                       ? 'bg-jurist-orange text-black font-bold border-jurist-orange shadow-md' 
-                      : 'bg-black/50 text-gray-400 border-gray-800 hover:border-gray-600 hover:text-white')"
+                      : 'bg-black/60 text-gray-300 border-gray-800 hover:border-gray-600 hover:text-white hover:bg-gray-850')"
+                  [title]="cat.label"
                 >
-                  <span class="text-sm">{{ cat.icon }}</span>
-                  <span class="truncate">{{ cat.label }}</span>
+                  <span class="text-base shrink-0">{{ cat.icon }}</span>
+                  <span class="truncate font-semibold tracking-tight whitespace-nowrap">{{ cat.label }}</span>
                 </button>
               }
             </div>
@@ -175,8 +176,8 @@ interface DocCategory {
           </div>
         </div>
 
-        <!-- RIGHT: Modern Tabbed Preview Area (8 cols) -->
-        <div class="lg:col-span-8 flex flex-col h-full overflow-hidden bg-[#0c0d0e] border border-gray-800 rounded-xl shadow-2xl">
+        <!-- RIGHT: Modern Tabbed Preview Area (7 cols on lg, 8 cols on xl) -->
+        <div class="lg:col-span-7 xl:col-span-8 flex flex-col h-full overflow-hidden bg-[#0c0d0e] border border-gray-800 rounded-xl shadow-2xl">
           
           <!-- Mode Tabs Header (Differentiating Pleading vs Theoretical Memo) -->
           <div class="bg-gray-900/90 border-b border-gray-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">

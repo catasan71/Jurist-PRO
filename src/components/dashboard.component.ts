@@ -66,14 +66,30 @@ import { AuthService } from '../services/auth.service';
 
         <!-- Card 2: Deadline Next -->
         <div (click)="nav('calendar')" (keyup.enter)="nav('calendar')" tabindex="0" class="bg-jurist-card p-5 rounded-xl border border-gray-800 hover:border-gray-600 hover:-translate-y-1 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-neon">
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center justify-between mb-3">
             <span class="text-gray-400 text-sm font-medium">Următorul Termen</span>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-blue-400">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
             </svg>
           </div>
-          <div class="text-lg font-bold text-white truncate">{{ juristService.events()[0]?.date || 'Niciunul' }}</div>
-          <p class="text-xs text-gray-400 truncate mt-1">{{ juristService.events()[0]?.title || 'Calendar liber' }}</p>
+
+          @if (juristService.nextUpcomingEvent(); as nextEv) {
+            <div class="flex items-baseline justify-between gap-2">
+              <div class="text-lg font-bold text-white truncate">{{ nextEv.date }}</div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 whitespace-nowrap">
+                {{ juristService.getEventCountdownLabel(nextEv) }}
+              </span>
+            </div>
+            <p class="text-xs text-jurist-orange font-semibold truncate mt-1">{{ nextEv.clientName || 'Client' }}</p>
+            <p class="text-[11px] text-gray-400 truncate mt-0.5">{{ nextEv.title }}</p>
+          } @else {
+            <div class="text-base font-bold text-gray-300">Niciun termen viitor</div>
+            @if (juristService.events().length > 0) {
+              <p class="text-xs text-amber-400/80 mt-1">Toate cele {{ juristService.events().length }} dosare au termene trecute</p>
+            } @else {
+              <p class="text-xs text-gray-500 mt-1">Calendar liber</p>
+            }
+          }
         </div>
 
         <!-- Card 3: Active Strategy -->
