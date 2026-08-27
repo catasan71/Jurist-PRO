@@ -215,18 +215,31 @@ export class AuthService {
     }
   }
 
-  async login(email: string, pass: string): Promise<{ error: string | null }> {
+  async login(email: string, pass: string): Promise<{ error: string | null; code?: string }> {
     try {
       await signInWithEmailAndPassword(auth, email, pass);
       this.notificationService.success('Autentificare reușită!');
       return { error: null };
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      const msg = err.message || 'Eroare la autentificare.';
+      const err = error as { message?: string; code?: string };
+      const code = err.code || '';
+      let msg = err.message || 'Eroare la autentificare.';
       
-      const isRateLimit = msg.includes('too-many-requests') || msg.includes('network-request-failed') || msg.includes('invalid-api-key') || msg.includes('API key not valid');
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || msg.includes('invalid-credential')) {
+        msg = 'Email sau parolă incorectă.\n\n💡 Sugestie: Dacă v-ați creat contul inițial cu Google, vă puteți conecta oricând direct apăsând pe butonul „Continuă cu Google”.';
+      } else if (code === 'auth/user-not-found' || msg.includes('user-not-found')) {
+        msg = 'Nu există niciun cont cu acest email. Vă puteți înregistra din tab-ul „Înregistrare Cont”.';
+      } else if (code === 'auth/user-disabled' || msg.includes('user-disabled')) {
+        msg = 'Acest cont a fost suspendat. Contactați administratorul.';
+      } else if (code === 'auth/operation-not-allowed') {
+        msg = 'Autentificarea cu Email/Parolă nu este activată în Firebase Console. Vă rugăm să folosiți butonul „Continuă cu Google”.';
+      } else if (code === 'auth/too-many-requests' || msg.includes('too-many-requests')) {
+        msg = 'Prea multe încercări eșuate. Firebase a blocat temporar încercările. Puteți folosi imediat butonul „Continuă cu Google” sau așteptați câteva minute.';
+      }
       
-      if (isRateLimit) {
+      const isNetworkIssue = code === 'auth/network-request-failed' || msg.includes('network-request-failed') || msg.includes('invalid-api-key') || msg.includes('API key not valid');
+      
+      if (isNetworkIssue) {
           console.warn(">>> ACTIVATING OFFLINE/BYPASS MODE DUE TO AUTH ERROR <<<");
           const bypassUser: AppUser = {
               id: 'bypass-' + Date.now(), 
@@ -244,7 +257,7 @@ export class AuthService {
       }
 
       this.notificationService.error(msg);
-      return { error: msg };
+      return { error: msg, code };
     }
   }
 
