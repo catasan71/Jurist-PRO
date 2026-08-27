@@ -156,22 +156,25 @@ import { AuthService } from '../services/auth.service';
         </div>
       </div>
 
-      <!-- Billing Modal for Top-Up -->
+      <!-- Billing Modal for Top-Up and Plans -->
       @if (showBillingModal()) {
         <div class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn">
-          <div class="bg-[#121212] border border-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 class="text-xl font-bold text-white mb-4 border-b border-gray-800 pb-3">Date Facturare</h3>
-            <p class="text-sm text-gray-400 mb-6">Avem nevoie de datele de facturare pentru a procesa această plată.</p>
+          <div class="bg-[#121212] border border-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold text-white mb-2 border-b border-gray-800 pb-3 flex items-center justify-between">
+              <span>Date Facturare & Contract</span>
+              <span class="text-xs text-jurist-orange font-mono font-normal">OUG 34/2014</span>
+            </h3>
+            <p class="text-xs text-gray-400 mb-4">Introduceți datele pentru factură și confirmați constituirea contractului online.</p>
 
             <div class="space-y-4">
-               <div class="flex gap-4 mb-4">
+               <div class="flex gap-4 mb-2">
                   <label class="flex items-center gap-2 cursor-pointer">
                     <input type="radio" name="entityType" value="fizica" [(ngModel)]="billingType" class="accent-jurist-orange">
-                    <span class="text-sm text-gray-300">Persoană Fizică</span>
+                    <span class="text-xs sm:text-sm text-gray-300">Persoană Fizică</span>
                   </label>
                   <label class="flex items-center gap-2 cursor-pointer">
                     <input type="radio" name="entityType" value="juridica" [(ngModel)]="billingType" class="accent-jurist-orange">
-                    <span class="text-sm text-gray-300">Persoană Juridică</span>
+                    <span class="text-xs sm:text-sm text-gray-300">Persoană Juridică / Cabinet</span>
                   </label>
                </div>
 
@@ -185,8 +188,8 @@ import { AuthService } from '../services/auth.service';
                    <input id="pricing-cui" type="text" [(ngModel)]="billingData.cui" class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-jurist-orange outline-none" placeholder="ex: RO12345678">
                  </div>
                  <div>
-                   <label for="pricing-regcom" class="block text-xs text-gray-400 mb-1">Nr. Reg. Com. (Opțional)</label>
-                   <input id="pricing-regcom" type="text" [(ngModel)]="billingData.regCom" class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-jurist-orange outline-none" placeholder="ex: J40/1234/2020">
+                   <label for="pricing-regcom" class="block text-xs text-gray-400 mb-1">Nr. Reg. Com. / Barou (Opțional)</label>
+                   <input id="pricing-regcom" type="text" [(ngModel)]="billingData.regCom" class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-jurist-orange outline-none" placeholder="ex: Decizia Barou 123/2020">
                  </div>
                } @else {
                  <div>
@@ -200,19 +203,95 @@ import { AuthService } from '../services/auth.service';
                  <textarea id="pricing-address" [(ngModel)]="billingData.address" rows="2" class="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:border-jurist-orange outline-none resize-none" placeholder="Strada, Număr, Oraș, Județ"></textarea>
                </div>
 
+               <!-- Clear Legal Notice & Recurring Consent Box -->
+                @if (isSubscriptionModal()) {
+                  <div class="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-200 leading-relaxed">
+                    <p class="font-bold text-amber-300 flex items-center gap-1.5 mb-1 text-xs">
+                      <span>🔁</span> Acord Abonare Recurentă Lunară
+                    </p>
+                    <p class="text-gray-300">
+                      Prin apăsarea butonului <strong>„Plătește {{ getModalPrice() }} RON / lună”</strong> ești de acord cu abonarea recurentă lunară în valoare de <strong>{{ getModalPrice() }} RON / lună</strong> până la anularea din contul tău. Poți anula oricând din cont, fără penalități sau perioade minime obligatorii.
+                    </p>
+                  </div>
+                } @else {
+                  <div class="p-3.5 bg-blue-500/10 border border-blue-500/30 rounded-xl text-xs text-blue-200 leading-relaxed">
+                    <p class="font-bold text-blue-300 flex items-center gap-1.5 mb-1 text-xs">
+                      <span>⚡</span> Achiziție Unică Pachet Credite
+                    </p>
+                    <p class="text-gray-300">
+                      Prin apăsarea butonului <strong>„Plătește {{ getModalPrice() }} RON”</strong> confirmi achiziția unică a pachetului de <strong>{{ getModalCredits() }} credite</strong> în valoare de <strong>{{ getModalPrice() }} RON</strong> (plată unică, fără abonament recurent).
+                    </p>
+                  </div>
+                }
+
+                <!-- Mandatory Un-checked Consent Checkbox in Billing Modal -->
+               <div class="p-3 bg-black/60 rounded-xl border border-gray-800 space-y-2">
+                 <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                   <input type="checkbox" [(ngModel)]="termsAccepted" class="mt-0.5 w-4 h-4 rounded bg-gray-900 border-gray-700 text-jurist-orange accent-jurist-orange focus:ring-jurist-orange cursor-pointer shrink-0">
+                   <span class="text-xs text-gray-300 leading-snug">
+                     Sunt de acord cu <button type="button" (click)="openLegalModal('terms')" class="text-jurist-orange underline hover:text-white font-semibold inline">Termenii și Condițiile</button> și <button type="button" (click)="openLegalModal('privacy')" class="text-blue-400 underline hover:text-white font-semibold inline">Politica DPA</button> pentru încheierea contractului online.
+                   </span>
+                 </label>
+                 <div class="text-[10px] text-gray-500 pl-6 space-y-0.5 leading-tight">
+                   <p>• Confirmarea pe suport durabil se transmite pe e-mail. <a href="/api/preview-contract-email" target="_blank" class="text-jurist-orange underline hover:text-white inline-flex items-center gap-0.5">Vezi model e-mail ↗</a></p>
+                   <p>• Factura fiscală va fi emisă și trimisă separat de către furnizor.</p>
+                 </div>
+               </div>
+
                @if (billingError()) {
                  <p class="text-red-500 text-xs mt-2">{{ billingError() }}</p>
                }
 
-               <div class="flex gap-3 mt-6">
+               <div class="flex gap-3 mt-4">
                  <button (click)="showBillingModal.set(false)" class="px-4 py-2.5 rounded-xl border border-gray-700 text-gray-300 text-sm hover:bg-gray-800 transition-colors">Anulează</button>
-                 <button (click)="processBillingAndTopUp()" [disabled]="processing()" class="flex-1 bg-jurist-orange hover:bg-jurist-orangeHover text-white rounded-xl font-bold py-2.5 text-sm transition-all shadow-lg flex items-center justify-center gap-2">
+                 <button 
+                   (click)="processBillingAndTopUp()" 
+                   [disabled]="processing() || !termsAccepted()" 
+                   class="flex-1 bg-jurist-orange hover:bg-jurist-orangeHover disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-bold py-2.5 text-sm transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                 >
                    @if (processing()) {
                      <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                    }
-                   Continuă spre Plată
+                   @if (isSubscriptionModal()) { Plătește {{ getModalPrice() }} RON / lună } @else { Plătește {{ getModalPrice() }} RON }
                  </button>
                </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Legal Modal Viewer in Pricing -->
+      @if (activeLegalModal()) {
+        <div class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div class="bg-[#121212] border border-gray-700 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden text-left">
+            <div class="p-5 border-b border-gray-800 flex items-center justify-between bg-black/40">
+              <div class="flex items-center gap-2">
+                <span class="text-xl">{{ activeLegalModal() === 'terms' ? '📜' : '🛡️' }}</span>
+                <h3 class="text-lg font-bold text-white">{{ activeLegalModal() === 'terms' ? 'Termeni și Condiții de Utilizare (OUG 34/2014)' : 'Politica GDPR & Acordul DPA' }}</h3>
+              </div>
+              <button (click)="activeLegalModal.set(null)" class="text-gray-400 hover:text-white text-xl p-1 font-bold">✕</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 text-gray-300 text-sm leading-relaxed space-y-4">
+              <div class="p-4 bg-jurist-orange/10 border border-jurist-orange/20 rounded-xl text-xs text-gray-300">
+                <p class="font-bold text-jurist-orange mb-1">Identificare Furnizor:</p>
+                <p>Cătălin MI SANDU (ID/CIF 54552543), Strada Înfrățirii Nr. 15, Craiova, România. E-mail: office@juridicpro.ro.</p>
+              </div>
+              
+              <h4 class="font-bold text-white text-base border-l-4 border-jurist-orange pl-3">Încheierea Contractului și Dreptul de Retragere</h4>
+              <p class="text-xs text-gray-400">Bifarea căsuței de acceptare reprezintă acordul valabil pentru constituirea contractului la distanță. Conform art. 16 lit. m din OUG 34/2014, utilizatorul își exprimă acordul prealabil expres pentru începerea prestării serviciilor digitale și confirmă că ia la cunoștință faptul că își va pierde dreptul de retragere odată cu activarea serviciului.</p>
+              
+              <h4 class="font-bold text-white text-base border-l-4 border-jurist-orange pl-3">Garanție de Securitate Fără Antrenare AI</h4>
+              <p class="text-xs text-gray-400">Datele încărcate și documentele generate NU sunt utilizate pentru antrenarea modelelor AI publice. Toate datele sunt găzduite în servere securizate din UE.</p>
+            </div>
+
+            <div class="p-4 border-t border-gray-800 bg-black/40 flex justify-between items-center">
+              <button (click)="termsAccepted.set(true); activeLegalModal.set(null)" class="bg-jurist-orange hover:bg-jurist-orangeHover text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors cursor-pointer">
+                Accept și Închide
+              </button>
+              <button (click)="activeLegalModal.set(null)" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-4 py-2 rounded-lg border border-gray-700 transition-colors cursor-pointer">
+                Închide
+              </button>
             </div>
           </div>
         </div>
@@ -227,8 +306,14 @@ export class PricingComponent {
   showBillingModal = signal(false);
   processing = signal(false);
   billingError = signal('');
+  termsAccepted = signal(false); // Explicit un-checked by default
+  activeLegalModal = signal<'terms' | 'privacy' | null>(null);
   pendingTopUpAmount = signal<number | null>(null);
   pendingPlan: PlanType | null = null;
+
+  openLegalModal(type: 'terms' | 'privacy') {
+    this.activeLegalModal.set(type);
+  }
 
   billingType: 'fizica' | 'juridica' = 'juridica';
   billingData = {
@@ -283,41 +368,60 @@ export class PricingComponent {
     const user = this.authService.currentUser();
     if (!user) return;
 
-    if (!user.billing_data) {
-      this.pendingTopUpAmount.set(null); // null means it's a subscription upgrade
-      this.pendingPlan = plan;
-      this.showBillingModal.set(true);
-      this.billingError.set('');
+    this.pendingTopUpAmount.set(null); // null means it's a subscription upgrade
+    this.pendingPlan = plan;
+    this.termsAccepted.set(false); // Mandatory non-pre-checked
+    this.billingError.set('');
+
+    if (user.billing_data) {
+      const bData: Record<string, unknown> = user.billing_data;
+      const bType = typeof bData['type'] === 'string' ? bData['type'] : 'juridica';
+      this.billingType = (bType === 'fizica' || bType === 'juridica') ? bType : 'juridica';
+      if (this.billingType === 'juridica') {
+        this.billingData.companyName = typeof bData['name'] === 'string' ? bData['name'] : '';
+        this.billingData.cui = typeof bData['cui'] === 'string' ? bData['cui'] : '';
+        this.billingData.regCom = typeof bData['regCom'] === 'string' ? bData['regCom'] : '';
+      } else {
+        this.billingData.fullName = typeof bData['name'] === 'string' ? bData['name'] : (user.fullName || '');
+      }
+      this.billingData.address = typeof bData['address'] === 'string' ? bData['address'] : '';
+    } else {
       if (!this.billingData.fullName) {
         this.billingData.fullName = user.fullName || '';
       }
-    } else {
-      const result = await this.juristService.upgradePlan(plan);
-      if (result && result.error) {
-         alert(result.error);
-      }
     }
+
+    this.showBillingModal.set(true);
   }
 
   async buyTopUp(amount: number) {
     const user = this.authService.currentUser();
     if (!user) return;
 
-    if (!user.billing_data) {
-      // Show billing modal if no billing data exists
-      this.pendingTopUpAmount.set(amount);
-      this.showBillingModal.set(true);
-      this.billingError.set('');
+    this.pendingTopUpAmount.set(amount);
+    this.pendingPlan = null;
+    this.termsAccepted.set(false); // Mandatory non-pre-checked
+    this.billingError.set('');
+
+    if (user.billing_data) {
+      const bData: Record<string, unknown> = user.billing_data;
+      const bType = typeof bData['type'] === 'string' ? bData['type'] : 'juridica';
+      this.billingType = (bType === 'fizica' || bType === 'juridica') ? bType : 'juridica';
+      if (this.billingType === 'juridica') {
+        this.billingData.companyName = typeof bData['name'] === 'string' ? bData['name'] : '';
+        this.billingData.cui = typeof bData['cui'] === 'string' ? bData['cui'] : '';
+        this.billingData.regCom = typeof bData['regCom'] === 'string' ? bData['regCom'] : '';
+      } else {
+        this.billingData.fullName = typeof bData['name'] === 'string' ? bData['name'] : (user.fullName || '');
+      }
+      this.billingData.address = typeof bData['address'] === 'string' ? bData['address'] : '';
+    } else {
       if (!this.billingData.fullName) {
         this.billingData.fullName = user.fullName || '';
       }
-    } else {
-      // Proceed directly if billing data exists
-      const result = await this.juristService.purchaseTopUp(amount);
-      if (result && result.error) {
-         alert(result.error);
-      }
     }
+
+    this.showBillingModal.set(true);
   }
 
   async processBillingAndTopUp() {
@@ -356,9 +460,9 @@ export class PricingComponent {
     let result: { error?: string | null } | undefined = undefined;
     
     if (amount) {
-      result = await this.juristService.purchaseTopUp(amount) as { error?: string | null } | undefined;
+      result = await this.juristService.purchaseTopUp(amount, finalBillingData) as { error?: string | null } | undefined;
     } else if (this.pendingPlan) {
-      result = await this.juristService.upgradePlan(this.pendingPlan) as { error?: string | null } | undefined;
+      result = await this.juristService.upgradePlan(this.pendingPlan, finalBillingData) as { error?: string | null } | undefined;
     }
     
     this.processing.set(false);
@@ -367,5 +471,28 @@ export class PricingComponent {
     } else {
       this.showBillingModal.set(false);
     }
+  }
+
+  isSubscriptionModal(): boolean {
+    return !this.pendingTopUpAmount() && !!this.pendingPlan;
+  }
+
+  getModalPrice(): number {
+    const topUp = this.pendingTopUpAmount();
+    if (topUp) return topUp;
+    if (this.pendingPlan === 'expert') return 200;
+    if (this.pendingPlan === 'gold') return 500;
+    return 0;
+  }
+
+  getModalCredits(): number {
+    const topUp = this.pendingTopUpAmount();
+    if (topUp) {
+      const pkg = this.topUpPackages().find(p => p.price === topUp);
+      return pkg ? pkg.credits : 0;
+    }
+    if (this.pendingPlan === 'expert') return 150;
+    if (this.pendingPlan === 'gold') return 500;
+    return 0;
   }
 }

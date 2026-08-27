@@ -1105,7 +1105,7 @@ export class JuristService implements OnDestroy {
 
   // --- SUB/CREDITS ---
 
-  async upgradePlan(newPlan: PlanType) {
+  async upgradePlan(newPlan: PlanType, billingData?: any) {
     const user = this.authService.currentUser();
     if (!user) return;
 
@@ -1137,7 +1137,8 @@ export class JuristService implements OnDestroy {
           type: 'subscription',
           plan: newPlan,
           userId: user.id,
-          email: user.email
+          email: user.email,
+          billingData: billingData || user.billing_data || null
         })
       });
       
@@ -1235,7 +1236,7 @@ export class JuristService implements OnDestroy {
     }
   }
 
-  async purchaseTopUp(amount: number) {
+  async purchaseTopUp(amount: number, billingData?: any) {
     const user = this.authService.currentUser();
     if (!user) return;
 
@@ -1255,7 +1256,8 @@ export class JuristService implements OnDestroy {
           amount: amount,
           credits: pkg.credits,
           userId: user.id,
-          email: user.email
+          email: user.email,
+          billingData: billingData || user.billing_data || null
         })
       });
       
