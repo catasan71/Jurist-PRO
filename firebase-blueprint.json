@@ -1,0 +1,128 @@
+{
+  "entities": {
+    "LegalSource": {
+      "title": "LegalSource",
+      "description": "Represents a legal source like the Civil Code.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the source." },
+        "description": { "type": "string", "description": "Description of the source." }
+      },
+      "required": ["title"]
+    },
+    "LegalArticle": {
+      "title": "LegalArticle",
+      "description": "Represents an article from a legal source.",
+      "type": "object",
+      "properties": {
+        "source_id": { "type": "string", "description": "ID of the source." },
+        "article_number": { "type": "string", "description": "Article number." },
+        "content": { "type": "string", "description": "Content of the article." }
+      },
+      "required": ["source_id", "article_number", "content"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "User profile data.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "full_name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "lawyer"] },
+        "plan": { "type": "string", "enum": ["trial", "expert", "gold"] },
+        "status": { "type": "string", "enum": ["active", "pending_payment", "expired", "trial", "cancelled", "suspended"] },
+        "credits": { "type": "number" },
+        "cabinet_data": { "type": "object" },
+        "consents": { "type": "object" },
+        "stripe_customer_id": { "type": "string" },
+        "stripe_subscription_id": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "full_name", "role", "plan", "status", "credits"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "Calendar event for judicial management.",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "title": { "type": "string", "description": "Numărul de dosar sau denumirea speței." },
+        "client_name": { "type": "string" },
+        "case_object": { "type": "string" },
+        "event_date": { "type": "string", "format": "date" },
+        "event_time": { "type": "string" },
+        "type": { "type": "string", "enum": ["court", "deadline", "meeting"] },
+        "details": { "type": "string", "description": "Locația (Instanța, Sala, Zoom)." },
+        "notes": { "type": "string", "description": "Note de strategie sau obiective." },
+        "whatsapp_alert": { "type": "boolean", "description": "Dacă este activată alerta automată cu 24h înainte." },
+        "financial": {
+          "type": "object",
+          "properties": {
+            "total": { "type": "number", "description": "Onorariu total stabilit." },
+            "paid": { "type": "number", "description": "Suma încasată până în prezent." },
+            "rest": { "type": "number", "description": "Diferența de onorariu rămasă (calculată)." }
+          }
+        }
+      },
+      "required": ["user_id", "title", "event_date", "event_time", "type"]
+    },
+    "Ticket": {
+      "title": "Ticket",
+      "description": "Support ticket.",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "type": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string" },
+        "admin_response": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "name", "email", "type", "message", "created_at"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial transaction.",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "description": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "amount", "type", "status", "created_at"]
+    }
+  },
+  "firestore": {
+    "/legal_sources/{sourceId}": {
+      "schema": { "$ref": "LegalSource" },
+      "description": "Collection of legal sources."
+    },
+    "/legal_articles/{articleId}": {
+      "schema": { "$ref": "LegalArticle" },
+      "description": "Collection of legal articles."
+    },
+    "/profiles/{userId}": {
+      "schema": { "$ref": "Profile" },
+      "description": "User profiles."
+    },
+    "/events/{eventId}": {
+      "schema": { "$ref": "Event" },
+      "description": "User calendar events."
+    },
+    "/tickets/{ticketId}": {
+      "schema": { "$ref": "Ticket" },
+      "description": "Support tickets."
+    },
+    "/transactions/{transactionId}": {
+      "schema": { "$ref": "Transaction" },
+      "description": "Financial transactions."
+    }
+  }
+}

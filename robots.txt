@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin-dashboard
+
+Sitemap: https://www.juridicpro.ro/sitemap.xml

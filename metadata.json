@@ -1,0 +1,11 @@
+{
+  "name": "JuristPRO-v2",
+  "description": "Platformă SaaS LegalTech de elită pentru asistență juridică avansată, strategie și redactare documente.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
