@@ -314,10 +314,10 @@ export class AssistantComponent implements OnDestroy {
     // Calculate precise index of the AI message placeholder
     const aiMessageIndex = this.messages().length + 1;
     const history = this.messages()
-      .slice(-4) // Keep only the last 4 messages (2 turns) to prevent context overflow
+      .slice(-6)
       .map(m => ({ 
         role: m.role, 
-        content: m.content.length > 2000 ? m.content.substring(0, 2000) + '...[Trunchiat]' : m.content 
+        content: m.content.length > 25000 ? m.content.substring(0, 25000) : m.content 
       }));
     
     // Add user message and the placeholder in a single synchronous signal update!
