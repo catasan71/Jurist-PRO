@@ -4,7 +4,6 @@ node_modules/
 # Production & Build outputs
 dist/
 .angular/
-server.js
 migrated_prompt_history/
 
 # Environment variables & secrets

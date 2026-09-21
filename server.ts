@@ -140,7 +140,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Direct source code download endpoint
-app.get('/api/download-zip', (req, res) => {
+app.get(['/api/download-zip', '/download-zip'], (req, res) => {
   const zipPath = path.join(__dirname, 'dist/juristpro/browser/juristpro-backup.zip');
   if (fs.existsSync(zipPath)) {
     res.download(zipPath, 'juristpro-source-code.zip');
@@ -505,7 +505,7 @@ async function sendContractConfirmationEmail(params: {
 }
 
 // API Endpoint for Revolut Webhook
-app.post('/api/revolut-webhook', async (req, res) => {
+app.post(['/api/revolut-webhook', '/revolut-webhook'], async (req, res) => {
   const adminDb = getAdminDb();
   
   try {
@@ -628,7 +628,7 @@ app.post('/api/revolut-webhook', async (req, res) => {
 });
 
 // API Endpoint for Testing Revolut API Configuration
-app.get('/api/test-revolut', async (req, res) => {
+app.get(['/api/test-revolut', '/test-revolut'], async (req, res) => {
   try {
     const { apiKey, baseUrl, isSandbox } = getRevolutConfig();
     const configured = apiKey !== 'dummy_revolut_key_for_testing';
@@ -719,7 +719,7 @@ async function logProofOfConsent(params: {
 }
 
 // API Endpoint to Create Revolut Hosted Checkout Order
-app.post('/api/create-revolut-order', async (req, res) => {
+app.post(['/api/create-revolut-order', '/create-revolut-order'], async (req, res) => {
   try {
     const { type, plan, amount, credits, userId, email, billingData } = req.body;
     
@@ -900,7 +900,7 @@ app.post('/api/create-revolut-order', async (req, res) => {
 });
 
 // API Endpoint for Contact Form
-app.post('/api/contact', async (req, res) => {
+app.post(['/api/contact', '/contact'], async (req, res) => {
   try {
     const { name, email, message } = req.body;
     
@@ -943,7 +943,7 @@ app.post('/api/contact', async (req, res) => {
 });
 
 // API Endpoint to send or resend distance contract confirmation email
-app.post('/api/send-contract-confirmation', async (req, res) => {
+app.post(['/api/send-contract-confirmation', '/send-contract-confirmation'], async (req, res) => {
   try {
     const { userId, email, orderId, type, planName, amount, credits, billingData } = req.body;
     
@@ -990,7 +990,7 @@ app.post('/api/send-contract-confirmation', async (req, res) => {
 });
 
 // API Endpoint to render live preview of the luxury contract confirmation email in the browser
-app.get('/api/preview-contract-email', (req, res) => {
+app.get(['/api/preview-contract-email', '/preview-contract-email'], (req, res) => {
   const html = generateContractEmailHtml({
     email: (req.query.email as string) || 'catalinsandu07@gmail.com',
     userName: (req.query.name as string) || 'Cătălin Sandu (Avocat / Titular Cabinet)',
@@ -1013,10 +1013,10 @@ app.get('/api/preview-contract-email', (req, res) => {
   res.send(html);
 });
 
-app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env).filter(k => k.includes('GEMINI')).map(k => `${k}=${process.env[k]}`) }));
+app.get(['/api/debug-key', '/debug-key'], (req, res) => res.json({ env: Object.keys(process.env).filter(k => k.includes('GEMINI')).map(k => `${k}=${process.env[k]}`) }));
 
 // API Endpoint for Gemini Proxy
-  app.post('/api/gemini', async (req, res) => {
+app.post(['/api/gemini', '/gemini'], async (req, res) => {
   const { contents, systemInstruction } = req.body;
   let { tools } = req.body;
   let rawKey = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
@@ -1180,7 +1180,7 @@ app.get('/api/debug-key', (req, res) => res.json({ env: Object.keys(process.env)
 });
 
 // API Endpoint for Testing WhatsApp Gateway
-app.post('/api/test-whatsapp', async (req, res) => {
+app.post(['/api/test-whatsapp', '/test-whatsapp'], async (req, res) => {
   try {
     const { phone } = req.body;
     if (!phone) {
@@ -1409,11 +1409,13 @@ async function runDeadlineAutomation() {
 }
 
 
-// Run automation every 8 hours (3 times a day)
-setInterval(runDeadlineAutomation, 8 * 60 * 60 * 1000); 
+// Run automation every 8 hours (3 times a day) in persistent environment (non-Vercel)
+if (!process.env.VERCEL) {
+  setInterval(runDeadlineAutomation, 8 * 60 * 60 * 1000); 
 
-// Also trigger once on server startup after a small delay
-setTimeout(runDeadlineAutomation, 15000);
+  // Also trigger once on server startup after a small delay
+  setTimeout(runDeadlineAutomation, 15000);
+}
 
 // --- END AUTOMATION ---
 
@@ -1487,8 +1489,10 @@ app.use((req, res) => {
   }
 });
 
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server running on port ${port}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`Server running on port ${port}`);
+  });
+}
 
 export default app;
