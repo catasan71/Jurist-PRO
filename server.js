@@ -150,14 +150,31 @@ function getRevolutConfig() {
 }
 app.use(import_express.default.json({ limit: "50mb" }));
 app.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
-app.get(["/api/download-zip", "/download-zip"], (req, res) => {
-  const zipPath = import_path.default.join(__dirname, "dist/juristpro/browser/juristpro-backup.zip");
-  if (import_fs.default.existsSync(zipPath)) {
-    res.download(zipPath, "juristpro-source-code.zip");
-  } else {
-    res.status(404).send("Arhiva ZIP se genereaz\u0103. V\u0103 rug\u0103m re\xEEnc\u0103rca\u021Bi pagina.");
+var ADMIN_EMAILS = ["catalinsandu07@gmail.com", "admin@juristpro.ai", "juristpro.ai@gmail.com"];
+var ADMIN_UIDS = ["mP5qKCHEHZbnrPp3JzNaE7pEwci2"];
+async function getRequestUser(req) {
+  const header = req.headers.authorization || "";
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+  try {
+    const adminDb = getAdminDb();
+    const decoded = await import_firebase_admin.default.auth().verifyIdToken(match[1]);
+    const email = (decoded.email || "").toLowerCase().trim();
+    let isAdmin = ADMIN_UIDS.includes(decoded.uid) || decoded.email_verified === true && ADMIN_EMAILS.includes(email);
+    if (!isAdmin) {
+      const profile = await adminDb.collection("profiles").doc(decoded.uid).get();
+      isAdmin = profile.exists && profile.data()?.role === "admin";
+    }
+    return { uid: decoded.uid, email, isAdmin };
+  } catch (err) {
+    console.warn("[AUTH] Invalid or expired ID token:", err.message);
+    return null;
   }
-});
+}
+function escapeHtml(value) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+var UNAUTHORIZED_MSG = "Sesiunea a expirat sau nu sunte\u021Bi autentificat. V\u0103 rug\u0103m s\u0103 v\u0103 reconecta\u021Bi.";
 function generateContractEmailHtml(params) {
   const { email, userName, orderId, type, planName, amount, credits, billingData, origin } = params;
   const appUrl = origin || import_process.default.env.APP_URL || "https://juristpro.ro";
@@ -654,6 +671,10 @@ app.get(["/api/revolut-webhook-setup", "/revolut-webhook-setup"], async (req, re
 });
 app.get(["/api/test-revolut", "/test-revolut"], async (req, res) => {
   try {
+    const authUser = await getRequestUser(req);
+    if (!authUser || !authUser.isAdmin) {
+      return res.status(403).json({ success: false, error: "Acces permis doar administratorului." });
+    }
     const { apiKey, baseUrl, isSandbox } = getRevolutConfig();
     const configured = apiKey !== "dummy_revolut_key_for_testing";
     const keyPrefix = apiKey === "dummy_revolut_key_for_testing" ? "none" : apiKey.substring(0, Math.min(8, apiKey.length));
@@ -724,11 +745,14 @@ async function logProofOfConsent(params) {
 }
 app.post(["/api/create-revolut-order", "/create-revolut-order"], async (req, res) => {
   try {
-    const { type, plan, amount, credits, userId, email, billingData } = req.body;
-    if (!userId) {
-      res.status(400).json({ error: "User ID is required" });
+    const authUser = await getRequestUser(req);
+    if (!authUser) {
+      res.status(401).json({ error: UNAUTHORIZED_MSG });
       return;
     }
+    const { type, plan, amount, credits, billingData } = req.body;
+    const userId = authUser.uid;
+    const email = authUser.email || req.body.email;
     const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "127.0.0.1";
     const userAgent = req.headers["user-agent"] || "Unknown Browser";
     await logProofOfConsent({
@@ -876,6 +900,70 @@ app.post(["/api/create-revolut-order", "/create-revolut-order"], async (req, res
     res.status(500).json({ error: error.message || "Eroare intern\u0103 Revolut Pay" });
   }
 });
+app.post(["/api/credits/consume", "/credits/consume"], async (req, res) => {
+  try {
+    const authUser = await getRequestUser(req);
+    if (!authUser) return res.status(401).json({ error: UNAUTHORIZED_MSG });
+    if (authUser.isAdmin) return res.json({ success: true, admin: true });
+    const amount = Math.floor(Number(req.body?.amount));
+    if (!Number.isFinite(amount) || amount < 1 || amount > 50) {
+      return res.status(400).json({ error: "Cantitate de credite invalid\u0103." });
+    }
+    const adminDb = getAdminDb();
+    const ref = adminDb.collection("profiles").doc(authUser.uid);
+    const credits = await adminDb.runTransaction(async (t) => {
+      const snap = await t.get(ref);
+      if (!snap.exists) throw new Error("Profilul nu exist\u0103.");
+      const current = Number(snap.data()?.credits || 0);
+      const next = Math.max(0, current - amount);
+      t.update(ref, { credits: next });
+      return next;
+    });
+    res.json({ success: true, credits });
+  } catch (err) {
+    console.error("[CREDITS] consume error:", err);
+    res.status(500).json({ error: "Eroare la actualizarea creditelor." });
+  }
+});
+app.post(["/api/promo/redeem", "/promo/redeem"], async (req, res) => {
+  try {
+    const authUser = await getRequestUser(req);
+    if (!authUser) return res.status(401).json({ success: false, message: UNAUTHORIZED_MSG });
+    const code = String(req.body?.code || "").trim().toUpperCase();
+    if (!code || code.length > 64 || code.includes("/")) {
+      return res.status(400).json({ success: false, message: "Codul promo\u021Bional nu exist\u0103 sau este invalid." });
+    }
+    const adminDb = getAdminDb();
+    const codeRef = adminDb.collection("promo_codes").doc(code);
+    const profileRef = adminDb.collection("profiles").doc(authUser.uid);
+    const result = await adminDb.runTransaction(async (t) => {
+      const [codeSnap, profileSnap] = await Promise.all([t.get(codeRef), t.get(profileRef)]);
+      if (!codeSnap.exists) return { ok: false, message: "Codul promo\u021Bional nu exist\u0103 sau este invalid." };
+      if (!profileSnap.exists) return { ok: false, message: "Profilul nu exist\u0103." };
+      const promo = codeSnap.data() || {};
+      if (!promo.active) return { ok: false, message: "Acest cod promo\u021Bional a fost dezactivat." };
+      if (promo.expiresAt) {
+        const exp = typeof promo.expiresAt.toDate === "function" ? promo.expiresAt.toDate() : new Date(promo.expiresAt);
+        if (!isNaN(exp.getTime()) && exp < /* @__PURE__ */ new Date()) return { ok: false, message: "Acest cod promo\u021Bional a expirat." };
+      }
+      const usedBy = Array.isArray(promo.usedBy) ? promo.usedBy : [];
+      if (usedBy.includes(authUser.uid)) return { ok: false, message: "A\u021Bi folosit deja acest cod promo\u021Bional." };
+      if (Number(promo.maxUses) > 0 && usedBy.length >= Number(promo.maxUses)) {
+        return { ok: false, message: "Acest cod promo\u021Bional a atins limita maxim\u0103 de utiliz\u0103ri." };
+      }
+      const add = Math.max(0, Math.floor(Number(promo.credits) || 0));
+      const current = Number(profileSnap.data()?.credits || 0);
+      t.update(profileRef, { credits: current + add });
+      t.update(codeRef, { usedBy: [...usedBy, authUser.uid] });
+      return { ok: true, credits: current + add, added: add };
+    });
+    if (!result.ok) return res.json({ success: false, message: result.message });
+    res.json({ success: true, credits: result.credits, message: `Cod aplicat cu succes! A\u021Bi primit ${result.added} credite.` });
+  } catch (err) {
+    console.error("[PROMO] redeem error:", err);
+    res.status(500).json({ success: false, message: "A ap\u0103rut o eroare la aplicarea codului." });
+  }
+});
 app.post(["/api/contact", "/contact"], async (req, res) => {
   try {
     const { name, email, message } = req.body;
@@ -888,14 +976,14 @@ app.post(["/api/contact", "/contact"], async (req, res) => {
         from: "JuristPRO Contact <contact@juridicpro.ro>",
         to: ["office@developly.pro"],
         replyTo: email,
-        subject: `Mesaj nou de la ${name} (Contact JuristPRO)`,
+        subject: `Mesaj nou de la ${String(name).replace(/[\r\n]/g, " ").slice(0, 100)} (Contact JuristPRO)`,
         html: `
           <h2>Mesaj nou de contact</h2>
-          <p><strong>Nume:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Nume:</strong> ${escapeHtml(name)}</p>
+          <p><strong>Email:</strong> ${escapeHtml(email)}</p>
           <p><strong>Mesaj:</strong></p>
           <blockquote style="border-left: 4px solid #ccc; padding-left: 10px; margin-left: 0;">
-            ${message.replace(/\n/g, "<br>")}
+            ${escapeHtml(message).replace(/\n/g, "<br>")}
           </blockquote>
         `
       });
@@ -913,6 +1001,10 @@ app.post(["/api/contact", "/contact"], async (req, res) => {
 });
 app.post(["/api/send-contract-confirmation", "/send-contract-confirmation"], async (req, res) => {
   try {
+    const authUser = await getRequestUser(req);
+    if (!authUser || !authUser.isAdmin) {
+      return res.status(403).json({ error: "Acces permis doar administratorului." });
+    }
     const { userId, email, orderId, type, planName, amount, credits, billingData } = req.body;
     let targetEmail = email;
     let userName = "Utilizator";
@@ -953,11 +1045,11 @@ app.post(["/api/send-contract-confirmation", "/send-contract-confirmation"], asy
 });
 app.get(["/api/preview-contract-email", "/preview-contract-email"], (req, res) => {
   const html = generateContractEmailHtml({
-    email: req.query.email || "catalinsandu07@gmail.com",
-    userName: req.query.name || "C\u0103t\u0103lin Sandu (Avocat / Titular Cabinet)",
-    orderId: req.query.orderId || "ORD_2026_EXPERT_8892",
-    type: req.query.type || "subscription",
-    planName: req.query.plan || "expert",
+    email: escapeHtml(req.query.email || "catalinsandu07@gmail.com"),
+    userName: escapeHtml(req.query.name || "C\u0103t\u0103lin Sandu (Avocat / Titular Cabinet)"),
+    orderId: escapeHtml(req.query.orderId || "ORD_2026_EXPERT_8892"),
+    type: req.query.type === "topup" ? "topup" : "subscription",
+    planName: escapeHtml(req.query.plan || "expert"),
     amount: Number(req.query.amount) || 200,
     credits: Number(req.query.credits) || 150,
     billingData: {
@@ -972,8 +1064,21 @@ app.get(["/api/preview-contract-email", "/preview-contract-email"], (req, res) =
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.send(html);
 });
-app.get(["/api/debug-key", "/debug-key"], (req, res) => res.json({ env: Object.keys(import_process.default.env).filter((k) => k.includes("GEMINI")).map((k) => `${k}=${import_process.default.env[k]}`) }));
 app.post(["/api/gemini", "/gemini"], async (req, res) => {
+  const authUser = await getRequestUser(req);
+  if (!authUser) {
+    return res.status(401).json({ error: UNAUTHORIZED_MSG });
+  }
+  if (!authUser.isAdmin) {
+    const profileSnap = await getAdminDb().collection("profiles").doc(authUser.uid).get();
+    const profile = profileSnap.data() || {};
+    if (profile.status === "suspended") {
+      return res.status(403).json({ error: "Contul dumneavoastr\u0103 este suspendat. Contacta\u021Bi suportul." });
+    }
+    if (Number(profile.credits || 0) < 1) {
+      return res.status(402).json({ error: "Credite insuficiente. V\u0103 rug\u0103m s\u0103 achizi\u021Biona\u021Bi un pachet de credite." });
+    }
+  }
   const { contents, systemInstruction } = req.body;
   let { tools } = req.body;
   let rawKey = import_process.default.env.GEMINI_API_KEY || import_process.default.env.API_KEY || "";
@@ -1110,6 +1215,10 @@ app.post(["/api/gemini", "/gemini"], async (req, res) => {
 });
 app.post(["/api/test-whatsapp", "/test-whatsapp"], async (req, res) => {
   try {
+    const authUser = await getRequestUser(req);
+    if (!authUser) {
+      return res.status(401).json({ error: UNAUTHORIZED_MSG });
+    }
     const { phone } = req.body;
     if (!phone) {
       return res.status(400).json({ error: "Num\u0103rul de telefon este obligatoriu." });

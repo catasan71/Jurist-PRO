@@ -17,7 +17,9 @@ service cloud.firestore {
     function emailIsAdmin() {
       return isAuthenticated() && 
              (
-               (request.auth.token.email != null && request.auth.token.email.lower() in ["catalinsandu07@gmail.com", "admin@juristpro.ai", "juristpro.ai@gmail.com"]) ||
+               (request.auth.token.email != null &&
+                request.auth.token.email_verified == true &&
+                request.auth.token.email.lower() in ["catalinsandu07@gmail.com", "admin@juristpro.ai", "juristpro.ai@gmail.com"]) ||
                (request.auth.uid == "mP5qKCHEHZbnrPp3JzNaE7pEwci2")
              );
     }
@@ -117,7 +119,36 @@ service cloud.firestore {
 
     // Rules for Profiles
     match /profiles/{userId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isOwner(userId) || isAdmin();
+
+      // New profile at sign-up: always a lawyer, max 5 trial credits
+      allow create: if isAdmin() || (
+        isOwner(userId) &&
+        request.resource.data.id == userId &&
+        request.resource.data.role == 'lawyer' &&
+        request.resource.data.credits is int &&
+        request.resource.data.credits >= 0 &&
+        request.resource.data.credits <= 5 &&
+        (
+          (request.resource.data.plan == 'trial' && request.resource.data.status == 'trial') ||
+          (request.resource.data.plan in ['expert', 'gold'] && request.resource.data.status == 'pending_payment')
+        )
+      );
+
+      // The owner may edit only personal/cabinet data, cancel, or downgrade to trial.
+      // Plan upgrades and credits are handled exclusively by the server (Revolut webhook / API).
+      allow update: if isAdmin() || (
+        isOwner(userId) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['cabinet_data', 'billing_data', 'consents', 'full_name', 'updated_at', 'status', 'plan']) &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan']) ||
+          request.resource.data.plan == 'trial') &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) ||
+          request.resource.data.status == 'cancelled' ||
+          (request.resource.data.status == 'active' && request.resource.data.plan == 'trial'))
+      );
+
+      allow delete: if isAdmin();
     }
 
     // Rules for Events
@@ -130,24 +161,20 @@ service cloud.firestore {
 
     // Rules for Tickets
     match /tickets/{ticketId} {
-      allow read, create: if isAuthenticated();
-      allow update, delete: if isOwner(resource.data.user_id) || emailIsAdmin();
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isOwner(resource.data.user_id) || isAdmin();
     }
 
     // Rules for Transactions
     match /transactions/{transactionId} {
-      allow read: if isOwner(resource.data.user_id) || emailIsAdmin();
-      allow create: if isAuthenticated();
-      allow update, delete: if emailIsAdmin();
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     // Rules for Promo Codes
     match /promo_codes/{codeId} {
-      allow read, write: if emailIsAdmin() || isAdmin();
-      allow get: if isAuthenticated();
-      allow update: if isAuthenticated() && 
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy']) &&
-                       request.auth.uid in request.resource.data.usedBy;
+      allow read, write: if isAdmin();
     }
   }
 }

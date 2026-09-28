@@ -159,15 +159,45 @@ function getRevolutConfig() {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Direct source code download endpoint
-app.get(['/api/download-zip', '/download-zip'], (req, res) => {
-  const zipPath = path.join(__dirname, 'dist/juristpro/browser/juristpro-backup.zip');
-  if (fs.existsSync(zipPath)) {
-    res.download(zipPath, 'juristpro-source-code.zip');
-  } else {
-    res.status(404).send('Arhiva ZIP se generează. Vă rugăm reîncărcați pagina.');
+// ===============================================================
+// Authentication helpers (Firebase ID token sent by the app as "Authorization: Bearer <token>")
+// ===============================================================
+const ADMIN_EMAILS = ['catalinsandu07@gmail.com', 'admin@juristpro.ai', 'juristpro.ai@gmail.com'];
+const ADMIN_UIDS = ['mP5qKCHEHZbnrPp3JzNaE7pEwci2'];
+
+type RequestUser = { uid: string; email: string; isAdmin: boolean };
+
+async function getRequestUser(req: express.Request): Promise<RequestUser | null> {
+  const header = (req.headers.authorization as string) || '';
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+  try {
+    const adminDb = getAdminDb();
+    const decoded = await admin.auth().verifyIdToken(match[1]);
+    const email = (decoded.email || '').toLowerCase().trim();
+    let isAdmin = ADMIN_UIDS.includes(decoded.uid) ||
+      (decoded.email_verified === true && ADMIN_EMAILS.includes(email));
+    if (!isAdmin) {
+      const profile = await adminDb.collection('profiles').doc(decoded.uid).get();
+      isAdmin = profile.exists && profile.data()?.role === 'admin';
+    }
+    return { uid: decoded.uid, email, isAdmin };
+  } catch (err: any) {
+    console.warn('[AUTH] Invalid or expired ID token:', err.message);
+    return null;
   }
-});
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+const UNAUTHORIZED_MSG = 'Sesiunea a expirat sau nu sunteți autentificat. Vă rugăm să vă reconectați.';
 
 // // Helper to generate the luxury HTML template for distance contract confirmation
 function generateContractEmailHtml(params: {
@@ -729,6 +759,10 @@ app.get(['/api/revolut-webhook-setup', '/revolut-webhook-setup'], async (req, re
 // API Endpoint for Testing Revolut API Configuration
 app.get(['/api/test-revolut', '/test-revolut'], async (req, res) => {
   try {
+    const authUser = await getRequestUser(req);
+    if (!authUser || !authUser.isAdmin) {
+      return res.status(403).json({ success: false, error: 'Acces permis doar administratorului.' });
+    }
     const { apiKey, baseUrl, isSandbox } = getRevolutConfig();
     const configured = apiKey !== 'dummy_revolut_key_for_testing';
     
@@ -820,12 +854,14 @@ async function logProofOfConsent(params: {
 // API Endpoint to Create Revolut Hosted Checkout Order
 app.post(['/api/create-revolut-order', '/create-revolut-order'], async (req, res) => {
   try {
-    const { type, plan, amount, credits, userId, email, billingData } = req.body;
-    
-    if (!userId) {
-      res.status(400).json({ error: 'User ID is required' });
+    const authUser = await getRequestUser(req);
+    if (!authUser) {
+      res.status(401).json({ error: UNAUTHORIZED_MSG });
       return;
     }
+    const { type, plan, amount, credits, billingData } = req.body;
+    const userId = authUser.uid;
+    const email = authUser.email || req.body.email;
 
     const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || '127.0.0.1';
     const userAgent = (req.headers['user-agent'] as string) || 'Unknown Browser';
@@ -998,6 +1034,81 @@ app.post(['/api/create-revolut-order', '/create-revolut-order'], async (req, res
   }
 });
 
+// API Endpoint: consume credits after an AI action (server-side, atomic)
+app.post(['/api/credits/consume', '/credits/consume'], async (req, res) => {
+  try {
+    const authUser = await getRequestUser(req);
+    if (!authUser) return res.status(401).json({ error: UNAUTHORIZED_MSG });
+    if (authUser.isAdmin) return res.json({ success: true, admin: true });
+
+    const amount = Math.floor(Number(req.body?.amount));
+    if (!Number.isFinite(amount) || amount < 1 || amount > 50) {
+      return res.status(400).json({ error: 'Cantitate de credite invalidă.' });
+    }
+
+    const adminDb = getAdminDb();
+    const ref = adminDb.collection('profiles').doc(authUser.uid);
+    const credits = await adminDb.runTransaction(async (t) => {
+      const snap = await t.get(ref);
+      if (!snap.exists) throw new Error('Profilul nu există.');
+      const current = Number(snap.data()?.credits || 0);
+      const next = Math.max(0, current - amount);
+      t.update(ref, { credits: next });
+      return next;
+    });
+    res.json({ success: true, credits });
+  } catch (err: any) {
+    console.error('[CREDITS] consume error:', err);
+    res.status(500).json({ error: 'Eroare la actualizarea creditelor.' });
+  }
+});
+
+// API Endpoint: redeem a promo code (server-side, atomic)
+app.post(['/api/promo/redeem', '/promo/redeem'], async (req, res) => {
+  try {
+    const authUser = await getRequestUser(req);
+    if (!authUser) return res.status(401).json({ success: false, message: UNAUTHORIZED_MSG });
+
+    const code = String(req.body?.code || '').trim().toUpperCase();
+    if (!code || code.length > 64 || code.includes('/')) {
+      return res.status(400).json({ success: false, message: 'Codul promoțional nu există sau este invalid.' });
+    }
+
+    const adminDb = getAdminDb();
+    const codeRef = adminDb.collection('promo_codes').doc(code);
+    const profileRef = adminDb.collection('profiles').doc(authUser.uid);
+
+    const result = await adminDb.runTransaction(async (t) => {
+      const [codeSnap, profileSnap] = await Promise.all([t.get(codeRef), t.get(profileRef)]);
+      if (!codeSnap.exists) return { ok: false, message: 'Codul promoțional nu există sau este invalid.' };
+      if (!profileSnap.exists) return { ok: false, message: 'Profilul nu există.' };
+      const promo: any = codeSnap.data() || {};
+
+      if (!promo.active) return { ok: false, message: 'Acest cod promoțional a fost dezactivat.' };
+      if (promo.expiresAt) {
+        const exp = typeof promo.expiresAt.toDate === 'function' ? promo.expiresAt.toDate() : new Date(promo.expiresAt);
+        if (!isNaN(exp.getTime()) && exp < new Date()) return { ok: false, message: 'Acest cod promoțional a expirat.' };
+      }
+      const usedBy: string[] = Array.isArray(promo.usedBy) ? promo.usedBy : [];
+      if (usedBy.includes(authUser.uid)) return { ok: false, message: 'Ați folosit deja acest cod promoțional.' };
+      if (Number(promo.maxUses) > 0 && usedBy.length >= Number(promo.maxUses)) {
+        return { ok: false, message: 'Acest cod promoțional a atins limita maximă de utilizări.' };
+      }
+      const add = Math.max(0, Math.floor(Number(promo.credits) || 0));
+      const current = Number(profileSnap.data()?.credits || 0);
+      t.update(profileRef, { credits: current + add });
+      t.update(codeRef, { usedBy: [...usedBy, authUser.uid] });
+      return { ok: true, credits: current + add, added: add };
+    });
+
+    if (!result.ok) return res.json({ success: false, message: result.message });
+    res.json({ success: true, credits: result.credits, message: `Cod aplicat cu succes! Ați primit ${result.added} credite.` });
+  } catch (err: any) {
+    console.error('[PROMO] redeem error:', err);
+    res.status(500).json({ success: false, message: 'A apărut o eroare la aplicarea codului.' });
+  }
+});
+
 // API Endpoint for Contact Form
 app.post(['/api/contact', '/contact'], async (req, res) => {
   try {
@@ -1014,14 +1125,14 @@ app.post(['/api/contact', '/contact'], async (req, res) => {
         from: 'JuristPRO Contact <contact@juridicpro.ro>',
         to: ['office@developly.pro'],
         replyTo: email,
-        subject: `Mesaj nou de la ${name} (Contact JuristPRO)`,
+        subject: `Mesaj nou de la ${String(name).replace(/[\r\n]/g, ' ').slice(0, 100)} (Contact JuristPRO)`,
         html: `
           <h2>Mesaj nou de contact</h2>
-          <p><strong>Nume:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Nume:</strong> ${escapeHtml(name)}</p>
+          <p><strong>Email:</strong> ${escapeHtml(email)}</p>
           <p><strong>Mesaj:</strong></p>
           <blockquote style="border-left: 4px solid #ccc; padding-left: 10px; margin-left: 0;">
-            ${message.replace(/\n/g, '<br>')}
+            ${escapeHtml(message).replace(/\n/g, '<br>')}
           </blockquote>
         `
       });
@@ -1044,6 +1155,10 @@ app.post(['/api/contact', '/contact'], async (req, res) => {
 // API Endpoint to send or resend distance contract confirmation email
 app.post(['/api/send-contract-confirmation', '/send-contract-confirmation'], async (req, res) => {
   try {
+    const authUser = await getRequestUser(req);
+    if (!authUser || !authUser.isAdmin) {
+      return res.status(403).json({ error: 'Acces permis doar administratorului.' });
+    }
     const { userId, email, orderId, type, planName, amount, credits, billingData } = req.body;
     
     let targetEmail = email;
@@ -1091,11 +1206,11 @@ app.post(['/api/send-contract-confirmation', '/send-contract-confirmation'], asy
 // API Endpoint to render live preview of the luxury contract confirmation email in the browser
 app.get(['/api/preview-contract-email', '/preview-contract-email'], (req, res) => {
   const html = generateContractEmailHtml({
-    email: (req.query.email as string) || 'catalinsandu07@gmail.com',
-    userName: (req.query.name as string) || 'Cătălin Sandu (Avocat / Titular Cabinet)',
-    orderId: (req.query.orderId as string) || 'ORD_2026_EXPERT_8892',
-    type: (req.query.type as 'subscription' | 'topup') || 'subscription',
-    planName: (req.query.plan as string) || 'expert',
+    email: escapeHtml((req.query.email as string) || 'catalinsandu07@gmail.com'),
+    userName: escapeHtml((req.query.name as string) || 'Cătălin Sandu (Avocat / Titular Cabinet)'),
+    orderId: escapeHtml((req.query.orderId as string) || 'ORD_2026_EXPERT_8892'),
+    type: req.query.type === 'topup' ? 'topup' : 'subscription',
+    planName: escapeHtml((req.query.plan as string) || 'expert'),
     amount: Number(req.query.amount) || 200,
     credits: Number(req.query.credits) || 150,
     billingData: {
@@ -1112,10 +1227,24 @@ app.get(['/api/preview-contract-email', '/preview-contract-email'], (req, res) =
   res.send(html);
 });
 
-app.get(['/api/debug-key', '/debug-key'], (req, res) => res.json({ env: Object.keys(process.env).filter(k => k.includes('GEMINI')).map(k => `${k}=${process.env[k]}`) }));
 
 // API Endpoint for Gemini Proxy
 app.post(['/api/gemini', '/gemini'], async (req, res) => {
+  const authUser = await getRequestUser(req);
+  if (!authUser) {
+    return res.status(401).json({ error: UNAUTHORIZED_MSG });
+  }
+  if (!authUser.isAdmin) {
+    const profileSnap = await getAdminDb().collection('profiles').doc(authUser.uid).get();
+    const profile = profileSnap.data() || {};
+    if (profile.status === 'suspended') {
+      return res.status(403).json({ error: 'Contul dumneavoastră este suspendat. Contactați suportul.' });
+    }
+    if (Number(profile.credits || 0) < 1) {
+      return res.status(402).json({ error: 'Credite insuficiente. Vă rugăm să achiziționați un pachet de credite.' });
+    }
+  }
+
   const { contents, systemInstruction } = req.body;
   let { tools } = req.body;
   let rawKey = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
@@ -1281,6 +1410,10 @@ app.post(['/api/gemini', '/gemini'], async (req, res) => {
 // API Endpoint for Testing WhatsApp Gateway
 app.post(['/api/test-whatsapp', '/test-whatsapp'], async (req, res) => {
   try {
+    const authUser = await getRequestUser(req);
+    if (!authUser) {
+      return res.status(401).json({ error: UNAUTHORIZED_MSG });
+    }
     const { phone } = req.body;
     if (!phone) {
       return res.status(400).json({ error: 'Numărul de telefon este obligatoriu.' });
