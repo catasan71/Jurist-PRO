@@ -611,6 +611,47 @@ app.post(["/api/revolut-webhook", "/revolut-webhook"], async (req, res) => {
     res.status(500).json({ error: "Webhook processing failed" });
   }
 });
+app.get(["/api/revolut-webhook-setup", "/revolut-webhook-setup"], async (req, res) => {
+  try {
+    const { apiKey, baseUrl, isSandbox } = getRevolutConfig();
+    if (apiKey === "dummy_revolut_key_for_testing" || apiKey.startsWith("dummy_")) {
+      return res.status(400).json({ success: false, error: "REVOLUT_API_KEY nu este configurat." });
+    }
+    const webhookUrl = "https://www.juridicpro.ro/api/revolut-webhook";
+    const headers = {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    };
+    const listResp = await fetch(`${baseUrl}/webhooks`, { headers });
+    if (!listResp.ok) {
+      const t = await listResp.text();
+      console.error("[REVOLUT SETUP] List webhooks failed:", listResp.status, t);
+      return res.status(502).json({ success: false, step: "list", status: listResp.status, error: t.slice(0, 300) });
+    }
+    const list = await listResp.json();
+    const safe = (w) => ({ id: w.id, url: w.url, events: w.events });
+    const existing = list.find((w) => w.url === webhookUrl && Array.isArray(w.events) && w.events.includes("ORDER_COMPLETED"));
+    if (existing) {
+      return res.json({ success: true, action: "already_registered", isSandbox, webhooks: list.map(safe) });
+    }
+    const createResp = await fetch(`${baseUrl}/webhooks`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ url: webhookUrl, events: ["ORDER_COMPLETED"] })
+    });
+    if (!createResp.ok) {
+      const t = await createResp.text();
+      console.error("[REVOLUT SETUP] Create webhook failed:", createResp.status, t);
+      return res.status(502).json({ success: false, step: "create", status: createResp.status, error: t.slice(0, 300), webhooks: list.map(safe) });
+    }
+    const created = await createResp.json();
+    console.log("[REVOLUT SETUP] Webhook registered:", created.id, created.url);
+    return res.json({ success: true, action: "registered", isSandbox, created: safe(created), webhooks: [...list, created].map(safe) });
+  } catch (err) {
+    console.error("[REVOLUT SETUP] Error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 app.get(["/api/test-revolut", "/test-revolut"], async (req, res) => {
   try {
     const { apiKey, baseUrl, isSandbox } = getRevolutConfig();
