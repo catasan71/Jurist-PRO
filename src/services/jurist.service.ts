@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject, effect, OnDestroy, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { AuthService, UserConsents, FirestoreOp } from './auth.service';
-import { db } from '../app/firebase';
+import { db, auth } from '../app/firebase';
 import { doc, getDoc, updateDoc, setDoc, collection, getDocs, addDoc, query, where, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { NotificationService } from './notification.service';
 
@@ -851,47 +851,19 @@ export class JuristService implements OnDestroy {
     if (!user) return { success: false, message: "Trebuie să fiți autentificat." };
 
     try {
-      const codeRef = doc(db, 'promo_codes', code.toUpperCase());
-      const codeSnap = await getDoc(codeRef);
-
-      if (!codeSnap.exists()) {
-        return { success: false, message: "Codul promoțional nu există sau este invalid." };
+      const response = await fetch('/api/promo/redeem', {
+        method: 'POST',
+        headers: await this.authHeaders(),
+        body: JSON.stringify({ code })
+      });
+      const data = await response.json().catch(() => null);
+      if (data && typeof data.credits === 'number') {
+        this.authService.updateUserCredits(data.credits);
       }
-
-      const promoData = codeSnap.data() as PromoCode;
-
-      if (!promoData.active) {
-        return { success: false, message: "Acest cod promoțional a fost dezactivat." };
-      }
-
-      if (promoData.expiresAt) {
-         let isExpired = false;
-         if (typeof (promoData.expiresAt as unknown as { toDate?: () => Date }).toDate === 'function') {
-            isExpired = (promoData.expiresAt as unknown as { toDate: () => Date }).toDate() < new Date();
-         } else {
-            isExpired = new Date(promoData.expiresAt) < new Date();
-         }
-         if (isExpired) {
-            return { success: false, message: "Acest cod promoțional a expirat." };
-         }
-      }
-
-      if (promoData.usedBy && promoData.usedBy.includes(user.id)) {
-        return { success: false, message: "Ați folosit deja acest cod promoțional." };
-      }
-
-      if (promoData.maxUses > 0 && promoData.usedBy && promoData.usedBy.length >= promoData.maxUses) {
-        return { success: false, message: "Acest cod promoțional a atins limita maximă de utilizări." };
-      }
-
-      // Add credits to user
-      await this.authService.addCreditsToUser(user.id, promoData.credits);
-
-      // Add user to usedBy
-      const updatedUsedBy = [...(promoData.usedBy || []), user.id];
-      await updateDoc(codeRef, { usedBy: updatedUsedBy });
-
-      return { success: true, message: `Cod aplicat cu succes! Ați primit ${promoData.credits} credite.` };
+      return {
+        success: !!data?.success,
+        message: data?.message || "A apărut o eroare la aplicarea codului."
+      };
     } catch (error) {
       console.error("Error redeeming promo code:", error);
       return { success: false, message: "A apărut o eroare la aplicarea codului." };
@@ -1216,7 +1188,7 @@ export class JuristService implements OnDestroy {
     try {
       const response = await fetch('/api/create-revolut-order', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await this.authHeaders(),
         body: JSON.stringify({
           type: 'subscription',
           plan: newPlan,
@@ -1297,7 +1269,7 @@ export class JuristService implements OnDestroy {
     try {
       const response = await fetch('/api/test-whatsapp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await this.authHeaders(),
         body: JSON.stringify({ phone })
       });
       const data = await response.json();
@@ -1334,7 +1306,7 @@ export class JuristService implements OnDestroy {
     try {
       const response = await fetch('/api/create-revolut-order', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await this.authHeaders(),
         body: JSON.stringify({
           type: 'topup',
           amount: amount,
@@ -1399,16 +1371,41 @@ export class JuristService implements OnDestroy {
     return true;
   }
 
+  private async authHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    } catch (e) {
+      console.warn('Could not get auth token:', e);
+    }
+    return headers;
+  }
+
   private async consumeCredit(amount = 1) {
     if (this.authService.isAdmin()) return; // Administratorul nu consumă credite
-    
+
     const user = this.authService.currentUser();
-    if (user) {
-       const newBalance = Math.max(0, user.credits - amount);
-       this.authService.updateUserCredits(newBalance);
-       if (!this.authService.isDemo()) {
-         await updateDoc(doc(db, 'profiles', user.id), { credits: newBalance });
-       }
+    if (!user) return;
+
+    // Optimistic local update; the server is the source of truth
+    this.authService.updateUserCredits(Math.max(0, user.credits - amount));
+    if (this.authService.isDemo()) return;
+
+    try {
+      const response = await fetch('/api/credits/consume', {
+        method: 'POST',
+        headers: await this.authHeaders(),
+        body: JSON.stringify({ amount })
+      });
+      const data = await response.json().catch(() => null);
+      if (response.ok && typeof data?.credits === 'number') {
+        this.authService.updateUserCredits(data.credits);
+      } else {
+        console.warn('Credit consumption failed:', data?.error || response.status);
+      }
+    } catch (e) {
+      console.warn('Credit consumption error:', e);
     }
   }
   
@@ -1545,7 +1542,7 @@ export class JuristService implements OnDestroy {
   ): Promise<AsyncIterable<any>> {
     const response = await fetch('/api/gemini', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await this.authHeaders(),
       body: JSON.stringify(parameters)
     });
 
