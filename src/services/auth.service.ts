@@ -578,7 +578,13 @@ export class AuthService {
       try {
         const querySnapshot = await getDocs(collection(db, 'profiles'));
         const users: AppUser[] = [];
-        querySnapshot.forEach((doc) => {
+        // Most recent activity first (updated_at, then created_at); profiles without dates go last
+        const activityTime = (d: Record<string, unknown>) => {
+          const t = Date.parse(String(d['updated_at'] || d['created_at'] || ''));
+          return isNaN(t) ? 0 : t;
+        };
+        const docs = [...querySnapshot.docs].sort((a, b) => activityTime(b.data()) - activityTime(a.data()));
+        docs.forEach((doc) => {
           const data = doc.data();
           users.push({
             id: doc.id,
