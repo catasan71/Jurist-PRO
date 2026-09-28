@@ -83,6 +83,22 @@ var apiRateLimiter = (req, res, next) => {
 };
 app.use("/api/", apiRateLimiter);
 var adminDbInstance = null;
+function getServiceAccountCredential() {
+  const raw = (import_process.default.env.FIREBASE_SERVICE_ACCOUNT || "").trim();
+  if (!raw) {
+    console.warn("[FIREBASE] FIREBASE_SERVICE_ACCOUNT is not set - server-side Firestore writes will fail.");
+    return null;
+  }
+  try {
+    const json = raw.startsWith("{") ? raw : Buffer.from(raw, "base64").toString("utf8");
+    const sa = JSON.parse(json);
+    if (typeof sa.private_key === "string") sa.private_key = sa.private_key.replace(/\\n/g, "\n");
+    return import_firebase_admin.default.credential.cert(sa);
+  } catch (e) {
+    console.error("[FIREBASE] Invalid FIREBASE_SERVICE_ACCOUNT:", e.message);
+    return null;
+  }
+}
 function getAdminDb() {
   if (!adminDbInstance) {
     let projectId = import_process.default.env.FIREBASE_PROJECT_ID;
@@ -105,9 +121,8 @@ function getAdminDb() {
       const finalProjectId = projectId || "juristpro-d79ee";
       console.log(`[FIREBASE] Initializing Admin SDK with projectId: ${finalProjectId}`);
       try {
-        import_firebase_admin.default.initializeApp({
-          projectId: finalProjectId
-        });
+        const credential = getServiceAccountCredential();
+        import_firebase_admin.default.initializeApp(credential ? { credential, projectId: finalProjectId } : { projectId: finalProjectId });
       } catch (initErr) {
         console.error("[FIREBASE] Initialization error:", initErr);
       }
@@ -470,23 +485,49 @@ async function sendContractConfirmationEmail(params) {
 app.post(["/api/revolut-webhook", "/revolut-webhook"], async (req, res) => {
   const adminDb = getAdminDb();
   try {
-    const payload = req.body;
+    const payload = req.body || {};
     console.log("[REVOLUT WEBHOOK] Received payload:", JSON.stringify(payload));
     const eventName = (payload.event || "").toUpperCase();
-    const order = payload.order || {};
-    const orderId = order.id || payload.order_id || `order_${Date.now()}`;
-    const metadata = order.metadata || {};
-    const userId = metadata.userId;
-    if (!userId) {
-      console.warn("[REVOLUT WEBHOOK] No userId present in metadata.", metadata);
+    const orderId = payload.order_id || payload.order?.id;
+    if (!orderId) {
+      console.warn("[REVOLUT WEBHOOK] No order_id in payload.");
       return res.json({ received: true });
     }
-    if (eventName === "ORDER_COMPLETED" || order.state === "COMPLETED") {
+    if (eventName && eventName !== "ORDER_COMPLETED") {
+      return res.json({ received: true, ignored: eventName });
+    }
+    const { apiKey, baseUrl } = getRevolutConfig();
+    const orderResp = await fetch(`${baseUrl}/orders/${encodeURIComponent(orderId)}`, {
+      headers: { "Authorization": `Bearer ${apiKey}`, "Revolut-Api-Version": "2023-09-01" }
+    });
+    if (!orderResp.ok) {
+      console.error("[REVOLUT WEBHOOK] Could not fetch order", orderId, orderResp.status, await orderResp.text());
+      return res.status(502).json({ error: "Could not verify order with Revolut" });
+    }
+    const order = await orderResp.json();
+    const metadata = order.metadata || {};
+    const userId = metadata.userId || metadata.user_id;
+    const orderState = String(order.state || "").toUpperCase();
+    const orderAmountMinor = order.amount ?? order.order_amount?.value;
+    if (!userId) {
+      console.warn("[REVOLUT WEBHOOK] No userId present in order metadata.", orderId, metadata);
+      return res.json({ received: true });
+    }
+    if (orderState !== "COMPLETED") {
+      console.log(`[REVOLUT WEBHOOK] Order ${orderId} is ${orderState}, nothing to do.`);
+      return res.json({ received: true });
+    }
+    const already = await adminDb.collection("transactions").where("revolut_order_id", "==", orderId).limit(1).get();
+    if (!already.empty) {
+      console.log(`[REVOLUT WEBHOOK] Order ${orderId} already processed.`);
+      return res.json({ received: true, duplicate: true });
+    }
+    {
       const type = metadata.type;
       if (type === "subscription") {
         const plan = metadata.plan || "expert";
         const credits = plan === "expert" ? 150 : 500;
-        const amount = order.amount ? order.amount / 100 : plan === "expert" ? 200 : 500;
+        const amount = orderAmountMinor ? Number(orderAmountMinor) / 100 : plan === "expert" ? 200 : 500;
         const profileDoc = await adminDb.collection("profiles").doc(userId).get();
         const currentCredits = profileDoc.exists ? profileDoc.data()?.credits || 0 : 0;
         const userName = profileDoc.exists ? profileDoc.data()?.full_name || "User" : "User";
