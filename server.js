@@ -499,12 +499,234 @@ async function sendContractConfirmationEmail(params) {
     return { success: false, error: err.message };
   }
 }
+var REVOLUT_API_VERSION = "2026-08-17";
+var PLAN_CONFIG = {
+  expert: { credits: 150, amountMinor: 2e4, label: "EXPERT", name: "JuristPRO Expert (lunar)" },
+  gold: { credits: 500, amountMinor: 5e4, label: "GOLD", name: "JuristPRO Gold (lunar)" }
+};
+var DAY_MS = 24 * 60 * 60 * 1e3;
+var SUBSCRIPTION_GRACE_DAYS = 3;
+var LEGACY_PLAN_DAYS = 30;
+var REMINDER_DAYS_BEFORE = 5;
+function normalizePlan(plan) {
+  return plan === "gold" ? "gold" : "expert";
+}
+function revolutRootUrl() {
+  return getRevolutConfig().baseUrl.replace(/\/1\.0\/?$/, "");
+}
+async function revolutApi(method, apiPath, body) {
+  const { apiKey } = getRevolutConfig();
+  const response = await fetch(`${revolutRootUrl()}${apiPath}`, {
+    method,
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "Revolut-Api-Version": REVOLUT_API_VERSION
+    },
+    body: body === void 0 ? void 0 : JSON.stringify(body)
+  });
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+  if (!response.ok) {
+    const err = new Error(`Revolut ${method} ${apiPath} -> ${response.status}: ${text.slice(0, 300)}`);
+    err.status = response.status;
+    throw err;
+  }
+  return data;
+}
+async function getRevolutPlans() {
+  const snap = await getAdminDb().collection("server_config").doc("revolut_plans").get();
+  return snap.data() || {};
+}
+async function getPlanVariationId(plan) {
+  const ref = getAdminDb().collection("server_config").doc("revolut_plans");
+  const saved = (await ref.get()).data() || {};
+  if (saved[plan]?.variation_id) return saved[plan].variation_id;
+  const cfg = PLAN_CONFIG[plan];
+  const created = await revolutApi("POST", "/subscription-plans", {
+    name: cfg.name,
+    variations: [{ phases: [{ ordinal: 1, cycle_duration: "P1M", amount: cfg.amountMinor, currency: "RON" }] }]
+  });
+  const variationId = created?.variations?.[0]?.id;
+  if (!variationId) throw new Error("Revolut did not return a plan variation id");
+  await ref.set({
+    [plan]: { plan_id: created.id, variation_id: variationId, amount_minor: cfg.amountMinor, created_at: (/* @__PURE__ */ new Date()).toISOString() }
+  }, { merge: true });
+  console.log(`[SUBSCRIPTIONS] Created Revolut plan ${cfg.name}: ${created.id} / variation ${variationId}`);
+  return variationId;
+}
+function planFromVariation(saved, variationId) {
+  if (!variationId) return null;
+  if (saved.gold?.variation_id === variationId) return "gold";
+  if (saved.expert?.variation_id === variationId) return "expert";
+  return null;
+}
+async function ensureRevolutCustomer(userId, email, fullName) {
+  const ref = getAdminDb().collection("profiles").doc(userId);
+  const profile = (await ref.get()).data() || {};
+  if (profile.revolut_customer_id) return profile.revolut_customer_id;
+  const customer = await revolutApi("POST", "/customers", {
+    email,
+    ...fullName ? { full_name: String(fullName).slice(0, 100) } : {}
+  });
+  await ref.set({ revolut_customer_id: customer.id }, { merge: true });
+  return customer.id;
+}
+function isPlanExpired(profile, now = Date.now()) {
+  if (!profile || !profile.plan || profile.plan === "trial") return false;
+  if (!profile.plan_expires_at) return false;
+  const end = Date.parse(profile.plan_expires_at);
+  if (isNaN(end)) return false;
+  const renewing = profile.subscription_state === "active" || profile.subscription_state === "overdue";
+  return now > end + (renewing ? SUBSCRIPTION_GRACE_DAYS * DAY_MS : 0);
+}
+async function downgradeExpiredPlan(userId) {
+  const adminDb = getAdminDb();
+  const ref = adminDb.collection("profiles").doc(userId);
+  return adminDb.runTransaction(async (t) => {
+    const snap = await t.get(ref);
+    const p = snap.data() || {};
+    if (!isPlanExpired(p)) return p;
+    const topup = Math.max(0, Number(p.topup_credits || 0));
+    const update = {
+      plan: "trial",
+      status: "expired",
+      credits: Math.min(topup, Number(p.credits || 0)),
+      topup_credits: Math.min(topup, Number(p.credits || 0)),
+      plan_expired_at: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    t.update(ref, update);
+    console.log(`[SUBSCRIPTIONS] Plan expired for ${userId} (${p.plan}), downgraded to trial.`);
+    return { ...p, ...update };
+  });
+}
+async function sendPlanExpiryReminder(params) {
+  const date = new Date(params.expiresAt).toLocaleDateString("ro-RO", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Bucharest" });
+  const planLabel = escapeHtml(String(params.plan).toUpperCase());
+  const intro = params.cancelled ? `Re\xEEnnoirea automat\u0103 a abonamentului dumneavoastr\u0103 JuristPRO ${planLabel} a fost anulat\u0103, iar accesul este valabil p\xE2n\u0103 la <strong>${date}</strong>.` : `Abonamentul dumneavoastr\u0103 JuristPRO ${planLabel} este valabil p\xE2n\u0103 la <strong>${date}</strong>. Am trecut la abonamente lunare cu re\xEEnnoire automat\u0103, a\u0219a c\u0103, pentru a continua f\u0103r\u0103 \xEEntrerupere, v\u0103 rug\u0103m s\u0103 activa\u021Bi abonamentul lunar din aplica\u021Bie.`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937;">
+      <h2 style="color: #ea580c;">JuristPRO</h2>
+      <p>Bun\u0103 ziua, ${escapeHtml(params.name || "")},</p>
+      <p>${intro}</p>
+      <p>Dup\u0103 aceast\u0103 dat\u0103, contul va trece pe planul Trial. Creditele cump\u0103rate separat (top-up) se p\u0103streaz\u0103.</p>
+      <p style="margin: 24px 0;">
+        <a href="https://www.juridicpro.ro/" style="background: #ea580c; color: #fff; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;">Activeaz\u0103 abonamentul lunar</a>
+      </p>
+      <p style="font-size: 13px; color: #6b7280;">Abonamentul se re\xEEnnoie\u0219te automat \xEEn fiecare lun\u0103 \u0219i \xEEl pute\u021Bi anula oric\xE2nd din Profil. Creditele incluse \xEEn abonament se reseteaz\u0103 la fiecare re\xEEnnoire.</p>
+      <p>Cu stim\u0103,<br/>Echipa JuristPRO</p>
+    </div>`;
+  const result = await getResend().emails.send({
+    from: "JuristPRO <contracte@juridicpro.ro>",
+    to: [params.email],
+    replyTo: "office@juridicpro.ro",
+    subject: `Abonamentul JuristPRO ${String(params.plan).toUpperCase()} expir\u0103 pe ${date}`,
+    html
+  });
+  if (result?.error) throw new Error(JSON.stringify(result.error));
+}
+async function syncSubscriptionState(subscriptionId) {
+  const sub = await revolutApi("GET", `/subscriptions/${encodeURIComponent(subscriptionId)}`);
+  const userId = sub?.external_reference;
+  if (!userId) return {};
+  const ref = getAdminDb().collection("profiles").doc(userId);
+  const profile = (await ref.get()).data() || {};
+  if (profile.subscription_id && profile.subscription_id !== sub.id) return { userId, state: sub.state };
+  await ref.set({ subscription_state: sub.state, subscription_synced_at: (/* @__PURE__ */ new Date()).toISOString() }, { merge: true });
+  return { userId, state: sub.state };
+}
+async function handleSubscriptionOrder(order, subscriptionId, orderId, origin) {
+  const adminDb = getAdminDb();
+  const sub = await revolutApi("GET", `/subscriptions/${encodeURIComponent(subscriptionId)}`);
+  const userId = sub?.external_reference;
+  if (!userId) {
+    console.warn("[SUBSCRIPTIONS] Subscription without external_reference", subscriptionId);
+    return;
+  }
+  const saved = await getRevolutPlans();
+  const ref = adminDb.collection("profiles").doc(userId);
+  const before = (await ref.get()).data() || {};
+  const plan = planFromVariation(saved, sub.plan_variation_id) || normalizePlan(before.subscription_plan);
+  const cfg = PLAN_CONFIG[plan];
+  let periodEnd = null;
+  const cycleId = order?.subscription_data?.active_cycle_id || sub.current_cycle_id;
+  if (cycleId) {
+    try {
+      const cycle = await revolutApi("GET", `/subscriptions/${encodeURIComponent(sub.id)}/cycles/${encodeURIComponent(cycleId)}`);
+      periodEnd = cycle?.end_date || null;
+    } catch (e) {
+      console.warn("[SUBSCRIPTIONS] Could not read cycle", e.message);
+    }
+  }
+  if (!periodEnd) periodEnd = new Date(Date.now() + 31 * DAY_MS).toISOString();
+  const isFirstPayment = before.subscription_id !== sub.id || before.subscription_state !== "active";
+  const amountMinor = order?.amount ?? order?.order_amount?.value ?? cfg.amountMinor;
+  await adminDb.runTransaction(async (t) => {
+    const snap = await t.get(ref);
+    const p = snap.data() || {};
+    const topup = Math.max(0, Math.min(Number(p.topup_credits || 0), Number(p.credits || 0)));
+    t.set(ref, {
+      plan,
+      status: "active",
+      credits: cfg.credits + topup,
+      // plan credits are reset every cycle
+      topup_credits: topup,
+      subscription_id: sub.id,
+      subscription_state: "active",
+      subscription_plan: plan,
+      plan_expires_at: periodEnd,
+      last_payment_at: (/* @__PURE__ */ new Date()).toISOString(),
+      revolut_order_id: orderId,
+      expiry_reminder_sent_for: null,
+      terms_accepted: true,
+      terms_accepted_at: (/* @__PURE__ */ new Date()).toISOString(),
+      terms_version: "v2.4-OUG34"
+    }, { merge: true });
+  });
+  await adminDb.collection("transactions").add({
+    user_id: userId,
+    user_name: before.full_name || "User",
+    billing_data: before.billing_data || null,
+    amount: Number(amountMinor) / 100,
+    currency: "RON",
+    status: "completed",
+    type: "subscription",
+    description: `${isFirstPayment ? "Abonament" : "Re\xEEnnoire abonament"} ${cfg.label} lunar (Revolut)`,
+    revolut_order_id: orderId,
+    subscription_id: sub.id,
+    created_at: (/* @__PURE__ */ new Date()).toISOString()
+  });
+  console.log(`[SUBSCRIPTIONS] ${isFirstPayment ? "Activated" : "Renewed"} ${plan} for ${userId} until ${periodEnd}`);
+  if (isFirstPayment && before.email) {
+    sendContractConfirmationEmail({
+      email: before.email,
+      userName: before.full_name || "Utilizator",
+      orderId,
+      type: "subscription",
+      planName: plan,
+      amount: Number(amountMinor) / 100,
+      credits: cfg.credits,
+      billingData: before.billing_data || null,
+      origin
+    }).catch(console.error);
+  }
+}
 app.post(["/api/revolut-webhook", "/revolut-webhook"], async (req, res) => {
   const adminDb = getAdminDb();
   try {
     const payload = req.body || {};
     console.log("[REVOLUT WEBHOOK] Received payload:", JSON.stringify(payload));
-    const eventName = (payload.event || "").toUpperCase();
+    const eventName = String(payload.event || "").toUpperCase();
+    if (eventName.startsWith("SUBSCRIPTION_")) {
+      const subscriptionId2 = payload.subscription_id || payload.subscription?.id;
+      if (subscriptionId2) await syncSubscriptionState(subscriptionId2);
+      return res.json({ received: true });
+    }
     const orderId = payload.order_id || payload.order?.id;
     if (!orderId) {
       console.warn("[REVOLUT WEBHOOK] No order_id in payload.");
@@ -513,23 +735,21 @@ app.post(["/api/revolut-webhook", "/revolut-webhook"], async (req, res) => {
     if (eventName && eventName !== "ORDER_COMPLETED") {
       return res.json({ received: true, ignored: eventName });
     }
-    const { apiKey, baseUrl } = getRevolutConfig();
-    const orderResp = await fetch(`${baseUrl}/orders/${encodeURIComponent(orderId)}`, {
-      headers: { "Authorization": `Bearer ${apiKey}`, "Revolut-Api-Version": "2023-09-01" }
-    });
-    if (!orderResp.ok) {
-      console.error("[REVOLUT WEBHOOK] Could not fetch order", orderId, orderResp.status, await orderResp.text());
-      return res.status(502).json({ error: "Could not verify order with Revolut" });
+    let order = null;
+    try {
+      order = await revolutApi("GET", `/orders/${encodeURIComponent(orderId)}`);
+    } catch (e) {
+      const { apiKey, baseUrl } = getRevolutConfig();
+      const legacyResp = await fetch(`${baseUrl}/orders/${encodeURIComponent(orderId)}`, {
+        headers: { "Authorization": `Bearer ${apiKey}`, "Revolut-Api-Version": "2023-09-01" }
+      });
+      if (!legacyResp.ok) {
+        console.error("[REVOLUT WEBHOOK] Could not fetch order", orderId, e.message, legacyResp.status);
+        return res.status(502).json({ error: "Could not verify order with Revolut" });
+      }
+      order = await legacyResp.json();
     }
-    const order = await orderResp.json();
-    const metadata = order.metadata || {};
-    const userId = metadata.userId || metadata.user_id;
     const orderState = String(order.state || "").toUpperCase();
-    const orderAmountMinor = order.amount ?? order.order_amount?.value;
-    if (!userId) {
-      console.warn("[REVOLUT WEBHOOK] No userId present in order metadata.", orderId, metadata);
-      return res.json({ received: true });
-    }
     if (orderState !== "COMPLETED") {
       console.log(`[REVOLUT WEBHOOK] Order ${orderId} is ${orderState}, nothing to do.`);
       return res.json({ received: true });
@@ -539,87 +759,115 @@ app.post(["/api/revolut-webhook", "/revolut-webhook"], async (req, res) => {
       console.log(`[REVOLUT WEBHOOK] Order ${orderId} already processed.`);
       return res.json({ received: true, duplicate: true });
     }
-    {
-      const type = metadata.type;
-      if (type === "subscription") {
-        const plan = metadata.plan || "expert";
-        const credits = plan === "expert" ? 150 : 500;
-        const amount = orderAmountMinor ? Number(orderAmountMinor) / 100 : plan === "expert" ? 200 : 500;
-        const profileDoc = await adminDb.collection("profiles").doc(userId).get();
-        const currentCredits = profileDoc.exists ? profileDoc.data()?.credits || 0 : 0;
-        const userName = profileDoc.exists ? profileDoc.data()?.full_name || "User" : "User";
-        const userEmail = profileDoc.exists ? profileDoc.data()?.email || "" : "";
-        const billingData = profileDoc.exists ? profileDoc.data()?.billing_data || null : null;
-        await adminDb.collection("profiles").doc(userId).update({
+    let subscriptionId = order.subscription_data?.subscription_id;
+    if (!subscriptionId) {
+      const bySetup = await adminDb.collection("profiles").where("subscription_setup_order_id", "==", orderId).limit(1).get();
+      if (!bySetup.empty) subscriptionId = bySetup.docs[0].data().subscription_id;
+    }
+    if (subscriptionId) {
+      await handleSubscriptionOrder(order, subscriptionId, orderId, req.headers.origin);
+      return res.json({ received: true });
+    }
+    const metadata = order.metadata || {};
+    const userId = metadata.userId || metadata.user_id;
+    const orderAmountMinor = order.amount ?? order.order_amount?.value;
+    if (!userId) {
+      console.warn("[REVOLUT WEBHOOK] No userId present in order metadata.", orderId, metadata);
+      return res.json({ received: true });
+    }
+    const profileRef = adminDb.collection("profiles").doc(userId);
+    const profileDoc = await profileRef.get();
+    const profileData = profileDoc.data() || {};
+    const userName = profileData.full_name || "User";
+    const userEmail = profileData.email || "";
+    const billingData = profileData.billing_data || null;
+    if (metadata.type === "subscription") {
+      const plan = normalizePlan(metadata.plan);
+      const cfg = PLAN_CONFIG[plan];
+      const amount = orderAmountMinor ? Number(orderAmountMinor) / 100 : cfg.amountMinor / 100;
+      await adminDb.runTransaction(async (t) => {
+        const snap = await t.get(profileRef);
+        const p = snap.data() || {};
+        const topup = Math.max(0, Math.min(Number(p.topup_credits || 0), Number(p.credits || 0)));
+        t.update(profileRef, {
           plan,
           status: "active",
-          credits: currentCredits + credits,
+          credits: cfg.credits + topup,
+          topup_credits: topup,
+          plan_expires_at: new Date(Date.now() + LEGACY_PLAN_DAYS * DAY_MS).toISOString(),
+          last_payment_at: (/* @__PURE__ */ new Date()).toISOString(),
           revolut_order_id: orderId,
           terms_accepted: true,
           terms_accepted_at: (/* @__PURE__ */ new Date()).toISOString(),
           terms_version: "v2.4-OUG34"
         });
-        await adminDb.collection("transactions").add({
-          user_id: userId,
-          user_name: userName,
-          billing_data: billingData,
-          amount,
+      });
+      await adminDb.collection("transactions").add({
+        user_id: userId,
+        user_name: userName,
+        billing_data: billingData,
+        amount,
+        currency: "RON",
+        status: "completed",
+        type: "subscription",
+        description: `Abonament ${cfg.label} (plat\u0103 unic\u0103, Revolut)`,
+        revolut_order_id: orderId,
+        created_at: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      console.log(`[REVOLUT WEBHOOK] One-time plan payment processed for ${userId} (${plan})`);
+      if (userEmail) {
+        sendContractConfirmationEmail({
+          email: userEmail,
+          userName,
+          orderId,
           type: "subscription",
-          description: `Abonament ${plan.toUpperCase()} (Revolut Pay)`,
-          revolut_order_id: orderId,
-          created_at: (/* @__PURE__ */ new Date()).toISOString()
-        });
-        console.log(`[REVOLUT WEBHOOK] Successfully upgraded subscription for user ${userId} to ${plan}`);
-        if (userEmail) {
-          sendContractConfirmationEmail({
-            email: userEmail,
-            userName,
-            orderId,
-            type: "subscription",
-            planName: plan,
-            amount,
-            credits,
-            billingData,
-            origin: req.headers.origin
-          }).catch(console.error);
-        }
-      } else if (type === "topup") {
-        const amount = Number(metadata.amount || "0");
-        const credits = Number(metadata.credits || "0");
-        const profileDoc = await adminDb.collection("profiles").doc(userId).get();
-        const currentCredits = profileDoc.exists ? profileDoc.data()?.credits || 0 : 0;
-        const userName = profileDoc.exists ? profileDoc.data()?.full_name || "User" : "User";
-        const userEmail = profileDoc.exists ? profileDoc.data()?.email || "" : "";
-        const billingData = profileDoc.exists ? profileDoc.data()?.billing_data || null : null;
-        await adminDb.collection("profiles").doc(userId).update({
-          credits: currentCredits + credits,
+          planName: plan,
+          amount,
+          credits: cfg.credits,
+          billingData,
+          origin: req.headers.origin
+        }).catch(console.error);
+      }
+    } else if (metadata.type === "topup") {
+      const amount = Number(metadata.amount || "0");
+      const credits = Math.max(0, Math.floor(Number(metadata.credits || "0")));
+      await adminDb.runTransaction(async (t) => {
+        const snap = await t.get(profileRef);
+        const p = snap.data() || {};
+        const current = Number(p.credits || 0);
+        const topup = Math.max(0, Math.min(Number(p.topup_credits || 0), current));
+        t.update(profileRef, {
+          credits: current + credits,
+          topup_credits: topup + credits,
           terms_accepted: true,
           terms_accepted_at: (/* @__PURE__ */ new Date()).toISOString(),
           terms_version: "v2.4-OUG34"
         });
-        await adminDb.collection("transactions").add({
-          user_id: userId,
-          user_name: userName,
-          billing_data: billingData,
+      });
+      await adminDb.collection("transactions").add({
+        user_id: userId,
+        user_name: userName,
+        billing_data: billingData,
+        amount,
+        currency: "RON",
+        status: "completed",
+        type: "top-up",
+        description: `Top-Up ${credits} Credite (Revolut Pay)`,
+        revolut_order_id: orderId,
+        created_at: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      console.log(`[REVOLUT WEBHOOK] Successfully processed top-up for user ${userId}`);
+      if (userEmail) {
+        sendContractConfirmationEmail({
+          email: userEmail,
+          userName,
+          orderId,
+          type: "topup",
           amount,
-          type: "top-up",
-          description: `Top-Up ${credits} Credite (Revolut Pay)`,
-          revolut_order_id: orderId,
-          created_at: (/* @__PURE__ */ new Date()).toISOString()
-        });
-        console.log(`[REVOLUT WEBHOOK] Successfully processed top-up for user ${userId}`);
-        if (userEmail) {
-          sendContractConfirmationEmail({
-            email: userEmail,
-            userName,
-            orderId,
-            type: "topup",
-            amount,
-            credits,
-            billingData,
-            origin: req.headers.origin
-          }).catch(console.error);
-        }
+          credits,
+          billingData,
+          origin: req.headers.origin
+        }).catch(console.error);
       }
     }
     res.json({ received: true });
@@ -857,6 +1105,44 @@ app.post(["/api/create-revolut-order", "/create-revolut-order"], async (req, res
       res.json({ url: successMockUrl });
       return;
     }
+    if (type === "subscription") {
+      const planKey = normalizePlan(plan);
+      const adminDb = getAdminDb();
+      const profileRef = adminDb.collection("profiles").doc(userId);
+      const profile = (await profileRef.get()).data() || {};
+      if (profile.subscription_id && (profile.subscription_state === "active" || profile.subscription_state === "overdue")) {
+        res.status(409).json({ error: "Ave\u021Bi deja un abonament activ. \xCEl pute\u021Bi gestiona din Profil." });
+        return;
+      }
+      if (profile.subscription_id && profile.subscription_state === "pending") {
+        try {
+          await revolutApi("POST", `/subscriptions/${encodeURIComponent(profile.subscription_id)}/cancel`);
+        } catch (e) {
+          console.warn("[SUBSCRIPTIONS] Could not cancel pending subscription", e.message);
+        }
+      }
+      const customerId = await ensureRevolutCustomer(userId, email || profile.email, profile.full_name);
+      const variationId = await getPlanVariationId(planKey);
+      const subscription = await revolutApi("POST", "/subscriptions", {
+        plan_variation_id: variationId,
+        customer_id: customerId,
+        external_reference: userId,
+        setup_order_redirect_url: `${appUrl}/?payment=success`
+      });
+      const setupOrder = subscription.setup_order_id ? await revolutApi("GET", `/orders/${encodeURIComponent(subscription.setup_order_id)}`) : null;
+      if (!setupOrder?.checkout_url) {
+        throw new Error("Revolut nu a returnat pagina de plat\u0103 pentru abonament.");
+      }
+      await profileRef.set({
+        subscription_id: subscription.id,
+        subscription_state: subscription.state || "pending",
+        subscription_plan: planKey,
+        subscription_setup_order_id: subscription.setup_order_id
+      }, { merge: true });
+      console.log(`[SUBSCRIPTIONS] Created ${planKey} subscription ${subscription.id} for ${userId}`);
+      res.json({ url: setupOrder.checkout_url });
+      return;
+    }
     const keyLogStr = apiKey === "dummy_revolut_key_for_testing" ? "DUMMY KEY" : `${apiKey.substring(0, Math.min(6, apiKey.length))}...${apiKey.substring(Math.max(0, apiKey.length - 4))}`;
     console.log(`[REVOLUT] Creating order. Endpoint: ${baseUrl}, Sandbox: ${isSandbox}, Key: ${keyLogStr} (Length: ${apiKey.length})`);
     const fetchResponse = await fetch(`${baseUrl}/orders`, {
@@ -916,13 +1202,99 @@ app.post(["/api/credits/consume", "/credits/consume"], async (req, res) => {
       if (!snap.exists) throw new Error("Profilul nu exist\u0103.");
       const current = Number(snap.data()?.credits || 0);
       const next = Math.max(0, current - amount);
-      t.update(ref, { credits: next });
+      const topup = Math.max(0, Math.min(Number(snap.data()?.topup_credits || 0), next));
+      t.update(ref, { credits: next, topup_credits: topup });
       return next;
     });
     res.json({ success: true, credits });
   } catch (err) {
     console.error("[CREDITS] consume error:", err);
     res.status(500).json({ error: "Eroare la actualizarea creditelor." });
+  }
+});
+app.post(["/api/subscription/cancel", "/subscription/cancel"], async (req, res) => {
+  try {
+    const authUser = await getRequestUser(req);
+    if (!authUser) return res.status(401).json({ success: false, error: UNAUTHORIZED_MSG });
+    const ref = getAdminDb().collection("profiles").doc(authUser.uid);
+    const profile = (await ref.get()).data() || {};
+    if (profile.subscription_id && ["active", "overdue", "pending", "paused"].includes(profile.subscription_state)) {
+      await revolutApi("POST", `/subscriptions/${encodeURIComponent(profile.subscription_id)}/cancel`);
+    } else if (!profile.plan || profile.plan === "trial") {
+      return res.status(400).json({ success: false, error: "Nu ave\u021Bi un abonament activ." });
+    }
+    const update = {
+      subscription_state: "cancelled",
+      subscription_cancelled_at: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    if (!profile.plan_expires_at && profile.plan && profile.plan !== "trial") {
+      update.plan_expires_at = new Date(Date.now() + LEGACY_PLAN_DAYS * DAY_MS).toISOString();
+    }
+    await ref.set(update, { merge: true });
+    const planExpiresAt = update.plan_expires_at || profile.plan_expires_at || null;
+    console.log(`[SUBSCRIPTIONS] Renewal cancelled by ${authUser.uid}, access until ${planExpiresAt}`);
+    res.json({ success: true, plan_expires_at: planExpiresAt });
+  } catch (err) {
+    console.error("[SUBSCRIPTIONS] cancel error:", err);
+    res.status(500).json({ success: false, error: "Nu am putut anula abonamentul. V\u0103 rug\u0103m contacta\u021Bi suportul." });
+  }
+});
+app.get(["/api/cron/daily", "/cron/daily"], async (req, res) => {
+  const secret = import_process.default.env.CRON_SECRET;
+  if (secret && req.headers.authorization !== `Bearer ${secret}`) {
+    const authUser = await getRequestUser(req);
+    if (!authUser?.isAdmin) return res.status(401).json({ error: "Unauthorized" });
+  }
+  const summary = { legacyDated: 0, reminders: 0, downgraded: 0, synced: 0, errors: [] };
+  try {
+    const adminDb = getAdminDb();
+    const now = Date.now();
+    const paid = await adminDb.collection("profiles").where("plan", "in", ["expert", "gold"]).get();
+    for (const doc of paid.docs) {
+      const ref = doc.ref;
+      let p = doc.data();
+      try {
+        if (!p.plan_expires_at && !(p.subscription_id && p.subscription_state === "active")) {
+          const paidAt = Date.parse(p.last_payment_at || p.updated_at || "");
+          const base = !isNaN(paidAt) && paidAt > now - LEGACY_PLAN_DAYS * DAY_MS ? paidAt : now;
+          const expiresAt = new Date(base + LEGACY_PLAN_DAYS * DAY_MS).toISOString();
+          await ref.set({ plan_expires_at: expiresAt }, { merge: true });
+          p = { ...p, plan_expires_at: expiresAt };
+          summary.legacyDated++;
+        }
+        if (p.subscription_id) {
+          const { state } = await syncSubscriptionState(p.subscription_id);
+          if (state) {
+            p = { ...p, subscription_state: state };
+            summary.synced++;
+          }
+        }
+        const end = Date.parse(p.plan_expires_at || "");
+        const willRenew = p.subscription_state === "active";
+        if (!willRenew && !isNaN(end) && end > now && end - now <= REMINDER_DAYS_BEFORE * DAY_MS && p.expiry_reminder_sent_for !== p.plan_expires_at && p.email) {
+          await sendPlanExpiryReminder({
+            email: p.email,
+            name: p.full_name || "",
+            plan: p.plan,
+            expiresAt: p.plan_expires_at,
+            cancelled: p.subscription_state === "cancelled"
+          });
+          await ref.set({ expiry_reminder_sent_for: p.plan_expires_at }, { merge: true });
+          summary.reminders++;
+        }
+        if (isPlanExpired(p, now)) {
+          await downgradeExpiredPlan(doc.id);
+          summary.downgraded++;
+        }
+      } catch (e) {
+        summary.errors.push(`${doc.id}: ${e.message}`);
+      }
+    }
+    console.log("[CRON] Daily maintenance:", JSON.stringify(summary));
+    res.json({ success: true, ...summary });
+  } catch (err) {
+    console.error("[CRON] Daily maintenance failed:", err);
+    res.status(500).json({ success: false, error: err.message, ...summary });
   }
 });
 app.post(["/api/promo/redeem", "/promo/redeem"], async (req, res) => {
@@ -953,7 +1325,8 @@ app.post(["/api/promo/redeem", "/promo/redeem"], async (req, res) => {
       }
       const add = Math.max(0, Math.floor(Number(promo.credits) || 0));
       const current = Number(profileSnap.data()?.credits || 0);
-      t.update(profileRef, { credits: current + add });
+      const currentTopup = Math.max(0, Math.min(Number(profileSnap.data()?.topup_credits || 0), current));
+      t.update(profileRef, { credits: current + add, topup_credits: currentTopup + add });
       t.update(codeRef, { usedBy: [...usedBy, authUser.uid] });
       return { ok: true, credits: current + add, added: add };
     });
@@ -1071,7 +1444,10 @@ app.post(["/api/gemini", "/gemini"], async (req, res) => {
   }
   if (!authUser.isAdmin) {
     const profileSnap = await getAdminDb().collection("profiles").doc(authUser.uid).get();
-    const profile = profileSnap.data() || {};
+    let profile = profileSnap.data() || {};
+    if (isPlanExpired(profile)) {
+      profile = await downgradeExpiredPlan(authUser.uid);
+    }
     if (profile.status === "suspended") {
       return res.status(403).json({ error: "Contul dumneavoastr\u0103 este suspendat. Contacta\u021Bi suportul." });
     }

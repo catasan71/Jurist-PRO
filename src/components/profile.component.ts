@@ -126,16 +126,31 @@ import { AuthService, UserConsents } from '../services/auth.service';
                         </div>
                         <div class="text-right">
                             <p class="text-xs text-gray-500 uppercase font-bold">Status</p>
-                            <p class="text-green-400 font-bold">Activ</p>
+                            <p class="text-green-400 font-bold">{{ subscriptionLabel() }}</p>
                         </div>
                     </div>
 
                     @if (userPlan() !== 'trial') {
-                        <div class="text-right">
-                            <button (click)="cancelSubscription()" class="text-red-400 hover:text-white text-xs underline font-bold transition-all">
-                                Anulează Reînnoirea Automată
+                        @if (planExpiresAt()) {
+                            <p class="text-xs text-gray-400">
+                                @if (subscriptionState() === 'active') {
+                                    Următoarea reînnoire automată: <strong class="text-white">{{ planExpiresAt() }}</strong>. Creditele incluse se resetează la fiecare reînnoire.
+                                } @else {
+                                    Acces la plan până la: <strong class="text-white">{{ planExpiresAt() }}</strong>. După această dată contul trece pe Trial (creditele Top-Up se păstrează).
+                                }
+                            </p>
+                        }
+                        @if (subscriptionState() === 'active' || subscriptionState() === 'overdue') {
+                            <div class="text-right">
+                                <button (click)="cancelSubscription()" [disabled]="saving()" class="text-red-400 hover:text-white text-xs underline font-bold transition-all">
+                                    Anulează Reînnoirea Automată
+                                </button>
+                            </div>
+                        } @else if (subscriptionState() !== 'cancelled') {
+                            <button (click)="goToPricing()" class="w-full bg-gray-800 hover:bg-gray-700 text-white py-2 rounded border border-gray-600 text-sm font-bold transition-colors">
+                                Activează abonamentul lunar &rarr;
                             </button>
-                        </div>
+                        }
                     } @else {
                         <button (click)="goToPricing()" class="w-full bg-gray-800 hover:bg-gray-700 text-white py-2 rounded border border-gray-600 text-sm font-bold transition-colors">
                             Upgrade la Premium &rarr;
@@ -321,6 +336,20 @@ export class ProfileComponent {
 
   // Helper for Plan
   userPlan = computed(() => this.authService.currentUser()?.plan || 'trial');
+  subscriptionState = computed(() => this.authService.currentUser()?.subscription_state || null);
+  planExpiresAt = computed(() => {
+    const value = this.authService.currentUser()?.plan_expires_at;
+    return value ? new Date(value).toLocaleDateString('ro-RO') : null;
+  });
+  subscriptionLabel = computed(() => {
+    if (this.userPlan() === 'trial') return 'Trial';
+    switch (this.subscriptionState()) {
+      case 'active': return 'Activ (reînnoire automată)';
+      case 'overdue': return 'Plată restantă';
+      case 'cancelled': return 'Activ (fără reînnoire)';
+      default: return 'Activ';
+    }
+  });
 
   async save() {
     this.saving.set(true);
@@ -352,7 +381,11 @@ export class ProfileComponent {
   }
 
   async cancelSubscription() {
-    // Replaced confirm with direct action due to iframe restrictions
+    const until = this.planExpiresAt();
+    const question = until
+      ? `Sigur doriți să anulați reînnoirea automată? Veți avea acces la plan până la ${until}.`
+      : 'Sigur doriți să anulați reînnoirea automată a abonamentului?';
+    if (typeof window !== 'undefined' && !window.confirm(question)) return;
     this.saving.set(true);
     const success = await this.juristService.cancelSubscription();
     this.saving.set(false);

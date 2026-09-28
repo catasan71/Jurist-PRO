@@ -1175,9 +1175,9 @@ export class JuristService implements OnDestroy {
       return;
     }
 
-    // If user already has an active paid subscription, redirect to portal to manage it
-    if (user.status === 'active' && user.plan !== 'trial') {
-      this.cancelSubscription(); // This opens the portal
+    // An active recurring subscription is managed from the Profile page
+    if (user.subscription_state === 'active' || user.subscription_state === 'overdue') {
+      this.notificationService.info('Aveți deja un abonament activ. Îl puteți gestiona din Profil.');
       this._loading.set(false);
       return;
     }
@@ -1250,10 +1250,25 @@ export class JuristService implements OnDestroy {
 
     this._loading.set(true);
     try {
-      if (!this.authService.isDemo()) {
-         await updateDoc(doc(db, 'profiles', user.id), { status: 'cancelled' });
+      if (this.authService.isDemo()) {
+        this.notificationService.success('Abonamentul a fost anulat (Mod Demo).');
+        return true;
       }
-      this.notificationService.success('Abonamentul a fost anulat cu succes.');
+      const response = await fetch('/api/subscription/cancel', {
+        method: 'POST',
+        headers: await this.authHeaders()
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) {
+        this.notificationService.error(data?.error || 'Eroare la anularea abonamentului.');
+        return false;
+      }
+      const until = data.plan_expires_at
+        ? new Date(data.plan_expires_at).toLocaleDateString('ro-RO')
+        : null;
+      this.notificationService.success(until
+        ? `Reînnoirea automată a fost anulată. Aveți acces la plan până la ${until}.`
+        : 'Reînnoirea automată a fost anulată.');
       return true;
     } catch (error) {
       console.error('Cancellation error:', error);

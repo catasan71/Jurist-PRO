@@ -46,6 +46,9 @@ export interface AppUser {
   credits: number;
   consents?: UserConsents;
   billing_data?: Record<string, unknown>;
+  plan_expires_at?: string | null;
+  subscription_state?: string | null;
+  topup_credits?: number;
 }
 
 @Injectable({
@@ -510,7 +513,10 @@ export class AuthService {
             status: status,
             credits: credits,
             consents: data['consents'],
-            billing_data: data['billing_data']
+            billing_data: data['billing_data'],
+            plan_expires_at: data['plan_expires_at'] || null,
+            subscription_state: data['subscription_state'] || null,
+            topup_credits: Number(data['topup_credits'] || 0)
           });
         } else {
           if (this._isCreatingProfile) return;
