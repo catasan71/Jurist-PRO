@@ -291,7 +291,7 @@ export class AuthComponent {
   email = '';
   password = '';
   fullName = '';
-  selectedPlan: 'trial' | 'expert' | 'gold' = 'expert';
+     selectedPlan: 'trial' | 'expert' | 'gold' = 'trial';
   
   agreeTerms = false;
   agreeGdpr = false;
